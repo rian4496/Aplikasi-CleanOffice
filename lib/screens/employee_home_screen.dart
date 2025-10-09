@@ -1,138 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:logging/logging.dart';
 
-import 'package:aplikasi_cleanoffice/providers/report_provider.dart';
 import 'package:aplikasi_cleanoffice/models/report_model.dart';
+import 'package:aplikasi_cleanoffice/models/report_status_enum.dart';
+import 'package:aplikasi_cleanoffice/providers/riverpod/employee_providers.dart';
 import 'report_detail_screen.dart';
 
 
-class EmployeeHomeScreen extends StatefulWidget {
+class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
 
   @override
-  State<EmployeeHomeScreen> createState() => _EmployeeHomeScreenState();
+  ConsumerState<EmployeeHomeScreen> createState() => _EmployeeHomeScreenState();
 }
 
-class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
-  bool _isRefreshing = false;
+class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   final _dateFormat = DateFormat('d MMM yyyy');
-  final _logger = Logger('EmployeeHomeScreen');
 
   String _formatDate(DateTime date) {
     return _dateFormat.format(date);
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'selesai':
-        return Colors.green;
-      case 'dikerjakan':
-        return Colors.orange;
-      case 'terkirim':
-        return Colors.blue;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  Future<void> _handleRefresh() async {
-    if (_isRefreshing) {
-      _logger.info('Refresh already in progress, skipping');
-      return;
-    }
-    
-    _logger.info('Starting refresh operation');
-    setState(() {
-      _isRefreshing = true;
-    });
-
-    try {
-      // Get current user ID
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        _logger.warning('Attempted to refresh while not logged in');
-        throw Exception('User not logged in');
-      }
-      
-      _logger.info('Fetching reports for user: ${user.uid}');
-
-      // Fetch reports from Firestore
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('reports')
-          .where('userId', isEqualTo: user.uid)
-          .orderBy('date', descending: true)
-          .get();
-
-      _logger.info('Retrieved ${querySnapshot.docs.length} reports from Firestore');
-      
-      // Convert the documents to Report objects
-      final reports = querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        try {
-          return Report(
-            id: doc.id,
-            title: data['title'] as String,
-            location: data['location'] as String,
-            date: (data['date'] as Timestamp).toDate(),
-            status: data['status'] as String,
-            imageUrl: data['imageUrl'] as String?,
-            description: data['description'] as String?,
-          );
-        } catch (e) {
-          _logger.warning('Error parsing report document ${doc.id}', e);
-          rethrow;
-        }
-      }).toList();
-
-      // Update the provider
-      if (mounted) {
-        final reportProvider = Provider.of<ReportProvider>(context, listen: false);
-        reportProvider.setReports(reports);
-        _logger.info('Successfully updated reports in provider');
-      } else {
-        _logger.warning('Widget was unmounted before reports could be updated');
-      }
-
-    } catch (error) {
-      _logger.severe('Error fetching reports', error);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              error is FirebaseException 
-                ? 'Error: ${error.message}' 
-                : 'Gagal memperbarui data. Silakan coba lagi.',
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            action: SnackBarAction(
-              label: 'COBA LAGI',
-              textColor: Colors.white,
-              onPressed: _handleRefresh,
-            ),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRefreshing = false;
-        });
-      }
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Fetch reports when screen is first loaded
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _handleRefresh();
-    });
+  Color _getStatusColor(ReportStatus status) {
+    return Color(status.colorValue);
   }
 
   Widget _buildProgressItem(String label, String value, Color color) {
@@ -141,7 +33,7 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -171,15 +63,15 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Mengambil data dari Provider
-    final reportProvider = Provider.of<ReportProvider>(context);
-    final reports = reportProvider.reports;
+    final user = FirebaseAuth.instance.currentUser;
+    final reportsAsync = ref.watch(employeeReportsProvider);
+    final summaryAsync = ref.watch(employeeReportsSummaryProvider);
 
-    // Menghitung jumlah laporan berdasarkan status
-    final int sentCount = reports.where((r) => r.status.toLowerCase() == 'terkirim').length;
-    final int inProgressCount = reports.where((r) => r.status.toLowerCase() == 'dikerjakan').length;
-    final int doneCount = reports.where((r) => r.status.toLowerCase() == 'selesai').length;
-
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text('Silakan login terlebih dahulu')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -205,218 +97,153 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () async {
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Konfirmasi Logout'),
-                  content: const Text('Apakah Anda yakin ingin keluar?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('BATAL'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('KELUAR'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldLogout == true) {
-                await FirebaseAuth.instance.signOut();
-                if (!mounted) return;
-                Navigator.pushReplacementNamed(context, '/login');
-              }
-            },
+            onPressed: () => _handleLogout(context),
           ),
         ],
       ),
       backgroundColor: Colors.grey[100],
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Progress status dinamis dari provider
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildProgressItem('Terkirim', sentCount.toString(), Colors.blue),
-                  _buildProgressItem('Dikerjakan', inProgressCount.toString(), Colors.orange),
-                  _buildProgressItem('Selesai', doneCount.toString(), Colors.green),
-                ],
-              ),
-            ),
-            // Header dengan tombol Buat Laporan (Tidak berubah)
-            Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Laporkan Masalah Kebersihan',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    InkWell(
-                      onTap: () => Navigator.pushNamed(context, '/create_report'),
-                      child: Container(
-                        // ... (Kode Container Tombol Buat Laporan sama seperti sebelumnya)
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.indigo[600],
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Column(
-                          children: [
-                            Icon(Icons.camera_alt, color: Colors.white, size: 32),
-                            SizedBox(height: 8),
-                            Text('Buat Laporan Baru', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Riwayat Laporan section
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      // ... (Kode Header Riwayat sama)
+        child: RefreshIndicator(
+          onRefresh: () async {
+            // Refresh data dengan invalidate provider
+            ref.invalidate(employeeReportsProvider);
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Progress status cards
+                Container(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: summaryAsync.when(
+                    data: (summary) => Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        Icon(Icons.history),
-                        SizedBox(width: 8),
-                        Text('Riwayat Laporan Anda', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                        _buildProgressItem('Terkirim', summary.pending.toString(), Colors.blue),
+                        _buildProgressItem('Dikerjakan', summary.inProgress.toString(), Colors.orange),
+                        _buildProgressItem('Selesai', summary.completed.toString(), Colors.green),
                       ],
                     ),
-                    const SizedBox(height: 16),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _handleRefresh,
-                        child: reports.isEmpty
-                          ? const Center(child: Text('Belum ada laporan.'))
-                          : ListView.builder(
-                          itemCount: reports.length,
-                          itemBuilder: (context, index) {
-                            final report = reports[index];
-                            return Dismissible(
-                              key: Key(report.id), // Gunakan ID unik dari model
-                              background: Container(
-                                color: Colors.red,
-                                alignment: Alignment.centerRight,
-                                padding: const EdgeInsets.only(right: 16),
-                                child: const Icon(Icons.delete, color: Colors.white),
-                              ),
-                              direction: DismissDirection.endToStart,
-                              confirmDismiss: (direction) async {
-                                return await showDialog(
-                                  context: context,
-                                  builder: (ctx) => AlertDialog(
-                                    title: const Text('Hapus Laporan'),
-                                    content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(ctx).pop(false),
-                                        child: const Text('BATAL'),
-                                      ),
-                                      TextButton(
-                                        onPressed: () => Navigator.of(ctx).pop(true),
-                                        child: const Text('HAPUS'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              onDismissed: (direction) {
-                                final deletedReport = report;
-                                reportProvider.deleteReport(report.id);
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Laporan dihapus'),
-                                    action: SnackBarAction(
-                                      label: 'BATALKAN',
-                                      onPressed: () {
-                                        reportProvider.addReport(deletedReport);
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                              child: Card(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                elevation: 0,
-                                child: ListTile(
-                                  leading: Container(
-                                    // ... (Kode Leading Icon sama)
-                                     padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(Icons.cleaning_services_outlined, color: Colors.indigo),
-                                  ),
-                                  title: Text(
-                                    report.title,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                  ),
-                                  subtitle: Text(_formatDate(report.date)),
-                                  trailing: Container(
-                                    // ... (Kode Trailing Status sama)
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: _getStatusColor(report.status),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(report.status, style: const TextStyle(color: Colors.white, fontSize: 12)),
-                                  ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ReportDetailScreen(
-                                          title: report.title,
-                                          date: _formatDate(report.date),
-                                          status: report.status,
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
+                    loading: () => Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildProgressItem('Terkirim', '...', Colors.blue),
+                        _buildProgressItem('Dikerjakan', '...', Colors.orange),
+                        _buildProgressItem('Selesai', '...', Colors.green),
+                      ],
                     ),
-                  ],
+                    error: (_, __) => Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildProgressItem('Terkirim', '0', Colors.blue),
+                        _buildProgressItem('Dikerjakan', '0', Colors.orange),
+                        _buildProgressItem('Selesai', '0', Colors.green),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+
+                // Header dengan tombol Buat Laporan
+                Card(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Laporkan Masalah Kebersihan',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        InkWell(
+                          onTap: () => Navigator.pushNamed(context, '/create_report'),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: Colors.indigo[600],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Column(
+                              children: [
+                                Icon(Icons.camera_alt, color: Colors.white, size: 32),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Buat Laporan Baru',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Riwayat Laporan section
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.history),
+                          SizedBox(width: 8),
+                          Text(
+                            'Riwayat Laporan Anda',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Reports List
+                      reportsAsync.when(
+                        data: (reports) {
+                          if (reports.isEmpty) {
+                            return _buildEmptyState();
+                          }
+
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: reports.length,
+                            itemBuilder: (context, index) {
+                              final report = reports[index];
+                              return _buildReportCard(report);
+                            },
+                          );
+                        },
+                        loading: () => _buildLoadingState(),
+                        error: (error, stack) => _buildErrorState(error),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
-      // Floating Action Button tidak diubah
       floatingActionButton: FloatingActionButton(
         heroTag: 'add_report_btn',
         onPressed: () {
@@ -426,5 +253,221 @@ class _EmployeeHomeScreenState extends State<EmployeeHomeScreen> {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  Widget _buildReportCard(Report report) {
+    return Dismissible(
+      key: Key(report.id),
+      background: Container(
+        color: Colors.red,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 16),
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Hapus Laporan'),
+            content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('BATAL'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('HAPUS'),
+              ),
+            ],
+          ),
+        );
+      },
+      onDismissed: (direction) async {
+        try {
+          final actions = ref.read(employeeActionsProvider);
+          await actions.deleteReport(report.id);
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Laporan dihapus'),
+                duration: Duration(seconds: 2),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Gagal menghapus: $e'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 8),
+        elevation: 0,
+        child: ListTile(
+          leading: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.cleaning_services_outlined,
+              color: Colors.indigo,
+            ),
+          ),
+          title: Text(
+            report.location,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          subtitle: Text(_formatDate(report.date)),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: _getStatusColor(report.status),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              report.status.displayName,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+              ),
+            ),
+          ),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ReportDetailScreen(
+                  title: report.location,
+                  date: _formatDate(report.date),
+                  status: report.status.displayName,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 64,
+              color: Colors.grey[400],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Belum ada laporan.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Buat laporan pertama Anda!',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[500],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(32),
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red[300],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Terjadi kesalahan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.red[700],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: TextStyle(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                ref.invalidate(employeeReportsProvider);
+              },
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Logout'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('BATAL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('KELUAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 }

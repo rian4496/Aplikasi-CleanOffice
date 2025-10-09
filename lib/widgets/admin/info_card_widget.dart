@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// Reusable card widget untuk menampilkan informasi statistik
-/// di dashboard supervisor
+/// di dashboard admin
 class InfoCard extends StatelessWidget {
   final String title;
   final String value;

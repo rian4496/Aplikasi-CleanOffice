@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/report_model.dart';
-import '../../providers/riverpod/supervisor_providers.dart';
+import '../../providers/riverpod/admin_providers.dart';
 
 /// Screen untuk verifikasi laporan yang sudah selesai dikerjakan
-/// Supervisor dapat menyetujui atau menolak laporan
+/// Admin dapat menyetujui atau menolak laporan
 class VerificationScreen extends ConsumerStatefulWidget {
   final Report report;
 

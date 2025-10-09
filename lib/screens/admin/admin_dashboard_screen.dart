@@ -4,20 +4,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report_status.dart';
 import '../../providers/riverpod/admin_providers.dart';
 import '../../providers/riverpod/report_providers.dart';
-import '../../widgets/supervisor/info_card.dart';
-import '../../widgets/supervisor/report_list_item.dart';
-import '../supervisor/verification_screen.dart';
+import '../../widgets/admin/info_card.dart';
+import '../../widgets/admin/report_list_item.dart';
+import '../admin/verification_screen.dart';
 
-/// Main dashboard screen untuk Supervisor
+/// Main dashboard screen untuk Admin
 /// Menampilkan ringkasan statistik dan daftar laporan yang perlu diverifikasi
-class SupervisorDashboardScreen extends ConsumerStatefulWidget {
-  const SupervisorDashboardScreen({super.key});
+class AdminDashboardScreen extends ConsumerStatefulWidget {
+  const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<SupervisorDashboardScreen> createState() => _SupervisorDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _SupervisorDashboardScreenState extends ConsumerState<SupervisorDashboardScreen> {
+class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -26,7 +26,7 @@ class _SupervisorDashboardScreenState extends ConsumerState<SupervisorDashboardS
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard Supervisor'),
+        title: const Text('Dashboard Admin'),
         backgroundColor: Colors.deepPurple[700],
         elevation: 0,
         automaticallyImplyLeading: false,
@@ -96,7 +96,7 @@ class _SupervisorDashboardScreenState extends ConsumerState<SupervisorDashboardS
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            user?.displayName ?? 'Supervisor',
+                            user?.displayName ?? 'Admin',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,

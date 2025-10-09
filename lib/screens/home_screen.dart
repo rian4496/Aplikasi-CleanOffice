@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aplikasi_cleanoffice/models/user_role.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/cleaner_home_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/supervisor/supervisor_dashboard_screen.dart'; // TAMBAHAN
+import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,7 +42,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // If role not loaded yet, show loading indicator
     if (_userRole == null) {
       return const Scaffold(
         body: Center(
@@ -51,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Check authentication and role
     final userRef = FirebaseAuth.instance.currentUser;
     if (userRef == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -60,15 +58,14 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox();
     }
 
-    // Redirect to role-specific screen or show error
+    // Redirect berdasarkan role
     if (_userRole == UserRole.employee) {
       return const EmployeeHomeScreen();
     } else if (_userRole == UserRole.cleaner) {
       return const CleanerHomeScreen();
-    } else if (_userRole == UserRole.supervisor) { // TAMBAHAN
-      return const SupervisorDashboardScreen();
+    } else if (_userRole == UserRole.admin) {
+      return const AdminDashboardScreen();
     } else {
-      // Show error for invalid role
       return Scaffold(
         body: Center(
           child: Column(

@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/report_model.dart';
 
 /// Widget untuk menampilkan item laporan dalam list
-/// Digunakan di supervisor dashboard dan verification screen
+/// Digunakan di admin dashboard dan verification screen
 class ReportListItem extends StatelessWidget {
   final Report report;
   final VoidCallback? onTap;

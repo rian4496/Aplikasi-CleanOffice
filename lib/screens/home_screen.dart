@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aplikasi_cleanoffice/models/user_role.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/cleaner_home_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/supervisor/supervisor_dashboard_screen.dart'; // TAMBAHAN
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -64,6 +65,8 @@ class _HomeScreenState extends State<HomeScreen> {
       return const EmployeeHomeScreen();
     } else if (_userRole == UserRole.cleaner) {
       return const CleanerHomeScreen();
+    } else if (_userRole == UserRole.supervisor) { // TAMBAHAN
+      return const SupervisorDashboardScreen();
     } else {
       // Show error for invalid role
       return Scaffold(
@@ -71,14 +74,39 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text('Peran tidak valid'),
-              TextButton(
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red[300],
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Peran tidak valid',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Role: $_userRole',
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
                 onPressed: () async {
                   await FirebaseAuth.instance.signOut();
                   if (!mounted) return;
                   Navigator.pushReplacementNamed(context, '/login');
                 },
-                child: const Text('Kembali ke Login'),
+                icon: const Icon(Icons.logout),
+                label: const Text('Kembali ke Login'),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                ),
               ),
             ],
           ),

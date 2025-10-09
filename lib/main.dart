@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart' show Firebase;
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // TAMBAHAN
 import 'package:logging/logging.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -10,6 +11,7 @@ import 'providers/work_schedule_provider.dart';
 import 'package:aplikasi_cleanoffice/screens/create_report_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/login_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/supervisor/supervisor_dashboard_screen.dart'; // TAMBAHAN
 
 // Fungsi main diubah menjadi async
 void main() async {
@@ -34,7 +36,12 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
   
-  runApp(const MyApp());
+  // PENTING: Wrap dengan ProviderScope untuk Riverpod
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -42,26 +49,29 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hybrid approach: Provider lama tetap digunakan untuk fitur existing
+    // Riverpod untuk fitur supervisor baru
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => UserProfileProvider()),
         ChangeNotifierProvider(create: (_) => WorkScheduleProvider()),
       ],
       child: MaterialApp(
-      title: 'Clean Office',
-      theme: ThemeData(
-        primarySwatch: Colors.indigo,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        scaffoldBackgroundColor: Colors.grey[50],
+        title: 'Clean Office',
+        theme: ThemeData(
+          primarySwatch: Colors.indigo,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+          scaffoldBackgroundColor: Colors.grey[50],
+        ),
+        initialRoute: '/login',
+        // Tambahkan route baru untuk supervisor
+        routes: {
+          '/login': (context) => const LoginScreen(),
+          '/home_employee': (context) => const EmployeeHomeScreen(),
+          '/home_supervisor': (context) => const SupervisorDashboardScreen(), // TAMBAHAN
+          '/create_report': (context) => const CreateReportScreen(),
+        },
       ),
-      initialRoute: '/login',
-      // Pastikan semua rute sudah terdaftar
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/home_employee': (context) => const EmployeeHomeScreen(),
-        '/create_report': (context) => const CreateReportScreen(),
-      },
-    ),
     );
   }
 }

@@ -42,6 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // If role not loaded yet, show loading indicator
     if (_userRole == null) {
       return const Scaffold(
         body: Center(
@@ -50,6 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
+    // Check authentication and role
     final userRef = FirebaseAuth.instance.currentUser;
     if (userRef == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,14 +60,15 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox();
     }
 
-    // Redirect berdasarkan role
+    // Redirect to role-specific screen or show error
     if (_userRole == UserRole.employee) {
       return const EmployeeHomeScreen();
     } else if (_userRole == UserRole.cleaner) {
       return const CleanerHomeScreen();
-    } else if (_userRole == UserRole.admin) {
+    } else if (_userRole == UserRole.supervisor) { // TAMBAHAN
       return const AdminDashboardScreen();
     } else {
+      // Show error for invalid role
       return Scaffold(
         body: Center(
           child: Column(

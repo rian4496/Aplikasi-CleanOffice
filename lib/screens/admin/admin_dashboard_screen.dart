@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/report_status.dart';
+import '../../models/report_status_enum.dart';
 import '../../providers/riverpod/admin_providers.dart';
 import '../../providers/riverpod/report_providers.dart';
-import '../../widgets/admin/info_card.dart';
-import '../../widgets/admin/report_list_item.dart';
+import '../../widgets/admin/info_card_widget.dart';
+import '../../widgets/admin/report_list_item_widget.dart';
 import '../admin/verification_screen.dart';
 
 /// Main dashboard screen untuk Admin

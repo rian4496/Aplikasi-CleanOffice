@@ -4,9 +4,9 @@
 /// 1. pending - Laporan baru dibuat oleh employee, menunggu petugas
 /// 2. assigned - Sudah ditugaskan ke petugas tertentu
 /// 3. inProgress - Petugas sedang mengerjakan
-/// 4. completed - Petugas selesai, menunggu verifikasi supervisor
-/// 5. verified - Supervisor sudah memverifikasi dan menyetujui
-/// 6. rejected - Ditolak oleh supervisor, perlu dikerjakan ulang
+/// 4. completed - Petugas selesai, menunggu verifikasi admin
+/// 5. verified - Admin sudah memverifikasi dan menyetujui
+/// 6. rejected - Ditolak oleh admin, perlu dikerjakan ulang
 enum ReportStatus {
   pending,
   assigned,
@@ -108,8 +108,8 @@ enum ReportStatus {
     }
   }
 
-  /// Check apakah status ini memerlukan action dari supervisor
-  bool get needsSupervisorAction {
+  /// Check apakah status ini memerlukan action dari admin
+  bool get needsAdminAction {
     return this == ReportStatus.completed;
   }
 

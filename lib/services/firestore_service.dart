@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
 import '../models/report_model.dart';
-import '../models/report_status.dart';
+import '../models/report_status_enum.dart';
 
 /// Service layer untuk interaksi dengan Firestore
 /// Memisahkan business logic dari UI layer

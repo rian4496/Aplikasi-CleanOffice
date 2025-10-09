@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/report_model.dart';
-import '../../models/report_status.dart';
+import '../../models/report_status_enum.dart';
 import '../../models/user_profile.dart';
 import './report_providers.dart';
 
@@ -14,12 +14,10 @@ final currentUserProvider = StreamProvider<User?>((ref) {
 });
 
 /// Provider untuk current user profile
-final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) async* {
-  final userAsync = ref.watch(currentUserProvider);
-  
-  await for (final user in userAsync.stream) {
+final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
+  return FirebaseAuth.instance.authStateChanges().asyncMap((user) async {
     if (user == null) {
-      yield null;
+      return null;
     } else {
       final docSnapshot = await FirebaseFirestore.instance
           .collection('users')
@@ -27,12 +25,12 @@ final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) async* {
           .get();
       
       if (docSnapshot.exists) {
-        yield UserProfile.fromMap(docSnapshot.data()!..['uid'] = user.uid);
+        return UserProfile.fromMap(docSnapshot.data()!..['uid'] = user.uid);
       } else {
-        yield null;
+        return null;
       }
     }
-  }
+  });
 });
 
 /// Provider untuk department ID dari current user

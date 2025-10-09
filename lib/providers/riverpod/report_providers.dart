@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report_model.dart';
-import '../../models/report_status.dart';
+import '../../models/report_status_enum.dart';
 import '../../services/firestore_service.dart';
 
 // ==================== SERVICE PROVIDER ====================
@@ -91,9 +91,9 @@ final cleanerStatsProvider = FutureProvider.family<Map<String, dynamic>, String>
   return service.getCleanerStats(cleanerId);
 });
 
-// ==================== STATE NOTIFIER PROVIDERS ====================
+// ==================== NOTIFIER PROVIDERS (Riverpod 3.0+) ====================
 
-/// StateNotifier untuk mengelola filter dan sorting laporan
+/// State class untuk filter dan sorting laporan
 class ReportFilterState {
   final ReportStatus? statusFilter;
   final bool showUrgentOnly;
@@ -129,8 +129,12 @@ enum ReportSortBy {
   location,
 }
 
-class ReportFilterNotifier extends StateNotifier<ReportFilterState> {
-  ReportFilterNotifier() : super(const ReportFilterState());
+/// Notifier untuk mengelola filter dan sorting laporan (Riverpod 3.0+)
+class ReportFilterNotifier extends Notifier<ReportFilterState> {
+  @override
+  ReportFilterState build() {
+    return const ReportFilterState();
+  }
 
   void setStatusFilter(ReportStatus? status) {
     state = state.copyWith(statusFilter: status);
@@ -153,7 +157,7 @@ class ReportFilterNotifier extends StateNotifier<ReportFilterState> {
   }
 }
 
-final reportFilterProvider = StateNotifierProvider<ReportFilterNotifier, ReportFilterState>((ref) {
+final reportFilterProvider = NotifierProvider<ReportFilterNotifier, ReportFilterState>(() {
   return ReportFilterNotifier();
 });
 

@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'report_status.dart';
+import 'package:aplikasi_cleanoffice/models/report_status_enum.dart' show ReportStatus;
 
 /// Model untuk laporan kebersihan yang diperluas dengan field-field tambahan
 /// untuk mendukung workflow lengkap dari pembuatan hingga verifikasi

@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/user_profile_provider.dart';
+import 'cleaner/request_detail_screen.dart';
 
 class CleanerHomeScreen extends StatefulWidget {
   const CleanerHomeScreen({super.key});
@@ -59,6 +60,7 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           // Refresh data
+          if (!mounted) return;
           await Provider.of<UserProfileProvider>(context, listen: false)
               .loadUserProfile();
         },
@@ -263,7 +265,14 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
                     ),
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () {
-                      // TODO: Navigate to request detail
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RequestDetailScreen(
+                            requestId: doc.id,
+                          ),
+                        ),
+                      );
                     },
                   );
                 },

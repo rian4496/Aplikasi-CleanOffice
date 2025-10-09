@@ -38,7 +38,7 @@ class WorkScheduleProvider extends ChangeNotifier {
   Future<void> addSchedule(WorkSchedule schedule) async {
     try {
       _error = null;
-      final docRef = await _firestore
+      await _firestore
           .collection('schedules')
           .add(schedule.toMap());
 
@@ -48,7 +48,7 @@ class WorkScheduleProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -68,7 +68,7 @@ class WorkScheduleProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 
@@ -85,7 +85,7 @@ class WorkScheduleProvider extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       notifyListeners();
-      throw e;
+      rethrow;
     }
   }
 

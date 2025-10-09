@@ -37,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     if (_passwordController.text != _confirmPasswordController.text) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Password tidak cocok'),
@@ -59,12 +60,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
         password: _passwordController.text.trim(),
       );
 
-      if (!mounted) return;
-
       // Update user profile
       await userCredential.user?.updateDisplayName(_nameController.text.trim());
       
       _logger.info('User account created successfully');
+
+      if (!mounted) return;
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
@@ -80,6 +81,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     } on FirebaseAuthException catch (e) {
       _logger.warning('Registration failed', e);
+      
       if (!mounted) return;
 
       String errorMessage;
@@ -109,6 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
     } catch (e) {
       _logger.severe('Unexpected error during registration', e);
+      
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

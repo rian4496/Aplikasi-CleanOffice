@@ -109,7 +109,7 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
       _logger.logAuth('login_success', userId: userCredential.user?.uid);
       state = const AsyncValue.data(null);
     } on FirebaseAuthException catch (e, stackTrace) {
-      _logger.logAuth('login_failed', error: e);
+      _logger.logAuth('login_failed', err: e);
       final exception = AuthException.fromFirebaseAuth(e);
       state = AsyncValue.error(exception, stackTrace);
       rethrow;
@@ -164,7 +164,7 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
       _logger.logAuth('registration_success', userId: user.uid);
       state = const AsyncValue.data(null);
     } on FirebaseAuthException catch (e, stackTrace) {
-      _logger.logAuth('registration_failed', error: e);
+      _logger.logAuth('registration_failed', err: e);
       final exception = AuthException.fromFirebaseAuth(e);
       state = AsyncValue.error(exception, stackTrace);
       rethrow;

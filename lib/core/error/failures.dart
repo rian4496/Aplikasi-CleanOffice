@@ -1,5 +1,6 @@
 /// Failures untuk presentation layer
 /// Digunakan untuk menampilkan error ke user dengan format yang user-friendly
+library;
 
 import 'package:equatable/equatable.dart';
 import 'exceptions.dart';

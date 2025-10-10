@@ -1,10 +1,12 @@
+/// Service layer untuk interaksi dengan Firestore
+/// Memisahkan business logic dari UI layer
+library;
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
 import '../models/report_model.dart';
 import '../models/report_status_enum.dart';
 
-/// Service layer untuk interaksi dengan Firestore
-/// Memisahkan business logic dari UI layer
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
   factory FirestoreService() => _instance;
@@ -37,14 +39,13 @@ class FirestoreService {
             return Report.fromFirestore(doc);
           } catch (e) {
             _logger.warning('Error parsing report ${doc.id}: $e');
-            // Return null dan filter nanti
             return null;
           }
-        }).whereType<Report>().toList(); // Filter null values
+        }).whereType<Report>().toList();
       });
     } catch (e) {
       _logger.severe('Error getting all reports: $e');
-      return Stream.value([]); // Return empty stream on error
+      return Stream.value([]);
     }
   }
 
@@ -184,7 +185,6 @@ class FirestoreService {
       });
     } catch (e) {
       _logger.severe('Error getting today completed reports: $e');
-      // Fallback query tanpa completedAt filter
       return getReportsByStatus(ReportStatus.completed, departmentId: departmentId);
     }
   }

@@ -76,78 +76,7 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        // Material 3
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: AppConstants.primaryColor,
-          brightness: Brightness.light,
-        ),
-        
-        // Typography
-        textTheme: const TextTheme(
-          displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w400),
-          displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w400),
-          displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w400),
-          headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w400),
-          headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w400),
-          headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w400),
-          titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
-          titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
-          bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
-          bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
-          labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-          labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-        ),
-        
-        // Card theme
-        cardTheme: CardTheme(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-        ),
-        
-        // Input decoration
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.grey[50],
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.defaultPadding,
-            vertical: AppConstants.defaultPadding,
-          ),
-        ),
-        
-        // Elevated button
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            elevation: 2,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.largePadding,
-              vertical: AppConstants.defaultPadding,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-            ),
-          ),
-        ),
-        
-        // App bar
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: false,
-          scrolledUnderElevation: 2,
-        ),
-        
-        // Scaffold
-        scaffoldBackgroundColor: Colors.grey[50],
-      ),
+      theme: _buildTheme(),
       
       // Routes
       initialRoute: AppConstants.loginRoute,
@@ -176,6 +105,82 @@ class MyApp extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  /// Build theme untuk aplikasi
+  ThemeData _buildTheme() {
+    return ThemeData(
+      // Material 3
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppConstants.primaryColor,
+        brightness: Brightness.light,
+      ),
+      
+      // Typography
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(fontSize: 57, fontWeight: FontWeight.w400),
+        displayMedium: TextStyle(fontSize: 45, fontWeight: FontWeight.w400),
+        displaySmall: TextStyle(fontSize: 36, fontWeight: FontWeight.w400),
+        headlineLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.w400),
+        headlineMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.w400),
+        headlineSmall: TextStyle(fontSize: 24, fontWeight: FontWeight.w400),
+        titleLarge: TextStyle(fontSize: 22, fontWeight: FontWeight.w500),
+        titleMedium: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+        titleSmall: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        bodyLarge: TextStyle(fontSize: 16, fontWeight: FontWeight.w400),
+        bodyMedium: TextStyle(fontSize: 14, fontWeight: FontWeight.w400),
+        bodySmall: TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
+        labelLarge: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+        labelMedium: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
+      ),
+      
+      // Card theme - FIXED: Gunakan CardThemeData bukan CardTheme
+      cardTheme: CardThemeData(
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+        ),
+      ),
+      
+      // Input decoration
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.grey[50],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.defaultPadding,
+          vertical: AppConstants.defaultPadding,
+        ),
+      ),
+      
+      // Elevated button
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          elevation: 2,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.largePadding,
+            vertical: AppConstants.defaultPadding,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+          ),
+        ),
+      ),
+      
+      // App bar
+      appBarTheme: const AppBarTheme(
+        elevation: 0,
+        centerTitle: false,
+        scrolledUnderElevation: 2,
+      ),
+      
+      // Scaffold
+      scaffoldBackgroundColor: Colors.grey[50],
     );
   }
 }

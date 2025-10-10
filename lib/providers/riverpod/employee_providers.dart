@@ -83,7 +83,12 @@ final employeeUrgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final reportsAsync = ref.watch(employeeReportsProvider);
   
   return reportsAsync.whenData((reports) {
-    return reports.where((r) => r.isUrgent && !r.isFinal).toList();
+    // FIXED: Ganti r.isFinal dengan kondisi langsung
+    return reports.where((r) {
+      return r.isUrgent && 
+             r.status != ReportStatus.verified && 
+             r.status != ReportStatus.rejected;
+    }).toList();
   });
 });
 

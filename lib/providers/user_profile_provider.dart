@@ -47,7 +47,7 @@ class UserProfileProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Error updating user profile: $e');
-      throw e;
+      rethrow;
     }
   }
 }

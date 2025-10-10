@@ -4,26 +4,27 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import '../models/user_profile.dart';
-import '../providers/user_profile_provider.dart';
+import '../providers/riverpod/profile_providers.dart';
+import '../providers/riverpod/auth_providers.dart';
 
-class EditProfileScreen extends StatefulWidget {
+class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  ConsumerState<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _auth = FirebaseAuth.instance;
   final _storage = FirebaseStorage.instance;
   final _picker = ImagePicker();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
-  late TextEditingController _departmentController;
+  late TextEditingController _locationController;
   late TextEditingController _employeeIdController;
   bool _isSaving = false;
   File? _imageFile;
@@ -35,32 +36,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.initState();
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
-    _departmentController = TextEditingController();
+    _locationController = TextEditingController();
     _employeeIdController = TextEditingController();
     _loadUserProfile();
   }
 
   Future<void> _loadUserProfile() async {
-    final provider = Provider.of<UserProfileProvider>(context, listen: false);
-    await provider.loadUserProfile();
-    final profile = provider.userProfile;
-    if (profile != null) {
-      setState(() {
-        _userProfile = profile;
-        _nameController.text = profile.displayName;
-        _phoneController.text = profile.phoneNumber ?? '';
-        _departmentController.text = profile.department ?? '';
-        _employeeIdController.text = profile.employeeId ?? '';
-        _currentPhotoUrl = profile.photoURL;
-      });
-    }
+    final profileAsync = ref.read(currentUserProfileProvider);
+    profileAsync.whenData((profile) {
+      if (profile != null && mounted) {
+        setState(() {
+          _userProfile = profile;
+          _nameController.text = profile.displayName;
+          _phoneController.text = profile.phoneNumber ?? '';
+          _locationController.text = profile.location ?? '';
+          _employeeIdController.text = profile.employeeId ?? '';
+          _currentPhotoUrl = profile.photoURL;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _departmentController.dispose();
+    _locationController.dispose();
     _employeeIdController.dispose();
     super.dispose();
   }
@@ -104,6 +105,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
       }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error picking image: ${e.toString()}'),
@@ -165,6 +167,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final user = _auth.currentUser;
       if (user != null) {
         await user.updatePhotoURL(null);
+        if (!mounted) return;
         setState(() {
           _currentPhotoUrl = null;
           _imageFile = null;
@@ -202,7 +205,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       final user = _auth.currentUser;
       if (user == null) return null;
 
-      final ref = _storage
+      final storageRef = _storage
           .ref()
           .child('profile_pictures')
           .child('${user.uid}.jpg');
@@ -211,14 +214,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         try {
           await _storage.refFromURL(_currentPhotoUrl!).delete();
         } catch (e) {
-          print('Error deleting old photo: $e');
+          debugPrint('Error deleting old photo: $e');
         }
       }
 
-      final uploadTask = await ref.putFile(_imageFile!);
+      final uploadTask = await storageRef.putFile(_imageFile!);
       return await uploadTask.ref.getDownloadURL();
     } catch (e) {
-      print('Error uploading image: $e');
+      debugPrint('Error uploading image: $e');
       return null;
     }
   }
@@ -247,12 +250,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           displayName: _nameController.text.trim(),
           photoURL: photoUrl,
           phoneNumber: _phoneController.text.trim(),
-          department: _departmentController.text.trim(),
+          location: _locationController.text.trim(),
           employeeId: _employeeIdController.text.trim(),
         );
 
-        final provider = Provider.of<UserProfileProvider>(context, listen: false);
-        await provider.updateProfile(updatedProfile);
+        final profileActions = ref.read(profileActionsProvider.notifier);
+        await profileActions.updateProfile(updatedProfile);
         
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -261,6 +264,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        if (!mounted) return;
         Navigator.pop(context, true);
       }
     } catch (e) {
@@ -402,10 +406,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _departmentController,
+                controller: _locationController,
                 decoration: const InputDecoration(
-                  labelText: 'Departemen',
-                  prefixIcon: Icon(Icons.business),
+                  labelText: 'Lokasi Kerja',
+                  prefixIcon: Icon(Icons.location_on),
                   border: OutlineInputBorder(),
                 ),
                 enabled: !_isSaving,

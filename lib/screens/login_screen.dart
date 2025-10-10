@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth, FirebaseAuthException;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/user_profile.dart';
 import 'register_screen.dart';
 import 'reset_password_screen.dart';
 
@@ -24,10 +26,47 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  /// FIXED: Auto-create profile jika belum ada
+  Future<void> _ensureUserProfile(User user) async {
+    try {
+      final firestore = FirebaseFirestore.instance;
+      final userDoc = await firestore.collection('users').doc(user.uid).get();
+
+      // Jika profile belum ada, buat profile baru
+      if (!userDoc.exists) {
+        debugPrint('Creating user profile for ${user.email}');
+        
+        // Tentukan role default berdasarkan email
+        String role = 'employee'; // default
+        if (user.email?.contains('admin') == true) {
+          role = 'supervisor';
+        } else if (user.email?.contains('cleaner') == true || 
+                   user.email?.contains('petugas') == true) {
+          role = 'cleaner';
+        }
+
+        final profile = UserProfile(
+          uid: user.uid,
+          displayName: user.displayName ?? user.email?.split('@')[0] ?? 'User',
+          email: user.email ?? '',
+          role: role,
+          joinDate: DateTime.now(),
+          status: 'active',
+        );
+
+        await firestore.collection('users').doc(user.uid).set(profile.toMap());
+        debugPrint('User profile created successfully with role: $role');
+      }
+    } catch (e) {
+      debugPrint('Error ensuring user profile: $e');
+      rethrow;
+    }
+  }
+
+  /// FIXED: Login dengan auto-create profile
   Future<void> _login() async {
     if (_isLoading) return;
 
-    // Validate form first
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -37,202 +76,65 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      // Step 1: Login ke Firebase Authentication
+      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Cek mounted sebelum navigasi
+      if (userCredential.user == null) {
+        throw Exception('Login failed: No user returned');
+      }
+
+      // Step 2: Pastikan user profile ada di Firestore
+      await _ensureUserProfile(userCredential.user!);
+
+      // Step 3: Load user role untuk routing
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home_employee');
+
+      if (!userDoc.exists) {
+        throw Exception('User profile not found');
+      }
+
+      final userData = userDoc.data()!;
+      final userRole = userData['role'] as String?;
+
+      // Step 4: Navigate berdasarkan role
+      String route;
+      switch (userRole) {
+        case 'supervisor':
+          route = '/home_admin';
+          break;
+        case 'cleaner':
+          route = '/home_cleaner';
+          break;
+        case 'employee':
+        default:
+          route = '/home_employee';
+          break;
+      }
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, route);
 
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
+      _handleAuthError(e);
+    } catch (e) {
+      if (!mounted) return;
       
-      String errorMessage;
-      String actionLabel = 'OK';
-      VoidCallback? actionCallback;
-
-      switch (e.code) {
-        case 'user-not-found':
-          errorMessage = 'Email belum terdaftar';
-          actionLabel = 'DAFTAR';
-          actionCallback = () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const RegisterScreen()),
-            );
-          };
-          break;
-          
-        case 'wrong-password':
-          errorMessage = 'Password salah. Silakan coba lagi';
-          actionLabel = 'RESET';
-          actionCallback = () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ResetPasswordScreen(
-                  initialEmail: _emailController.text,
-                ),
-              ),
-            );
-          };
-          break;
-          
-        case 'invalid-email':
-          errorMessage = 'Format email tidak valid';
-          break;
-          
-        case 'user-disabled':
-          errorMessage = 'Akun ini telah dinonaktifkan. Silakan hubungi admin';
-          actionLabel = 'HUBUNGI';
-          actionCallback = () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            showDialog(
-              context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Hubungi Admin'),
-                content: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Silakan hubungi admin melalui:'),
-                    SizedBox(height: 8),
-                    Text('Email: admin@cleanoffice.com'),
-                    Text('Telp: (021) 123-4567'),
-                  ],
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('TUTUP'),
-                  ),
-                ],
-              ),
-            );
-          };
-          break;
-          
-        case 'too-many-requests':
-          errorMessage = 'Terlalu banyak percobaan. Silakan tunggu beberapa saat';
-          // Tampilkan dialog dengan informasi lebih detail
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Terlalu Banyak Percobaan'),
-              content: const Text(
-                'Untuk keamanan akun Anda, silakan tunggu beberapa saat sebelum mencoba login kembali. '
-                'Jika Anda lupa password, gunakan fitur Reset Password.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('MENGERTI'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ResetPasswordScreen(
-                          initialEmail: _emailController.text,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text('RESET PASSWORD'),
-                ),
-              ],
-            ),
-          );
-          break;
-          
-        case 'network-request-failed':
-          errorMessage = 'Koneksi internet bermasalah. Periksa koneksi Anda';
-          actionLabel = 'COBA LAGI';
-          actionCallback = () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            _login();
-          };
-          break;
-          
-        default:
-          errorMessage = e.message ?? 'Terjadi kesalahan saat login';
-          // Tampilkan dialog untuk error yang tidak terduga
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Error'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Terjadi kesalahan yang tidak terduga:'),
-                  const SizedBox(height: 8),
-                  Text(
-                    e.message ?? 'Unknown error',
-                    style: const TextStyle(fontFamily: 'monospace'),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('TUTUP'),
-                ),
-              ],
-            ),
-          );
-      }
-
-      // Tampilkan Snackbar untuk semua jenis error
+      debugPrint('Login error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(errorMessage),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
-          action: SnackBarAction(
-            label: actionLabel,
-            textColor: Colors.white,
-            onPressed: actionCallback ?? () {
-              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            },
-          ),
-        ),
-      );
-
-    } on Exception catch (e) {
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Terjadi kesalahan tak terduga'),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'DETAIL',
-            textColor: Colors.white,
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Detail Error'),
-                  content: Text(e.toString()),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('TUTUP'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
         ),
       );
     } finally {
@@ -242,6 +144,79 @@ class _LoginScreenState extends State<LoginScreen> {
         });
       }
     }
+  }
+
+  void _handleAuthError(FirebaseAuthException e) {
+    String errorMessage;
+    String actionLabel = 'OK';
+    VoidCallback? actionCallback;
+
+    switch (e.code) {
+      case 'user-not-found':
+        errorMessage = 'Email belum terdaftar';
+        actionLabel = 'DAFTAR';
+        actionCallback = () {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+          );
+        };
+        break;
+        
+      case 'wrong-password':
+        errorMessage = 'Password salah. Silakan coba lagi';
+        actionLabel = 'RESET';
+        actionCallback = () {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ResetPasswordScreen(
+                initialEmail: _emailController.text,
+              ),
+            ),
+          );
+        };
+        break;
+        
+      case 'invalid-email':
+        errorMessage = 'Format email tidak valid';
+        break;
+        
+      case 'user-disabled':
+        errorMessage = 'Akun ini telah dinonaktifkan';
+        break;
+        
+      case 'too-many-requests':
+        errorMessage = 'Terlalu banyak percobaan. Tunggu sebentar';
+        break;
+        
+      case 'network-request-failed':
+        errorMessage = 'Koneksi internet bermasalah';
+        break;
+        
+      default:
+        errorMessage = e.message ?? 'Terjadi kesalahan saat login';
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(errorMessage),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(
+          label: actionLabel,
+          textColor: Colors.white,
+          onPressed: actionCallback ?? () {
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+          },
+        ),
+      ),
+    );
   }
 
   @override
@@ -297,10 +272,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       prefixIcon: const Icon(Icons.email),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -327,17 +298,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.grey,
                         ),
                         onPressed: () {
                           setState(() {
                             _obscurePassword = !_obscurePassword;
                           });
                         },
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
                       ),
                     ),
                     obscureText: _obscurePassword,
@@ -346,9 +312,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Password tidak boleh kosong';
-                      }
-                      if (value.length < 6) {
-                        return 'Password minimal 6 karakter';
                       }
                       return null;
                     },
@@ -384,8 +347,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       backgroundColor: Colors.indigo[600],
                       foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.indigo[200],
-                      padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                     child: _isLoading
                         ? const SizedBox(

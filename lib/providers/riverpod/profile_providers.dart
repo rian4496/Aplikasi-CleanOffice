@@ -1,6 +1,8 @@
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_profile.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
@@ -23,6 +25,8 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
   }
 
   FirebaseStorage get _storage => ref.read(firebaseStorageProvider);
+  FirebaseAuth get _auth => ref.read(firebaseAuthProvider);
+  FirebaseFirestore get _firestore => ref.read(firestoreProvider);
 
   /// Update user profile
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -31,8 +35,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Updating profile for user: ${updatedProfile.uid}');
       
-      final firestore = ref.read(firestoreProvider);
-      await firestore
+      await _firestore
           .collection('users')
           .doc(updatedProfile.uid)
           .update(updatedProfile.toMap());
@@ -90,16 +93,14 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
       _logger.info('Deleting profile picture for user: $userId');
       
       // Delete from storage
-      final ref = _storage.refFromURL(photoUrl);
-      await ref.delete();
+      final storageRef = _storage.refFromURL(photoUrl);
+      await storageRef.delete();
       
       // Update user profile
-      final auth = ref.read(firebaseAuthProvider);
-      await auth.currentUser?.updatePhotoURL(null);
+      await _auth.currentUser?.updatePhotoURL(null);
       
       // Update Firestore
-      final firestore = ref.read(firestoreProvider);
-      await firestore
+      await _firestore
           .collection('users')
           .doc(userId)
           .update({'photoURL': null});
@@ -131,8 +132,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
       final photoUrl = await uploadProfilePicture(imageFile, profile.uid);
       
       // Update auth profile
-      final auth = ref.read(firebaseAuthProvider);
-      await auth.currentUser?.updatePhotoURL(photoUrl);
+      await _auth.currentUser?.updatePhotoURL(photoUrl);
       
       // Update profile with new photo URL
       final updatedProfile = profile.copyWith(photoURL: photoUrl);
@@ -177,5 +177,17 @@ final currentUserSchedulesProvider = StreamProvider<List<dynamic>>((ref) {
   if (userId == null) {
     return Stream.value([]);
   }
-  return ref.watch(userSchedulesProvider(userId).stream);
+  // FIXED: Tidak perlu .stream karena userSchedulesProvider sudah StreamProvider
+  final firestore = ref.watch(firestoreProvider);
+  
+  return firestore
+      .collection('schedules')
+      .where('userId', isEqualTo: userId)
+      .orderBy('createdAt', descending: true)
+      .snapshots()
+      .map((snapshot) {
+    return snapshot.docs.map((doc) {
+      return doc.data();
+    }).toList();
+  });
 });

@@ -1,5 +1,6 @@
 /// Custom exceptions untuk aplikasi Clean Office
 /// Digunakan di data layer (services, repositories)
+library;
 
 /// Base exception class
 abstract class AppException implements Exception {
@@ -169,6 +170,8 @@ class ValidationException extends AppException {
     required super.message,
     this.fieldErrors,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 
   bool hasFieldError(String field) => fieldErrors?.containsKey(field) ?? false;
@@ -180,6 +183,8 @@ class NotFoundException extends AppException {
   const NotFoundException({
     required super.message,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 
@@ -188,6 +193,8 @@ class UnauthorizedException extends AppException {
   const UnauthorizedException({
     required super.message,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 
@@ -196,6 +203,8 @@ class NetworkException extends AppException {
   const NetworkException({
     required super.message,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 
@@ -207,6 +216,8 @@ class ServerException extends AppException {
     required super.message,
     this.statusCode,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 
@@ -215,6 +226,8 @@ class CacheException extends AppException {
   const CacheException({
     required super.message,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 
@@ -223,6 +236,8 @@ class FormatException extends AppException {
   const FormatException({
     required super.message,
     super.code,
+    super.originalError,
+    super.stackTrace,
   });
 }
 

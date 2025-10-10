@@ -1,19 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../providers/user_profile_provider.dart';
 import 'cleaner/request_detail_screen.dart';
 
-class CleanerHomeScreen extends StatefulWidget {
+class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
 
   @override
-  State<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
+  ConsumerState<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
 }
 
-class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
+class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -59,10 +58,9 @@ class _CleanerHomeScreenState extends State<CleanerHomeScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () async {
-          // Refresh data
+          // Refresh data dengan setState
           if (!mounted) return;
-          await Provider.of<UserProfileProvider>(context, listen: false)
-              .loadUserProfile();
+          setState(() {});
         },
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import '../../providers/riverpod/auth_providers.dart';
+import '../../providers/riverpod/cleaner_providers.dart';
 
-/// Screen untuk menampilkan detail permintaan kebersihan
-/// dan memungkinkan cleaner untuk accept, start, complete request
-class RequestDetailScreen extends StatefulWidget {
+final _logger = AppLogger('RequestDetailScreen');
+
+class RequestDetailScreen extends ConsumerStatefulWidget {
   final String requestId;
 
   const RequestDetailScreen({
@@ -14,122 +19,100 @@ class RequestDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<RequestDetailScreen> createState() => _RequestDetailScreenState();
+  ConsumerState<RequestDetailScreen> createState() => _RequestDetailScreenState();
 }
 
-class _RequestDetailScreenState extends State<RequestDetailScreen> {
+class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
   bool _isProcessing = false;
 
   @override
   Widget build(BuildContext context) {
+    final requestAsync = ref.watch(requestByIdProvider(widget.requestId));
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detail Permintaan'),
         backgroundColor: Colors.indigo[700],
       ),
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('requests')
-            .doc(widget.requestId)
-            .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                ],
-              ),
-            );
+      body: requestAsync.when(
+        data: (request) {
+          if (request == null) {
+            return _buildNotFoundState();
           }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text('Permintaan tidak ditemukan'),
-            );
-          }
-
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final status = data['status'] as String? ?? 'pending';
-          final isUrgent = data['isUrgent'] as bool? ?? false;
-
-          return SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Header dengan status
-                _buildHeader(data, status, isUrgent),
-
-                // Content
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Foto jika ada
-                      if (data['imageUrl'] != null && 
-                          (data['imageUrl'] as String).isNotEmpty)
-                        _buildImage(data['imageUrl'] as String),
-
-                      const SizedBox(height: 16),
-
-                      // Informasi Detail
-                      _buildInfoSection('Lokasi', data['location'] as String? ?? '-', 
-                          Icons.location_on),
-                      const SizedBox(height: 12),
-                      
-                      _buildInfoSection('Deskripsi', 
-                          data['description'] as String? ?? '-', 
-                          Icons.description),
-                      const SizedBox(height: 12),
-
-                      _buildInfoSection('Pelapor', 
-                          data['requesterName'] as String? ?? '-', 
-                          Icons.person),
-                      const SizedBox(height: 12),
-
-                      if (data['requesterEmail'] != null)
-                        _buildInfoSection('Email', 
-                            data['requesterEmail'] as String, 
-                            Icons.email),
-
-                      const SizedBox(height: 12),
-                      
-                      _buildInfoSection('Dibuat', 
-                          _formatDateTime(data['createdAt']), 
-                          Icons.calendar_today),
-
-                      const SizedBox(height: 24),
-
-                      // Timeline
-                      _buildTimeline(data),
-
-                      const SizedBox(height: 24),
-
-                      // Action Buttons
-                      _buildActionButtons(status, data),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          );
+          return _buildContent(request);
         },
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stack) => _buildErrorState(error.toString()),
       ),
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> data, String status, bool isUrgent) {
-    Color statusColor = _getStatusColor(status);
-    String statusText = _getStatusText(status);
+  Widget _buildContent(Map<String, dynamic> request) {
+    final status = request['status'] as String? ?? 'pending';
+    final isUrgent = request['isUrgent'] as bool? ?? false;
+    final currentUserId = ref.watch(currentUserIdProvider);
+    final assignedCleanerId = request['cleanerId'] as String?;
 
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          _buildHeader(request, status, isUrgent),
+
+          // Content
+          Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Image if exists
+                if (request['imageUrl'] != null && (request['imageUrl'] as String).isNotEmpty)
+                  _buildImage(request['imageUrl'] as String),
+
+                if (request['imageUrl'] != null) 
+                  const SizedBox(height: AppConstants.defaultPadding),
+
+                // Info sections
+                _buildInfoSection('Lokasi', request['location'] as String? ?? '-', Icons.location_on),
+                const SizedBox(height: AppConstants.defaultPadding),
+                
+                _buildInfoSection('Deskripsi', request['description'] as String? ?? '-', Icons.description),
+                const SizedBox(height: AppConstants.defaultPadding),
+
+                _buildInfoSection('Pelapor', request['userName'] as String? ?? '-', Icons.person),
+                const SizedBox(height: AppConstants.defaultPadding),
+
+                if (request['userEmail'] != null)
+                  _buildInfoSection('Email', request['userEmail'] as String, Icons.email),
+
+                if (request['userEmail'] != null)
+                  const SizedBox(height: AppConstants.defaultPadding),
+                
+                _buildInfoSection(
+                  'Dibuat',
+                  _formatDateTime(request['createdAt']),
+                  Icons.calendar_today,
+                ),
+
+                const SizedBox(height: AppConstants.largePadding),
+
+                // Timeline
+                _buildTimeline(request),
+
+                const SizedBox(height: AppConstants.largePadding),
+
+                // Action Buttons
+                _buildActionButtons(status, assignedCleanerId, currentUserId),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Map<String, dynamic> request, String status, bool isUrgent) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -141,7 +124,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           ],
         ),
       ),
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(AppConstants.largePadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -150,11 +133,11 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: statusColor,
+                  color: _getStatusColor(status),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  statusText,
+                  _getStatusText(status),
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -191,7 +174,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
           ),
           const SizedBox(height: 16),
           Text(
-            data['location'] as String? ?? 'Lokasi tidak diketahui',
+            request['location'] as String? ?? 'Lokasi tidak diketahui',
             style: const TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -207,7 +190,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
       ),
       clipBehavior: Clip.antiAlias,
       child: Image.network(
@@ -222,6 +205,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             child: const Center(
               child: Icon(Icons.broken_image, size: 64),
             ),
+          );
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            height: 200,
+            color: Colors.grey[200],
+            child: const Center(child: CircularProgressIndicator()),
           );
         },
       ),
@@ -258,14 +249,14 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  Widget _buildTimeline(Map<String, dynamic> data) {
+  Widget _buildTimeline(Map<String, dynamic> request) {
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -279,28 +270,28 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             const SizedBox(height: 12),
             _buildTimelineItem(
               'Dibuat',
-              data['createdAt'],
+              request['createdAt'],
               Icons.add_circle_outline,
               Colors.blue,
             ),
-            if (data['acceptedAt'] != null)
+            if (request['acceptedAt'] != null)
               _buildTimelineItem(
                 'Diterima',
-                data['acceptedAt'],
+                request['acceptedAt'],
                 Icons.check_circle_outline,
                 Colors.green,
               ),
-            if (data['startedAt'] != null)
+            if (request['startedAt'] != null)
               _buildTimelineItem(
                 'Mulai Dikerjakan',
-                data['startedAt'],
+                request['startedAt'],
                 Icons.play_circle_outline,
                 Colors.orange,
               ),
-            if (data['completedAt'] != null)
+            if (request['completedAt'] != null)
               _buildTimelineItem(
                 'Selesai',
-                data['completedAt'],
+                request['completedAt'],
                 Icons.done_all,
                 Colors.purple,
                 isLast: true,
@@ -319,10 +310,8 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     bool isLast = false,
   }) {
     String timeText = '-';
-    if (timestamp != null) {
-      if (timestamp is Timestamp) {
-        timeText = DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate());
-      }
+    if (timestamp != null && timestamp is Timestamp) {
+      timeText = DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate());
     }
 
     return Row(
@@ -333,7 +322,7 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, size: 16, color: color),
@@ -376,312 +365,142 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(String status, Map<String, dynamic> data) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    final assignedCleanerId = data['cleanerId'] as String?;
-
-    // Jika request sudah completed, tidak ada action
+  Widget _buildActionButtons(String status, String? assignedCleanerId, String? currentUserId) {
+    // If completed, no actions
     if (status == 'completed') {
-      return Card(
-        color: Colors.green[50],
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: const [
-              Icon(Icons.check_circle, color: Colors.green),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Permintaan ini sudah diselesaikan',
-                  style: TextStyle(
-                    color: Colors.green,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      return _buildInfoCard(
+        'Permintaan ini sudah diselesaikan',
+        Icons.check_circle,
+        AppConstants.successColor,
       );
     }
 
-    // Jika pending, tampilkan tombol Accept
+    // If pending, show Accept button
     if (status == 'pending') {
       return ElevatedButton.icon(
-        onPressed: _isProcessing ? null : () => _acceptRequest(data),
+        onPressed: _isProcessing ? null : () => _acceptRequest(),
         icon: const Icon(Icons.check),
         label: const Text('Terima Permintaan'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.green[600],
+          backgroundColor: AppConstants.successColor,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          minimumSize: const Size(double.infinity, 54),
         ),
       );
     }
 
-    // Jika sudah diterima tapi belum dimulai
-    if (status == 'accepted' && assignedCleanerId == currentUser?.uid) {
-      return ElevatedButton.icon(
-        onPressed: _isProcessing ? null : () => _startRequest(data),
-        icon: const Icon(Icons.play_arrow),
-        label: const Text('Mulai Pengerjaan'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.orange[600],
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+    // If accepted/in_progress and assigned to current user
+    if (assignedCleanerId == currentUserId) {
+      if (status == 'accepted') {
+        return ElevatedButton.icon(
+          onPressed: _isProcessing ? null : () => _startRequest(),
+          icon: const Icon(Icons.play_arrow),
+          label: const Text('Mulai Pengerjaan'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppConstants.warningColor,
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 54),
           ),
-        ),
-      );
+        );
+      } else if (status == 'in_progress') {
+        return ElevatedButton.icon(
+          onPressed: _isProcessing ? null : () => _completeRequest(),
+          icon: const Icon(Icons.done),
+          label: const Text('Tandai Selesai'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.purple[600],
+            foregroundColor: Colors.white,
+            minimumSize: const Size(double.infinity, 54),
+          ),
+        );
+      }
     }
 
-    // Jika sedang dikerjakan
-    if (status == 'in_progress' && assignedCleanerId == currentUser?.uid) {
-      return ElevatedButton.icon(
-        onPressed: _isProcessing ? null : () => _completeRequest(data),
-        icon: const Icon(Icons.done),
-        label: const Text('Tandai Selesai'),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.purple[600],
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      );
-    }
-
-    // Jika request sudah diambil oleh cleaner lain
-    if (assignedCleanerId != null && assignedCleanerId != currentUser?.uid) {
-      return Card(
-        color: Colors.orange[50],
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: const [
-              Icon(Icons.info_outline, color: Colors.orange),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Permintaan ini sedang ditangani petugas lain',
-                  style: TextStyle(
-                    color: Colors.orange,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+    // If assigned to someone else
+    if (assignedCleanerId != null && assignedCleanerId != currentUserId) {
+      return _buildInfoCard(
+        'Permintaan ini sedang ditangani petugas lain',
+        Icons.info_outline,
+        AppConstants.infoColor,
       );
     }
 
     return const SizedBox.shrink();
   }
 
-  Future<void> _acceptRequest(Map<String, dynamic> data) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Terima Permintaan'),
-        content: const Text('Apakah Anda yakin ingin menerima permintaan ini?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('BATAL'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-            child: const Text('TERIMA'),
+  Widget _buildInfoCard(String message, IconData icon, Color color) {
+    return Card(
+      color: color.withValues(alpha: 0.1),
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Row(
+          children: [
+            Icon(icon, color: color),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(
+                  color: color,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotFoundState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search_off, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: AppConstants.defaultPadding),
+          const Text(
+            'Permintaan tidak ditemukan',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
         ],
       ),
     );
-
-    if (confirmed != true) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser == null) throw Exception('User not logged in');
-
-      await FirebaseFirestore.instance
-          .collection('requests')
-          .doc(widget.requestId)
-          .update({
-        'status': 'accepted',
-        'cleanerId': currentUser.uid,
-        'cleanerName': currentUser.displayName ?? 'Petugas',
-        'acceptedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permintaan berhasil diterima'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
   }
 
-  Future<void> _startRequest(Map<String, dynamic> data) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Mulai Pengerjaan'),
-        content: const Text('Apakah Anda siap memulai pengerjaan?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('BATAL'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
-            child: const Text('MULAI'),
-          ),
-        ],
+  Widget _buildErrorState(String error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.largePadding),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            const SizedBox(height: AppConstants.defaultPadding),
+            const Text(
+              'Terjadi kesalahan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: AppConstants.smallPadding),
+            Text(
+              error,
+              style: TextStyle(color: Colors.grey[600]),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
-
-    if (confirmed != true) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('requests')
-          .doc(widget.requestId)
-          .update({
-        'status': 'in_progress',
-        'startedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengerjaan dimulai'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
-  }
-
-  Future<void> _completeRequest(Map<String, dynamic> data) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Tandai Selesai'),
-        content: const Text(
-          'Apakah Anda yakin pekerjaan sudah selesai? '
-          'Status akan berubah menjadi completed.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('BATAL'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
-            child: const Text('SELESAI'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() => _isProcessing = true);
-
-    try {
-      await FirebaseFirestore.instance
-          .collection('requests')
-          .doc(widget.requestId)
-          .update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-      });
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pekerjaan berhasil diselesaikan!'),
-          backgroundColor: Colors.purple,
-        ),
-      );
-
-      // Navigate back setelah selesai
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: ${e.toString()}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isProcessing = false);
-      }
-    }
-  }
-
-  String _formatDateTime(dynamic timestamp) {
-    if (timestamp == null) return '-';
-    if (timestamp is Timestamp) {
-      return DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate());
-    }
-    return '-';
   }
 
   Color _getStatusColor(String status) {
     switch (status) {
       case 'pending':
-        return Colors.orange;
+        return AppConstants.warningColor;
       case 'accepted':
-        return Colors.green;
+        return AppConstants.successColor;
       case 'in_progress':
-        return Colors.blue;
+        return AppConstants.infoColor;
       case 'completed':
         return Colors.purple;
       default:
@@ -702,5 +521,173 @@ class _RequestDetailScreenState extends State<RequestDetailScreen> {
       default:
         return status;
     }
+  }
+
+  String _formatDateTime(dynamic timestamp) {
+    if (timestamp == null) return '-';
+    if (timestamp is Timestamp) {
+      return DateFormat('dd MMM yyyy, HH:mm').format(timestamp.toDate());
+    }
+    return '-';
+  }
+
+  // ==================== ACTION HANDLERS ====================
+
+  Future<void> _acceptRequest() async {
+    final confirmed = await _showConfirmDialog(
+      'Terima Permintaan',
+      'Apakah Anda yakin ingin menerima permintaan ini?',
+      'TERIMA',
+      AppConstants.successColor,
+    );
+
+    if (!confirmed) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final actions = ref.read(cleanerActionsProvider.notifier);
+      await actions.acceptRequest(widget.requestId);
+
+      if (!mounted) return;
+      _showSuccessSnackbar('Permintaan berhasil diterima');
+    } on FirestoreException catch (e) {
+      _logger.error('Accept request error', e);
+      _showErrorSnackbar(e.message);
+    } catch (e) {
+      _logger.error('Unexpected error', e);
+      _showErrorSnackbar(AppConstants.genericErrorMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _startRequest() async {
+    final confirmed = await _showConfirmDialog(
+      'Mulai Pengerjaan',
+      'Apakah Anda siap memulai pengerjaan?',
+      'MULAI',
+      AppConstants.warningColor,
+    );
+
+    if (!confirmed) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final actions = ref.read(cleanerActionsProvider.notifier);
+      await actions.startRequest(widget.requestId);
+
+      if (!mounted) return;
+      _showSuccessSnackbar('Pengerjaan dimulai');
+    } on FirestoreException catch (e) {
+      _logger.error('Start request error', e);
+      _showErrorSnackbar(e.message);
+    } catch (e) {
+      _logger.error('Unexpected error', e);
+      _showErrorSnackbar(AppConstants.genericErrorMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<void> _completeRequest() async {
+    final confirmed = await _showConfirmDialog(
+      'Tandai Selesai',
+      'Apakah Anda yakin pekerjaan sudah selesai?',
+      'SELESAI',
+      Colors.purple,
+    );
+
+    if (!confirmed) return;
+
+    setState(() => _isProcessing = true);
+
+    try {
+      final actions = ref.read(cleanerActionsProvider.notifier);
+      await actions.completeRequest(widget.requestId);
+
+      if (!mounted) return;
+      _showSuccessSnackbar('Pekerjaan berhasil diselesaikan!');
+      
+      // Go back after completion
+      Navigator.pop(context);
+    } on FirestoreException catch (e) {
+      _logger.error('Complete request error', e);
+      _showErrorSnackbar(e.message);
+    } catch (e) {
+      _logger.error('Unexpected error', e);
+      _showErrorSnackbar(AppConstants.genericErrorMessage);
+    } finally {
+      if (mounted) {
+        setState(() => _isProcessing = false);
+      }
+    }
+  }
+
+  Future<bool> _showConfirmDialog(
+    String title,
+    String content,
+    String actionText,
+    Color actionColor,
+  ) async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(content),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('BATAL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: actionColor),
+            child: Text(actionText),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  void _showSuccessSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(message),
+          ],
+        ),
+        backgroundColor: AppConstants.successColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppConstants.errorColor,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 }

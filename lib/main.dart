@@ -17,7 +17,15 @@ import 'package:aplikasi_cleanoffice/screens/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/change_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/request_history_screen.dart';
 
+// DEV MENU - IMPORT INI
+import 'package:aplikasi_cleanoffice/screens/dev_menu_screen.dart';
+
 final _logger = AppLogger('Main');
+
+// 🔧 DEVELOPMENT MODE SWITCH
+// Set ke true untuk test UI tanpa Firebase Auth
+// Set ke false untuk mode production normal
+const bool devMode = true; // ← UBAH INI KE false SAAT PRODUCTION
 
 void main() async {
   // Ensure Flutter bindings are initialized
@@ -54,10 +62,13 @@ void main() async {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  e.toString(),
-                  style: const TextStyle(fontSize: 14),
-                  textAlign: TextAlign.center,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    e.toString(),
+                    style: const TextStyle(fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               ],
             ),
@@ -78,9 +89,15 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: _buildTheme(),
       
-      // Routes
-      initialRoute: AppConstants.loginRoute,
+      // 🔧 DEVELOPMENT MODE: Langsung ke Dev Menu
+      // PRODUCTION MODE: Ke Login Screen
+      initialRoute: devMode ? '/dev_menu' : AppConstants.loginRoute,
+      
       routes: {
+        // Dev Menu Route
+        '/dev_menu': (context) => const DevMenuScreen(),
+        
+        // Normal Routes
         AppConstants.loginRoute: (context) => const LoginScreen(),
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),
         AppConstants.homeAdminRoute: (context) => const AdminDashboardScreen(),
@@ -137,7 +154,7 @@ class MyApp extends ConsumerWidget {
         labelSmall: TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
       ),
       
-      // Card theme - FIXED: Gunakan CardThemeData bukan CardTheme
+      // Card theme
       cardTheme: CardThemeData(
         elevation: 2,
         shape: RoundedRectangleBorder(

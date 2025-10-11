@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
+import '../models/user_profile.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -29,6 +31,49 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  /// Tentukan role berdasarkan email
+  String _determineRoleFromEmail(String email) {
+    if (email.contains('admin') || email.contains('admin')) {
+      return 'admin';
+    } else if (email.contains('cleaner') || email.contains('petugas')) {
+      return 'cleaner';
+    } else {
+      return 'employee'; // default
+    }
+  }
+
+  /// Create user profile di Firestore
+  Future<void> _createUserProfile(User user) async {
+    try {
+      _logger.info('Creating user profile in Firestore for ${user.uid}');
+      
+      final firestore = FirebaseFirestore.instance;
+      
+      // Tentukan role berdasarkan email
+      final role = _determineRoleFromEmail(user.email ?? '');
+      
+      final profile = UserProfile(
+        uid: user.uid,
+        displayName: _nameController.text.trim(),
+        email: user.email ?? '',
+        role: role,
+        joinDate: DateTime.now(),
+        status: 'active',
+      );
+
+      // Simpan ke Firestore
+      await firestore
+          .collection('users')
+          .doc(user.uid)
+          .set(profile.toMap());
+      
+      _logger.info('User profile created successfully with role: $role');
+    } catch (e) {
+      _logger.severe('Error creating user profile: $e');
+      rethrow;
+    }
+  }
+
   Future<void> _register() async {
     if (_isLoading) return;
 
@@ -53,41 +98,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      _logger.info('Attempting to create user account');
-      // Create user account
+      _logger.info('Attempting to create user account for: ${_emailController.text}');
+      
+      // Step 1: Create user account di Firebase Auth
       final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Update user profile
-      await userCredential.user?.updateDisplayName(_nameController.text.trim());
+      final user = userCredential.user;
+      if (user == null) {
+        throw Exception('Failed to create user - user is null');
+      }
+
+      _logger.info('Firebase Auth account created: ${user.uid}');
+
+      // Step 2: Update display name
+      await user.updateDisplayName(_nameController.text.trim());
+      _logger.info('Display name updated');
       
-      _logger.info('User account created successfully');
+      // Step 3: Create user profile di Firestore
+      await _createUserProfile(user);
 
       if (!mounted) return;
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Registrasi berhasil! Silakan login.'),
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text('Registrasi berhasil! Silakan login.'),
+              ),
+            ],
+          ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
 
       // Navigate back to login screen
+      if (!mounted) return;
       Navigator.pop(context);
 
     } on FirebaseAuthException catch (e) {
-      _logger.warning('Registration failed', e);
+      _logger.warning('Registration failed: ${e.code}', e);
       
       if (!mounted) return;
 
       String errorMessage;
       switch (e.code) {
         case 'email-already-in-use':
-          errorMessage = 'Email sudah terdaftar';
+          errorMessage = 'Email sudah terdaftar. Silakan login atau gunakan email lain.';
           break;
         case 'invalid-email':
           errorMessage = 'Format email tidak valid';
@@ -98,6 +163,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         case 'weak-password':
           errorMessage = 'Password terlalu lemah. Gunakan minimal 6 karakter';
           break;
+        case 'network-request-failed':
+          errorMessage = 'Koneksi internet bermasalah. Periksa koneksi Anda';
+          break;
         default:
           errorMessage = e.message ?? 'Terjadi kesalahan saat registrasi';
       }
@@ -107,6 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(errorMessage),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
         ),
       );
     } catch (e) {
@@ -116,9 +185,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Terjadi kesalahan yang tidak terduga'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Terjadi kesalahan yang tidak terduga',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                e.toString(),
+                style: const TextStyle(fontSize: 12),
+              ),
+            ],
+          ),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
           action: SnackBarAction(
             label: 'DETAIL',
             textColor: Colors.white,
@@ -126,8 +210,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Error'),
-                  content: Text(e.toString()),
+                  title: const Text('Error Detail'),
+                  content: SingleChildScrollView(
+                    child: Text(e.toString()),
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -183,6 +269,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Bergabunglah dengan Clean Office',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                   const SizedBox(height: 32),
 
                   // Name Field
@@ -200,8 +295,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Nama tidak boleh kosong';
                       }
+                      if (value.length < 3) {
+                        return 'Nama minimal 3 karakter';
+                      }
                       return null;
                     },
+                    enabled: !_isLoading,
                   ),
                   const SizedBox(height: 16),
 
@@ -214,6 +313,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       prefixIcon: const Icon(Icons.email),
+                      helperText: 'Gunakan email aktif Anda',
+                      helperMaxLines: 2,
                     ),
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
@@ -221,11 +322,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Email tidak boleh kosong';
                       }
-                      if (!value.contains('@')) {
+                      if (!value.contains('@') || !value.contains('.')) {
                         return 'Email tidak valid';
                       }
                       return null;
                     },
+                    enabled: !_isLoading,
                   ),
                   const SizedBox(height: 16),
 
@@ -249,6 +351,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           });
                         },
                       ),
+                      helperText: 'Minimal 6 karakter',
                     ),
                     obscureText: _obscurePassword,
                     textInputAction: TextInputAction.next,
@@ -261,6 +364,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       }
                       return null;
                     },
+                    enabled: !_isLoading,
                   ),
                   const SizedBox(height: 16),
 
@@ -297,6 +401,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       return null;
                     },
                     onFieldSubmitted: (_) => _register(),
+                    enabled: !_isLoading,
                   ),
                   const SizedBox(height: 32),
 
@@ -313,13 +418,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       disabledBackgroundColor: Colors.indigo[200],
                     ),
                     child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                        ? Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: const [
+                              SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              SizedBox(width: 12),
+                              Text('Mendaftar...'),
+                            ],
                           )
                         : const Text(
                             'Daftar',
@@ -328,6 +440,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               fontWeight: FontWeight.bold,
                             ),
                           ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Info Box
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Role akan ditentukan otomatis berdasarkan email Anda',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.blue[700],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),

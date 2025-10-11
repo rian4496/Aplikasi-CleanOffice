@@ -3,29 +3,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import '../core/constants/app_constants.dart';
-import '../core/logging/app_logger.dart';
-import '../core/error/exceptions.dart';
-import '../models/report_model.dart';
-import '../models/report_status_enum.dart';
-import '../providers/riverpod/auth_providers.dart';
-import '../providers/riverpod/employee_providers.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import '../../providers/riverpod/auth_providers.dart';
+import '../../providers/riverpod/cleaner_providers.dart';
 
-final _logger = AppLogger('CreateReportScreen');
+final _logger = AppLogger('CreateCleaningReportScreen');
 
-class CreateReportScreen extends ConsumerStatefulWidget {
-  const CreateReportScreen({super.key});
+class CreateCleaningReportScreen extends ConsumerStatefulWidget {
+  const CreateCleaningReportScreen({super.key});
 
   @override
-  ConsumerState<CreateReportScreen> createState() => _CreateReportScreenState();
+  ConsumerState<CreateCleaningReportScreen> createState() => _CreateCleaningReportScreenState();
 }
 
-class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
+class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   File? _selectedImage;
-  bool _isUrgent = false;
   bool _isSubmitting = false;
 
   @override
@@ -60,7 +57,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
         _selectedImage = file;
       });
       
-      _logger.info('Image selected: ${pickedImage.path}');
+      _logger.info('Image selected for cleaning report');
     } catch (e, stackTrace) {
       _logger.error('Error picking image', e, stackTrace);
       _showError('Gagal mengambil foto');
@@ -74,18 +71,18 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user == null) throw const AuthException(message: 'User not logged in');
 
-      _logger.info('Uploading report image for user: ${user.uid}');
+      _logger.info('Uploading cleaning report image');
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'report_${timestamp}.jpg';
-      final ref = FirebaseStorage.instance
+      final fileName = 'cleaning_report_${timestamp}.jpg';
+      final storageRef = FirebaseStorage.instance
           .ref()
           .child('${AppConstants.reportImagesPath}/${user.uid}/$fileName');
 
-      final uploadTask = await ref.putFile(_selectedImage!);
+      final uploadTask = await storageRef.putFile(_selectedImage!);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
       
-      _logger.info('Image uploaded successfully');
+      _logger.info('Cleaning report image uploaded successfully');
       return downloadUrl;
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Upload image error', e, stackTrace);
@@ -96,30 +93,25 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedImage == null) {
-      _showError('Mohon ambil foto terlebih dahulu');
-      return;
-    }
-
+    // Image optional for cleaning reports
+    
     setState(() => _isSubmitting = true);
 
     try {
-      _logger.info('Submitting report');
+      _logger.info('Creating cleaning report');
       
-      // Upload image first
-      final imageUrl = await _uploadImage();
-      
-      if (imageUrl == null) {
-        throw const StorageException(message: 'Failed to upload image');
+      // Upload image if exists
+      String? imageUrl;
+      if (_selectedImage != null) {
+        imageUrl = await _uploadImage();
       }
 
       // Create report
-      final actions = ref.read(employeeActionsProvider);
-      await actions.createReport(
+      final actions = ref.read(cleanerActionsProvider.notifier);
+      await actions.createCleaningReport(
         location: _locationController.text.trim(),
         description: _descriptionController.text.trim(),
         imageUrl: imageUrl,
-        isUrgent: _isUrgent,
       );
 
       if (!mounted) return;
@@ -131,7 +123,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
             children: const [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text(AppConstants.submitSuccessMessage),
+              Text('Laporan kebersihan berhasil dibuat'),
             ],
           ),
           backgroundColor: AppConstants.successColor,
@@ -179,7 +171,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Laporkan Masalah Kebersihan'),
+        title: const Text('Buat Laporan Kebersihan'),
+        backgroundColor: Colors.indigo[700],
       ),
       body: Stack(
         children: [
@@ -190,7 +183,28 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Image Section
+                  // Info Card
+                  Card(
+                    color: Colors.blue[50],
+                    child: Padding(
+                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.blue[700]),
+                          const SizedBox(width: AppConstants.defaultPadding),
+                          const Expanded(
+                            child: Text(
+                              'Laporan untuk area yang sudah Anda bersihkan',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.largePadding),
+
+                  // Image Section (Optional)
                   _buildImageSection(),
                   const SizedBox(height: AppConstants.largePadding),
 
@@ -235,8 +249,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   TextFormField(
                     controller: _descriptionController,
                     decoration: const InputDecoration(
-                      labelText: 'Deskripsi',
-                      hintText: 'Jelaskan masalah singkat...',
+                      labelText: 'Keterangan',
+                      hintText: 'Jelaskan pekerjaan yang sudah dilakukan...',
                       prefixIcon: Icon(Icons.description),
                     ),
                     maxLines: 4,
@@ -246,26 +260,11 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                         return AppConstants.requiredFieldMessage;
                       }
                       if (value.trim().length < AppConstants.minDescriptionLength) {
-                        return 'Deskripsi minimal ${AppConstants.minDescriptionLength} karakter';
+                        return 'Keterangan minimal ${AppConstants.minDescriptionLength} karakter';
                       }
                       return null;
                     },
                     enabled: !_isSubmitting,
-                  ),
-                  const SizedBox(height: AppConstants.defaultPadding),
-
-                  // Urgent Switch
-                  SwitchListTile(
-                    title: const Text('Tandai sebagai Urgen'),
-                    subtitle: const Text('Masalah yang perlu segera ditangani'),
-                    value: _isUrgent,
-                    onChanged: _isSubmitting ? null : (value) {
-                      setState(() => _isUrgent = value);
-                    },
-                    secondary: Icon(
-                      Icons.priority_high,
-                      color: _isUrgent ? AppConstants.errorColor : null,
-                    ),
                   ),
                   const SizedBox(height: AppConstants.largePadding),
 
@@ -273,7 +272,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   ElevatedButton(
                     onPressed: _isSubmitting ? null : _submitReport,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppConstants.primaryColor,
+                      backgroundColor: Colors.indigo[700],
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 54),
                     ),
@@ -337,12 +336,25 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Foto Masalah',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              children: const [
+                Text(
+                  'Foto (Opsional)',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(width: 8),
+                Chip(
+                  label: Text(
+                    'Opsional',
+                    style: TextStyle(fontSize: 10),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
             const SizedBox(height: AppConstants.smallPadding),
             GestureDetector(
@@ -382,15 +394,15 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                     : const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt, size: 60, color: Colors.grey),
+                          Icon(Icons.add_a_photo, size: 48, color: Colors.grey),
                           SizedBox(height: 8),
                           Text(
-                            'Ketuk untuk mengambil foto',
+                            'Ketuk untuk ambil foto',
                             style: TextStyle(color: Colors.grey),
                           ),
                           Text(
-                            'masalah kebersihan',
-                            style: TextStyle(color: Colors.grey),
+                            '(Jika diperlukan)',
+                            style: TextStyle(color: Colors.grey, fontSize: 12),
                           ),
                         ],
                       ),

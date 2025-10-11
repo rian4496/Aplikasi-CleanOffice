@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_profile.dart';
+import '../../models/work_schedule.dart'; // TAMBAHAN: Import WorkSchedule model
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import './auth_providers.dart';
@@ -155,7 +156,7 @@ final profileActionsProvider = NotifierProvider<ProfileActionsNotifier, AsyncVal
 // ==================== WORK SCHEDULE PROVIDERS ====================
 
 /// Provider untuk work schedules (stream)
-final userSchedulesProvider = StreamProvider.family<List<dynamic>, String>((ref, userId) {
+final userSchedulesProvider = StreamProvider.family<List<WorkSchedule>, String>((ref, userId) {
   final firestore = ref.watch(firestoreProvider);
   
   return firestore
@@ -165,19 +166,23 @@ final userSchedulesProvider = StreamProvider.family<List<dynamic>, String>((ref,
       .snapshots()
       .map((snapshot) {
     return snapshot.docs.map((doc) {
-      // TODO: Create WorkSchedule.fromMap if needed
-      return doc.data();
-    }).toList();
+      try {
+        return WorkSchedule.fromMap(doc.id, doc.data());
+      } catch (e) {
+        _logger.warning('Error parsing schedule ${doc.id}: $e');
+        return null;
+      }
+    }).whereType<WorkSchedule>().toList(); // Filter out null values
   });
 });
 
 /// Provider untuk current user's schedules
-final currentUserSchedulesProvider = StreamProvider<List<dynamic>>((ref) {
+final currentUserSchedulesProvider = StreamProvider<List<WorkSchedule>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) {
     return Stream.value([]);
   }
-  // FIXED: Tidak perlu .stream karena userSchedulesProvider sudah StreamProvider
+  
   final firestore = ref.watch(firestoreProvider);
   
   return firestore
@@ -187,7 +192,12 @@ final currentUserSchedulesProvider = StreamProvider<List<dynamic>>((ref) {
       .snapshots()
       .map((snapshot) {
     return snapshot.docs.map((doc) {
-      return doc.data();
-    }).toList();
+      try {
+        return WorkSchedule.fromMap(doc.id, doc.data());
+      } catch (e) {
+        _logger.warning('Error parsing schedule ${doc.id}: $e');
+        return null;
+      }
+    }).whereType<WorkSchedule>().toList(); // Filter out null values
   });
 });

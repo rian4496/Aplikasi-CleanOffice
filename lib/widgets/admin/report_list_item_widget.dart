@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/report_model.dart';
+import '../../models/report_status_enum.dart';
 
 /// Widget untuk menampilkan item laporan dalam list
 /// Digunakan di admin dashboard dan verification screen
@@ -19,6 +20,24 @@ class ReportListItem extends StatelessWidget {
     this.showStatus = true,
     this.compact = false,
   });
+
+  // TAMBAHAN: Helper function untuk convert status ke Icon
+  IconData _getStatusIcon(ReportStatus status) {
+    switch (status) {
+      case ReportStatus.pending:
+        return Icons.schedule;
+      case ReportStatus.assigned:
+        return Icons.assignment_ind;
+      case ReportStatus.inProgress:
+        return Icons.pending_actions;
+      case ReportStatus.completed:
+        return Icons.check_circle;
+      case ReportStatus.verified:
+        return Icons.verified;
+      case ReportStatus.rejected:
+        return Icons.cancel;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -46,7 +65,7 @@ class ReportListItem extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Icon dengan status color
+            // Icon dengan status color - FIXED: Pakai helper function
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -54,10 +73,7 @@ class ReportListItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                IconData(
-                  report.status.iconCodePoint,
-                  fontFamily: 'MaterialIcons',
-                ),
+                _getStatusIcon(report.status), // FIXED: Tidak pakai IconData dynamic
                 color: Color(report.status.colorValue),
                 size: 24,
               ),
@@ -195,7 +211,7 @@ class ReportListItem extends StatelessWidget {
   Widget _buildCompactLayout() {
     return Row(
       children: [
-        // Icon
+        // Icon - FIXED: Pakai helper function
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
@@ -203,10 +219,7 @@ class ReportListItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
-            IconData(
-              report.status.iconCodePoint,
-              fontFamily: 'MaterialIcons',
-            ),
+            _getStatusIcon(report.status), // FIXED: Tidak pakai IconData dynamic
             color: Color(report.status.colorValue),
             size: 20,
           ),

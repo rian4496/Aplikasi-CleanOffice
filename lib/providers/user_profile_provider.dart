@@ -33,7 +33,8 @@ class UserProfileProvider extends ChangeNotifier {
       }
       notifyListeners();
     } catch (e) {
-      print('Error loading user profile: $e');
+      // FIXED: Gunakan debugPrint() instead of print()
+      debugPrint('Error loading user profile: $e');
     }
   }
 
@@ -46,7 +47,8 @@ class UserProfileProvider extends ChangeNotifier {
       _userProfile = updatedProfile;
       notifyListeners();
     } catch (e) {
-      print('Error updating user profile: $e');
+      // FIXED: Gunakan debugPrint() instead of print()
+      debugPrint('Error updating user profile: $e');
       rethrow;
     }
   }

@@ -99,7 +99,7 @@ final cleanerStatsProvider = StreamProvider<Map<String, int>>((ref) {
       'inProgress': 0,
       'total': 0,
     }),
-    error: (_, __) => Stream.value({
+    error: (error, stack) => Stream.value({
       'completed': 0,
       'inProgress': 0,
       'total': 0,

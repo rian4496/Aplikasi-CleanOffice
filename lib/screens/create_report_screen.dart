@@ -1,13 +1,15 @@
 import 'dart:io';
+
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
+
 import '../core/constants/app_constants.dart';
-import '../core/logging/app_logger.dart';
 import '../core/error/exceptions.dart';
-import '../models/report_model.dart';
-import '../models/report_status_enum.dart';
+import '../core/logging/app_logger.dart';
+// ❌ REMOVED: import '../models/report_model.dart';
+// ❌ REMOVED: import '../models/report_status_enum.dart';
 import '../providers/riverpod/auth_providers.dart';
 import '../providers/riverpod/employee_providers.dart';
 
@@ -40,7 +42,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       final imagePicker = ImagePicker();
       final pickedImage = await imagePicker.pickImage(
         source: ImageSource.camera,
-        maxWidth: AppConstants.maxImageWidth,
+        maxWidth: AppConstants.maxImageWidth.toDouble(),
         imageQuality: AppConstants.imageQuality,
       );
 
@@ -48,10 +50,10 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
       final file = File(pickedImage.path);
       
-      // Validate file size
       final bytes = await file.length();
       if (!AppConstants.isValidFileSize(bytes)) {
         if (!mounted) return;
+        // ✅ FIXED: Removed unnecessary braces
         _showError('Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}');
         return;
       }
@@ -77,12 +79,12 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       _logger.info('Uploading report image for user: ${user.uid}');
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'report_${timestamp}.jpg';
-      final ref = FirebaseStorage.instance
+      final fileName = 'report_$timestamp.jpg';
+      final storageRef = FirebaseStorage.instance
           .ref()
           .child('${AppConstants.reportImagesPath}/${user.uid}/$fileName');
 
-      final uploadTask = await ref.putFile(_selectedImage!);
+      final uploadTask = await storageRef.putFile(_selectedImage!);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
       
       _logger.info('Image uploaded successfully');
@@ -106,14 +108,12 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     try {
       _logger.info('Submitting report');
       
-      // Upload image first
       final imageUrl = await _uploadImage();
       
       if (imageUrl == null) {
         throw const StorageException(message: 'Failed to upload image');
       }
 
-      // Create report
       final actions = ref.read(employeeActionsProvider);
       await actions.createReport(
         location: _locationController.text.trim(),
@@ -124,7 +124,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
       if (!mounted) return;
 
-      // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -139,7 +138,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
         ),
       );
 
-      // Navigate back
       Navigator.pop(context);
       
     } on StorageException catch (e) {
@@ -190,11 +188,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Image Section
                   _buildImageSection(),
                   const SizedBox(height: AppConstants.largePadding),
 
-                  // Location Field with Autocomplete
                   Autocomplete<String>(
                     fieldViewBuilder: (context, controller, focusNode, onSubmit) {
                       _locationController.text = controller.text;
@@ -231,7 +227,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
 
-                  // Description Field
                   TextFormField(
                     controller: _descriptionController,
                     decoration: const InputDecoration(
@@ -254,7 +249,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
 
-                  // Urgent Switch
                   SwitchListTile(
                     title: const Text('Tandai sebagai Urgen'),
                     subtitle: const Text('Masalah yang perlu segera ditangani'),
@@ -269,7 +263,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   ),
                   const SizedBox(height: AppConstants.largePadding),
 
-                  // Submit Button
                   ElevatedButton(
                     onPressed: _isSubmitting ? null : _submitReport,
                     style: ElevatedButton.styleFrom(

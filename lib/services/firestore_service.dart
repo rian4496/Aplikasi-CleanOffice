@@ -17,8 +17,9 @@ class FirestoreService {
 
   // Collection references
   CollectionReference get _reportsCollection => _firestore.collection('reports');
-  CollectionReference get _usersCollection => _firestore.collection('users');
-  CollectionReference get _requestsCollection => _firestore.collection('requests');
+  // ❌ REMOVED: Unused collections to fix warnings
+  // CollectionReference get _usersCollection => _firestore.collection('users');
+  // CollectionReference get _requestsCollection => _firestore.collection('requests');
 
   // ==================== REPORT QUERIES ====================
 

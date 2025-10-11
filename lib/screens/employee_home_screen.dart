@@ -133,7 +133,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                         _buildProgressItem('Selesai', '...', Colors.green),
                       ],
                     ),
-                    error: (_, __) => Row(
+                    error: (error, stack) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildProgressItem('Terkirim', '0', Colors.blue),

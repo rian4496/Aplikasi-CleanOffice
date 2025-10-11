@@ -91,7 +91,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                             'Selamat Datang,',
                             style: TextStyle(
                               fontSize: 16,
-                              color: Colors.white.withOpacity(0.9),
+                              color: Colors.white.withValues(alpha: 0.9),
                             ),
                           ),
                           const SizedBox(height: 4),
@@ -127,7 +127,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 child: dashboardSummaryAsync.when(
                   data: (summary) => _buildQuickStats(summary),
                   loading: () => const SizedBox.shrink(),
-                  error: (_, __) => const SizedBox.shrink(),
+                  error: (error, stack) => const SizedBox.shrink(),
                 ),
               ),
 

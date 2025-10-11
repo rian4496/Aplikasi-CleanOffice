@@ -37,7 +37,7 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
       final imagePicker = ImagePicker();
       final pickedImage = await imagePicker.pickImage(
         source: ImageSource.camera,
-        maxWidth: AppConstants.maxImageWidth,
+        maxWidth: AppConstants.maxImageWidth.toDouble(),
         imageQuality: AppConstants.imageQuality,
       );
 
@@ -74,7 +74,7 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
       _logger.info('Uploading cleaning report image');
       
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'cleaning_report_${timestamp}.jpg';
+      final fileName = 'cleaning_report_$timestamp.jpg';
       final storageRef = FirebaseStorage.instance
           .ref()
           .child('${AppConstants.reportImagesPath}/${user.uid}/$fileName');

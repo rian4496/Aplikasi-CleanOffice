@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/constants/app_constants.dart';
 import '../core/logging/app_logger.dart';
 import '../providers/riverpod/auth_providers.dart';
@@ -98,7 +99,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                           'Memuat...',
                           style: TextStyle(color: Colors.white),
                         ),
-                        error: (_, __) => const Text(
+                        error: (error, stack) => const Text(
                           'Petugas',
                           style: TextStyle(color: Colors.white),
                         ),
@@ -151,7 +152,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                         Expanded(child: _buildStatCard('Proses', '...', Icons.pending_actions, AppConstants.warningColor)),
                       ],
                     ),
-                    error: (_, __) => Row(
+                    error: (error, stack) => Row(
                       children: [
                         Expanded(child: _buildStatCard('Selesai', '0', Icons.check_circle, AppConstants.successColor)),
                         const SizedBox(width: AppConstants.smallPadding),

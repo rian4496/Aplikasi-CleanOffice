@@ -6,7 +6,8 @@ import '../../providers/riverpod/admin_providers.dart';
 import '../../providers/riverpod/report_providers.dart';
 import '../../widgets/admin/info_card_widget.dart';
 import '../../widgets/admin/report_list_item_widget.dart';
-import '../admin/verification_screen.dart';
+import 'verification_screen.dart';
+import 'reports_list_screen.dart';
 
 /// Main dashboard screen untuk Admin
 /// Menampilkan ringkasan statistik dan daftar laporan yang perlu diverifikasi
@@ -39,7 +40,20 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.notifications_outlined),
             onPressed: () {
-              // TODO: Navigate to notifications
+              // Placeholder untuk notifikasi
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('🔔 Fitur notifikasi segera hadir'),
+                    ],
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  duration: Duration(seconds: 2),
+                ),
+              );
             },
             tooltip: 'Notifikasi',
           ),
@@ -148,7 +162,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                     ),
                     TextButton(
                       onPressed: () {
-                        // TODO: Navigate to all verification screen
+                        // Navigate to verification list
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ReportsListScreen(
+                              title: 'Perlu Verifikasi',
+                              showOnlyNeedsVerification: true,
+                            ),
+                          ),
+                        );
                       },
                       child: const Text('Lihat Semua'),
                     ),
@@ -192,7 +215,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          // TODO: Navigate to all reports view
+          // Navigate to all reports
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ReportsListScreen(
+                title: 'Semua Laporan',
+              ),
+            ),
+          );
         },
         icon: const Icon(Icons.view_list),
         label: const Text('Semua Laporan'),
@@ -201,97 +232,158 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
+  // ==================== BUILD METHODS ====================
+
   Widget _buildSummaryCards(dynamic summary) {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: [
-        InfoCard(
-          title: 'Menunggu',
-          value: summary.pendingCount.toString(),
-          icon: Icons.schedule,
-          color: Colors.orange,
-          backgroundColor: Colors.white,
-          onTap: () {
-            // TODO: Filter by pending
-          },
-        ),
-        InfoCard(
-          title: 'Perlu Verifikasi',
-          value: summary.needsVerificationCount.toString(),
-          icon: Icons.pending_actions,
-          color: Colors.blue,
-          backgroundColor: Colors.white,
-          onTap: () {
-            // TODO: Navigate to verification list
-          },
-        ),
-        InfoCard(
-          title: 'Selesai Hari Ini',
-          value: summary.completedTodayCount.toString(),
-          icon: Icons.check_circle,
-          color: Colors.green,
-          backgroundColor: Colors.white,
-          subtitle: '${summary.verifiedTodayCount} terverifikasi',
-        ),
-        InfoCard(
-          title: 'Total Aktif',
-          value: summary.totalActive.toString(),
-          icon: Icons.trending_up,
-          color: Colors.purple,
-          backgroundColor: Colors.white,
-          subtitle: '${summary.completionRate.toStringAsFixed(1)}% selesai',
-        ),
-      ],
+    // FIXED: Use LayoutBuilder untuk responsive layout
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Calculate optimal card dimensions
+        final cardWidth = (constraints.maxWidth - 12) / 2; // 12 = spacing
+        final cardHeight = cardWidth / 1.5; // Aspect ratio 1.5
+        
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: InfoCard(
+                title: 'Menunggu',
+                value: summary.pendingCount.toString(),
+                icon: Icons.schedule,
+                color: Colors.orange,
+                backgroundColor: Colors.white,
+                onTap: () {
+                  // Filter by pending
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ReportsListScreen(
+                        title: 'Laporan Pending',
+                        filterStatus: ReportStatus.pending,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: InfoCard(
+                title: 'Perlu Verifikasi',
+                value: summary.needsVerificationCount.toString(),
+                icon: Icons.pending_actions,
+                color: Colors.blue,
+                backgroundColor: Colors.white,
+                onTap: () {
+                  // Navigate to verification list
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ReportsListScreen(
+                        title: 'Perlu Verifikasi',
+                        showOnlyNeedsVerification: true,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: InfoCard(
+                title: 'Selesai Hari Ini',
+                value: summary.completedTodayCount.toString(),
+                icon: Icons.check_circle,
+                color: Colors.green,
+                backgroundColor: Colors.white,
+                subtitle: '${summary.verifiedTodayCount} terverifikasi',
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: InfoCard(
+                title: 'Total Aktif',
+                value: summary.totalActive.toString(),
+                icon: Icons.trending_up,
+                color: Colors.purple,
+                backgroundColor: Colors.white,
+                subtitle: '${summary.completionRate.toStringAsFixed(1)}% selesai',
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildSummaryCardsLoading() {
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
-      children: const [
-        InfoCard(
-          title: 'Menunggu',
-          value: '...',
-          icon: Icons.schedule,
-          color: Colors.orange,
-          backgroundColor: Colors.white,
-          isLoading: true,
-        ),
-        InfoCard(
-          title: 'Perlu Verifikasi',
-          value: '...',
-          icon: Icons.pending_actions,
-          color: Colors.blue,
-          backgroundColor: Colors.white,
-          isLoading: true,
-        ),
-        InfoCard(
-          title: 'Selesai Hari Ini',
-          value: '...',
-          icon: Icons.check_circle,
-          color: Colors.green,
-          backgroundColor: Colors.white,
-          isLoading: true,
-        ),
-        InfoCard(
-          title: 'Total Aktif',
-          value: '...',
-          icon: Icons.trending_up,
-          color: Colors.purple,
-          backgroundColor: Colors.white,
-          isLoading: true,
-        ),
-      ],
+    // FIXED: Use LayoutBuilder untuk responsive layout
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth = (constraints.maxWidth - 12) / 2;
+        final cardHeight = cardWidth / 1.5;
+        
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: const InfoCard(
+                title: 'Menunggu',
+                value: '...',
+                icon: Icons.schedule,
+                color: Colors.orange,
+                backgroundColor: Colors.white,
+                isLoading: true,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: const InfoCard(
+                title: 'Perlu Verifikasi',
+                value: '...',
+                icon: Icons.pending_actions,
+                color: Colors.blue,
+                backgroundColor: Colors.white,
+                isLoading: true,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: const InfoCard(
+                title: 'Selesai Hari Ini',
+                value: '...',
+                icon: Icons.check_circle,
+                color: Colors.green,
+                backgroundColor: Colors.white,
+                isLoading: true,
+              ),
+            ),
+            SizedBox(
+              width: cardWidth,
+              height: cardHeight,
+              child: const InfoCard(
+                title: 'Total Aktif',
+                value: '...',
+                icon: Icons.trending_up,
+                color: Colors.purple,
+                backgroundColor: Colors.white,
+                isLoading: true,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -451,6 +543,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
     );
   }
+
+  // ==================== NAVIGATION METHODS ====================
 
   void _navigateToVerification(BuildContext context, report) {
     Navigator.push(

@@ -9,6 +9,7 @@ import 'core/theme/app_theme.dart';
 // Screens
 import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/login_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/sign_up_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/cleaner_home_screen.dart';
@@ -94,16 +95,17 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       
       // 🔧 DEVELOPMENT MODE: Langsung ke Dev Menu
-      // PRODUCTION MODE: Ke Welcome Screen → Login
+      // PRODUCTION MODE: Ke Welcome Screen (bukan langsung Login)
       initialRoute: devMode ? '/dev_menu' : '/welcome',
       
       routes: {
         // Dev Menu Route
         '/dev_menu': (context) => const DevMenuScreen(),
         
-        // Welcome & Auth Routes
+        // Auth Routes - UPDATED!
         '/welcome': (context) => const WelcomeScreen(),
         AppConstants.loginRoute: (context) => const LoginScreen(),
+        '/sign-up': (context) => const SignUpScreen(), // CHANGED from /register
         
         // Home Routes
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),

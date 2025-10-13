@@ -1,6 +1,7 @@
+import 'package:aplikasi_cleanoffice/screens/sign_up_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/login_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/register_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/create_report_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/create_request_screen.dart';
@@ -72,6 +73,19 @@ class DevMenuScreen extends StatelessWidget {
             
             const SizedBox(height: 24),
             
+            // Welcome Screen (NEW!)
+            _buildSectionTitle('👋 Welcome & Onboarding'),
+            _buildScreenCard(
+              context,
+              title: 'Welcome Screen',
+              subtitle: 'Landing page pertama',
+              icon: Icons.waving_hand,
+              color: Colors.purple,
+              screen: const WelcomeScreen(),
+            ),
+            
+            const SizedBox(height: 24),
+            
             // Authentication Screens
             _buildSectionTitle('🔐 Authentication Screens'),
             _buildScreenCard(
@@ -84,11 +98,11 @@ class DevMenuScreen extends StatelessWidget {
             ),
             _buildScreenCard(
               context,
-              title: 'Register Screen',
+              title: 'Sign Up Screen',
               subtitle: 'Halaman registrasi',
               icon: Icons.person_add,
               color: Colors.green,
-              screen: const RegisterScreen(),
+              screen: const SignUpScreen(),
             ),
             _buildScreenCard(
               context,
@@ -219,6 +233,8 @@ class DevMenuScreen extends StatelessWidget {
                 ),
               ),
             ),
+            
+            const SizedBox(height: 16),
           ],
         ),
       ),

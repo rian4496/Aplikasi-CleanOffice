@@ -7,6 +7,7 @@ import 'core/constants/app_constants.dart';
 import 'core/theme/app_theme.dart';
 
 // Screens
+import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/login_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
@@ -93,24 +94,31 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       
       // 🔧 DEVELOPMENT MODE: Langsung ke Dev Menu
-      // PRODUCTION MODE: Ke Login Screen
-      initialRoute: devMode ? '/dev_menu' : AppConstants.loginRoute,
+      // PRODUCTION MODE: Ke Welcome Screen → Login
+      initialRoute: devMode ? '/dev_menu' : '/welcome',
       
       routes: {
         // Dev Menu Route
         '/dev_menu': (context) => const DevMenuScreen(),
         
-        // Normal Routes
+        // Welcome & Auth Routes
+        '/welcome': (context) => const WelcomeScreen(),
         AppConstants.loginRoute: (context) => const LoginScreen(),
+        
+        // Home Routes
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),
         AppConstants.homeAdminRoute: (context) => const AdminDashboardScreen(),
         AppConstants.homeCleanerRoute: (context) => const CleanerHomeScreen(),
+        
+        // Feature Routes
         AppConstants.createReportRoute: (context) => const CreateReportScreen(),
         AppConstants.createRequestRoute: (context) => const CreateRequestScreen(),
+        AppConstants.requestHistoryRoute: (context) => const RequestHistoryScreen(),
+        
+        // Profile Routes
         AppConstants.profileRoute: (context) => const ProfileScreen(),
         AppConstants.editProfileRoute: (context) => const EditProfileScreen(),
         AppConstants.changePasswordRoute: (context) => const ChangePasswordScreen(),
-        AppConstants.requestHistoryRoute: (context) => const RequestHistoryScreen(),
       },
       
       // Unknown route handler

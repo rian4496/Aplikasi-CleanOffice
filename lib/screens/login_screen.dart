@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_profile.dart';
-import 'register_screen.dart';
+import 'sign_up_screen.dart';
 import 'reset_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,18 +26,15 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  /// FIXED: Auto-create profile jika belum ada
   Future<void> _ensureUserProfile(User user) async {
     try {
       final firestore = FirebaseFirestore.instance;
       final userDoc = await firestore.collection('users').doc(user.uid).get();
 
-      // Jika profile belum ada, buat profile baru
       if (!userDoc.exists) {
         debugPrint('Creating user profile for ${user.email}');
         
-        // Tentukan role default berdasarkan email
-        String role = 'employee'; // default
+        String role = 'employee';
         if (user.email?.contains('admin') == true) {
           role = 'supervisor';
         } else if (user.email?.contains('cleaner') == true || 
@@ -63,7 +60,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// FIXED: Login dengan auto-create profile
   Future<void> _login() async {
     if (_isLoading) return;
 
@@ -76,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      // Step 1: Login ke Firebase Authentication
       final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -86,10 +81,8 @@ class _LoginScreenState extends State<LoginScreen> {
         throw Exception('Login failed: No user returned');
       }
 
-      // Step 2: Pastikan user profile ada di Firestore
       await _ensureUserProfile(userCredential.user!);
 
-      // Step 3: Load user role untuk routing
       final userDoc = await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user!.uid)
@@ -104,7 +97,6 @@ class _LoginScreenState extends State<LoginScreen> {
       final userData = userDoc.data()!;
       final userRole = userData['role'] as String?;
 
-      // Step 4: Navigate berdasarkan role
       String route;
       switch (userRole) {
         case 'supervisor':
@@ -160,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const RegisterScreen()),
+            MaterialPageRoute(builder: (context) => const SignUpScreen()),
           );
         };
         break;
@@ -219,154 +211,187 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // Widget Build 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(32.0),
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // App Icon
+                  // Placeholder Ilustrasi
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    height: 200,
+                    width: 200,
                     decoration: BoxDecoration(
-                      color: Colors.indigo[50],
-                      shape: BoxShape.circle,
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Icon(
-                      Icons.cleaning_services,
-                      size: 64,
-                      color: Colors.indigo[600],
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.login,
+                          size: 80,
+                          color: Colors.indigo[850],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Welcome Illustration',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  // App Title
+                  const SizedBox(height: 32),
+                  
+                  // Title
                   Text(
-                    'Clean Office',
+                    'Login',
                     style: TextStyle(
-                      fontSize: 32,
+                      fontSize: 28,
                       fontWeight: FontWeight.bold,
                       color: Colors.indigo[800],
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Sistem Manajemen Kebersihan',
+                    'Masuk ke akun Anda',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.grey[600],
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
+                  
                   // Email Field
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: InputDecoration(
-                      labelText: 'Email',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    child: TextFormField(
+                      controller: _emailController,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.email),
                       ),
-                      prefixIcon: const Icon(Icons.email),
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Email tidak boleh kosong';
+                        }
+                        if (!value.contains('@')) {
+                          return 'Email tidak valid';
+                        }
+                        return null;
+                      },
                     ),
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.next,
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Email tidak boleh kosong';
-                      }
-                      if (!value.contains('@')) {
-                        return 'Email tidak valid';
-                      }
-                      return null;
-                    },
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Password Field
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    child: TextFormField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        prefixIcon: const Icon(Icons.lock),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                      obscureText: _obscurePassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _login(),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Password tidak boleh kosong';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  
+                  // Forgot Password
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    child: Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ResetPasswordScreen(
+                              initialEmail: _emailController.text,
+                            ),
+                          ),
+                        ),
+                        child: Text(
+                          'Lupa Password?',
+                          style: TextStyle(
+                            color: Colors.indigo[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Login Button
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.85,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 54),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        backgroundColor: Colors.indigo[600],
+                        foregroundColor: Colors.white,
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 24,
+                              width: 24,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'Masuk',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  // Password Field
-                  TextFormField(
-                    controller: _passwordController,
-                    decoration: InputDecoration(
-                      labelText: 'Password',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      prefixIcon: const Icon(Icons.lock),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
-                      ),
-                    ),
-                    obscureText: _obscurePassword,
-                    textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _login(),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Password tidak boleh kosong';
-                      }
-                      return null;
-                    },
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: TextButton(
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => ResetPasswordScreen(
-                            initialEmail: _emailController.text,
-                          ),
-                        ),
-                      ),
-                      child: Text(
-                        'Lupa Password?',
-                        style: TextStyle(
-                          color: Colors.indigo[600],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  // Login Button
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 54),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      backgroundColor: Colors.indigo[600],
-                      foregroundColor: Colors.white,
-                    ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 24,
-                            width: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                        : const Text(
-                            'Masuk',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                  ),
-                  const SizedBox(height: 16),
+                  
                   // Register Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -379,11 +404,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => const RegisterScreen(),
+                            builder: (context) => const SignUpScreen(),
                           ),
                         ),
                         child: Text(
-                          'Daftar Sekarang',
+                          'Sign Up',
                           style: TextStyle(
                             color: Colors.indigo[600],
                             fontWeight: FontWeight.bold,

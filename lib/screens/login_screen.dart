@@ -36,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
         
         String role = 'employee';
         if (user.email?.contains('admin') == true) {
-          role = 'supervisor';
+          role = 'admin';
         } else if (user.email?.contains('cleaner') == true || 
                    user.email?.contains('petugas') == true) {
           role = 'cleaner';
@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
       String route;
       switch (userRole) {
-        case 'supervisor':
+        case 'admin':
           route = '/home_admin';
           break;
         case 'cleaner':
@@ -392,7 +392,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 20),
                   
-                  // Register Link
+                  // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

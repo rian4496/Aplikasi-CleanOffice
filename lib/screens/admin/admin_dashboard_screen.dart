@@ -1,3 +1,4 @@
+import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import '../notification_screen.dart';
 import '../create_report_screen.dart';
@@ -14,37 +15,25 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
-  // --- NEW COLOR PALETTE ---
-  static const Color _primaryColor = Color(0xFF2C3E50);
-  static const Color _backgroundColor = Color(0xFFF7F9FA);
-  static const Color _cardBackgroundColor = Colors.white;
-  static const Color _primaryTextColor = Colors.black87;
-  static const Color _secondaryTextColor = Color(
-    0xFF757575,
-  ); // Colors.grey[600]
-  static const Color _accentColor = Color(0xFF3498DB);
-
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: _backgroundColor,
+      // backgroundColor is handled by theme
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
             // --- 1. Refactored Header ---
-            // Solid primary color, no gradient, white text/icons.
+            // Uses AppBarTheme for styling
             SliverAppBar(
               pinned: true,
-              backgroundColor: _primaryColor,
-              elevation: 2,
+              // backgroundColor, foregroundColor, elevation, etc. from theme
               title: const Text(
                 'Dashboard',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                  color: Colors.white,
-                ),
+                // style is inherited from appBarTheme.titleTextStyle
               ),
               actions: [
                 IconButton(
@@ -58,17 +47,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   },
                   icon: const Icon(
                     Icons.notifications_outlined,
-                    color: Colors.white,
+                    // color is inherited from appBarTheme.iconTheme
                   ),
                 ),
-                const Padding(
-                  padding: EdgeInsets.only(right: 16.0),
+                Padding(
+                  padding: const EdgeInsets.only(right: 16.0),
                   child: CircleAvatar(
-                    backgroundColor: _accentColor,
+                    backgroundColor: colorScheme.secondary,
                     child: Icon(
                       Icons.person_outline,
                       size: 22,
-                      color: Colors.white,
+                      color: colorScheme.onSecondary,
                     ),
                   ),
                 ),
@@ -83,19 +72,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Welcome Header
-                    _buildWelcomeHeader(),
+                    _buildWelcomeHeader(context),
                     const SizedBox(height: 24),
 
                     // --- 2. Refactored Statistics Cards ---
-                    _buildStatisticsGrid(),
+                    _buildStatisticsGrid(context),
                     const SizedBox(height: 32),
 
-                    // Quick Actions (Optional: Can be refactored similarly if needed)
-                    _buildQuickActions(),
+                    // Quick Actions
+                    _buildQuickActions(context),
                     const SizedBox(height: 32),
 
                     // Recent Activities
-                    _buildRecentActivities(),
+                    _buildRecentActivities(context),
                   ],
                 ),
               ),
@@ -104,6 +93,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       ),
       // --- 3. Refactored Floating Action Button ---
+      // Uses floatingActionButtonTheme for styling
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
@@ -111,100 +101,101 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             MaterialPageRoute(builder: (context) => const CreateReportScreen()),
           );
         },
-        backgroundColor: _accentColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text(
-          'Buat Laporan',
-          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
-        ),
-        elevation: 4,
+        // backgroundColor and foregroundColor from theme
+        icon: const Icon(Icons.add),
+        label: const Text('Buat Laporan'),
+        // style is inherited from theme
       ),
     );
   }
 
-  Widget _buildWelcomeHeader() {
+  Widget _buildWelcomeHeader(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Selamat Datang Kembali! 👋',
-          style: TextStyle(
-            fontSize: 26,
+          style: textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
-            color: _primaryTextColor,
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 8),
         Text(
           'Kelola kebersihan kantor dengan mudah.',
-          style: TextStyle(fontSize: 16, color: _secondaryTextColor),
+          style: textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
         ),
       ],
     );
   }
 
-  Widget _buildStatisticsGrid() {
-    // --- Card data remains the same, only presentation changes ---
+  Widget _buildStatisticsGrid(BuildContext context) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       crossAxisSpacing: 16,
       mainAxisSpacing: 16,
-      childAspectRatio: 1.0, // Adjusted for a more square look
+      childAspectRatio: 1.0,
       children: [
         _buildStatCard(
+          context: context,
           title: 'Menunggu',
           value: '8',
-          icon: Icons.pending_actions_outlined, // Outline icon
-          accentColor: const Color(0xFFFF9800), // Orange accent
+          icon: Icons.pending_actions_outlined,
+          accentColor: AppTheme.warning,
         ),
         _buildStatCard(
+          context: context,
           title: 'Verifikasi',
           value: '5',
-          icon: Icons.verified_user_outlined, // Outline icon
-          accentColor: const Color(0xFF2196F3), // Blue accent
+          icon: Icons.verified_user_outlined,
+          accentColor: AppTheme.info,
         ),
         _buildStatCard(
+          context: context,
           title: 'Selesai',
           value: '23',
-          icon: Icons.check_circle_outline, // Outline icon
-          accentColor: const Color(0xFF4CAF50), // Green accent
+          icon: Icons.check_circle_outline,
+          accentColor: AppTheme.success,
         ),
         _buildStatCard(
+          context: context,
           title: 'Total Aktif',
           value: '36',
           icon: Icons.trending_up,
-          accentColor: const Color(0xFF673AB7), // Purple accent
+          accentColor: AppTheme.primary, // Using primary color
         ),
       ],
     );
   }
 
-  // --- REFACTORED STAT CARD WIDGET ---
   Widget _buildStatCard({
+    required BuildContext context,
     required String title,
     required String value,
     required IconData icon,
     required Color accentColor,
   }) {
+    final cardTheme = Theme.of(context).cardTheme;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _cardBackgroundColor, // White background
+        color: cardTheme.color,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withOpacity(0.05),
             spreadRadius: 1,
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: AppTheme.divider,
           width: 1,
-        ), // Subtle border
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,9 +209,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 32, // Large, bold number
+                  fontSize: 32,
                   fontWeight: FontWeight.bold,
-                  color: accentColor, // Accent color for the number
+                  color: accentColor,
                 ),
               ),
               const SizedBox(height: 4),
@@ -228,7 +219,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 title,
                 style: TextStyle(
                   fontSize: 14,
-                  color: _secondaryTextColor, // Secondary text color
+                  color: AppTheme.textSecondary,
                   fontWeight: FontWeight.w500,
                 ),
                 overflow: TextOverflow.ellipsis,
@@ -240,16 +231,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildQuickActions() {
+  Widget _buildQuickActions(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Aksi Cepat',
-          style: TextStyle(
-            fontSize: 20,
+          style: textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
-            color: _primaryTextColor,
+            color: AppTheme.textPrimary,
           ),
         ),
         const SizedBox(height: 16),
@@ -257,27 +248,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Expanded(
               child: _buildActionButton(
+                context,
                 'Verifikasi',
                 Icons.verified_outlined,
-                const Color(0xFF2196F3),
+                AppTheme.info,
                 () {},
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
+                context,
                 'Laporan',
                 Icons.assessment_outlined,
-                const Color(0xFF4CAF50),
+                AppTheme.success,
                 () {},
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: _buildActionButton(
+                context,
                 'Petugas',
                 Icons.people_outline,
-                const Color(0xFFFF9800),
+                AppTheme.warning,
                 () {},
               ),
             ),
@@ -288,24 +282,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildActionButton(
+    BuildContext context,
     String label,
     IconData icon,
     Color color,
     VoidCallback onTap,
   ) {
-    // This widget is slightly restyled for consistency
+    final cardTheme = Theme.of(context).cardTheme;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 20),
         decoration: BoxDecoration(
-          color: _cardBackgroundColor,
+          color: cardTheme.color,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade200, width: 1),
+          border: Border.all(color: AppTheme.divider, width: 1),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+              color: Colors.black.withOpacity(0.04),
               blurRadius: 8,
             ),
           ],
@@ -317,7 +312,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             Text(
               label,
               style: TextStyle(
-                color: _primaryTextColor,
+                color: AppTheme.textPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -328,8 +323,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  Widget _buildRecentActivities() {
-    // This widget already follows the new design principles, so it remains largely unchanged.
+  Widget _buildRecentActivities(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -338,66 +333,70 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           children: [
             Text(
               'Aktivitas Terbaru',
-              style: TextStyle(
-                fontSize: 20,
+              style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: _primaryTextColor,
+                color: AppTheme.textPrimary,
               ),
             ),
             TextButton(
               onPressed: () {},
-              style: TextButton.styleFrom(foregroundColor: _accentColor),
+              style: TextButton.styleFrom(foregroundColor: AppTheme.info),
               child: const Text('Lihat Semua'),
             ),
           ],
         ),
         const SizedBox(height: 8),
         _buildActivityItem(
+          context: context,
           icon: Icons.cleaning_services_outlined,
           title: 'Toilet Lt. 2',
           time: '10 menit lalu',
           status: 'Selesai',
-          statusColor: const Color(0xFF4CAF50),
+          statusColor: AppTheme.success,
         ),
         _buildActivityItem(
+          context: context,
           icon: Icons.hourglass_top_rounded,
           title: 'Ruang Rapat A',
           time: '25 menit lalu',
           status: 'Dikerjakan',
-          statusColor: const Color(0xFF2196F3),
+          statusColor: AppTheme.info,
         ),
         _buildActivityItem(
+          context: context,
           icon: Icons.notifications_active_outlined,
           title: 'Area Pantry',
           time: '1 jam lalu',
           status: 'Menunggu',
-          statusColor: const Color(0xFFFF9800),
+          statusColor: AppTheme.warning,
         ),
       ],
     );
   }
 
   Widget _buildActivityItem({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String time,
     required String status,
     required Color statusColor,
   }) {
+    final cardTheme = Theme.of(context).cardTheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _cardBackgroundColor,
+        color: cardTheme.color,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200, width: 1),
+        border: Border.all(color: AppTheme.divider, width: 1),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: statusColor),
@@ -412,13 +411,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 16,
-                    color: _primaryTextColor,
+                    color: AppTheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   time,
-                  style: TextStyle(color: _secondaryTextColor, fontSize: 13),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                 ),
               ],
             ),
@@ -426,7 +425,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.1),
+              color: statusColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(

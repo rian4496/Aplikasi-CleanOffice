@@ -1,3 +1,6 @@
+import 'package:flutter/material.dart';
+import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
+
 /// Enum untuk status laporan kebersihan
 ///
 /// Flow status:
@@ -73,38 +76,38 @@ enum ReportStatus {
   }
 
   /// Warna untuk UI berdasarkan status
-  int get colorValue {
+  Color get color {
     switch (this) {
       case ReportStatus.pending:
-        return 0xFFFFA726; // Orange
+        return AppTheme.warning;
       case ReportStatus.assigned:
-        return 0xFF42A5F5; // Blue
+        return AppTheme.secondary;
       case ReportStatus.inProgress:
-        return 0xFF29B6F6; // Light Blue
+        return AppTheme.info;
       case ReportStatus.completed:
-        return 0xFF66BB6A; // Green
+        return AppTheme.success;
       case ReportStatus.verified:
-        return 0xFF4CAF50; // Dark Green
+        return AppTheme.success;
       case ReportStatus.rejected:
-        return 0xFFEF5350; // Red
+        return AppTheme.error;
     }
   }
 
   /// Icon untuk UI berdasarkan status
-  int get iconCodePoint {
+  IconData get icon {
     switch (this) {
       case ReportStatus.pending:
-        return 0xe8b5; // Icons.schedule
+        return Icons.schedule;
       case ReportStatus.assigned:
-        return 0xe7fd; // Icons.assignment_ind
+        return Icons.assignment_ind;
       case ReportStatus.inProgress:
-        return 0xe3a8; // Icons.pending_actions
+        return Icons.pending_actions;
       case ReportStatus.completed:
-        return 0xe876; // Icons.check_circle
+        return Icons.check_circle;
       case ReportStatus.verified:
-        return 0xe86c; // Icons.verified
+        return Icons.verified;
       case ReportStatus.rejected:
-        return 0xe5c9; // Icons.cancel
+        return Icons.cancel;
     }
   }
 

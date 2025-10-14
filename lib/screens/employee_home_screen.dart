@@ -1,10 +1,10 @@
+import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:aplikasi_cleanoffice/models/report_model.dart';
-import 'package:aplikasi_cleanoffice/models/report_status_enum.dart';
 import 'package:aplikasi_cleanoffice/providers/riverpod/employee_providers.dart';
 import 'report_detail_screen.dart';
 
@@ -22,17 +22,14 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     return _dateFormat.format(date);
   }
 
-  Color _getStatusColor(ReportStatus status) {
-    return Color(status.colorValue);
-  }
-
-  Widget _buildProgressItem(String label, String value, Color color) {
+  Widget _buildProgressItem(BuildContext context, String label, String value, Color color) {
+    final textTheme = Theme.of(context).textTheme;
     return Expanded(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withOpacity(0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -40,14 +37,16 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           children: [
             Text(
               value,
-              style: TextStyle(
-                fontSize: 24,
+              style: textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: color,
               ),
             ),
             const SizedBox(height: 4),
-            Text(label, style: TextStyle(fontSize: 12, color: color)),
+            Text(
+              label,
+              style: textTheme.bodySmall?.copyWith(color: color),
+            ),
           ],
         ),
       ),
@@ -56,6 +55,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final textTheme = theme.textTheme;
+
     final user = FirebaseAuth.instance.currentUser;
     final reportsAsync = ref.watch(employeeReportsProvider);
     final summaryAsync = ref.watch(employeeReportsSummaryProvider);
@@ -69,9 +72,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Karyawan'),
-        backgroundColor: Colors.indigo[100],
+        // Use theme's AppBar style, but override for a lighter look
+        backgroundColor: AppTheme.primaryLight,
         elevation: 0,
-        foregroundColor: Colors.black,
+        foregroundColor: AppTheme.textPrimary,
+        iconTheme: IconThemeData(color: AppTheme.textPrimary),
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          color: AppTheme.textPrimary,
+          fontWeight: FontWeight.bold,
+        ),
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
@@ -94,12 +103,12 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
         ],
       ),
-      backgroundColor: Colors.grey[100],
+      // backgroundColor is handled by theme
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
-            // Refresh data dengan invalidate provider
             ref.invalidate(employeeReportsProvider);
+            ref.invalidate(employeeReportsSummaryProvider);
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -108,42 +117,45 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
               children: [
                 // Progress status cards
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16), // Add top padding
                   child: summaryAsync.when(
                     data: (summary) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         _buildProgressItem(
+                          context,
                           'Terkirim',
                           summary.pending.toString(),
-                          Colors.blue,
+                          AppTheme.info,
                         ),
                         _buildProgressItem(
+                          context,
                           'Dikerjakan',
                           summary.inProgress.toString(),
-                          Colors.orange,
+                          AppTheme.warning,
                         ),
                         _buildProgressItem(
+                          context,
                           'Selesai',
                           summary.completed.toString(),
-                          Colors.green,
+                          AppTheme.success,
                         ),
                       ],
                     ),
                     loading: () => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildProgressItem('Terkirim', '...', Colors.blue),
-                        _buildProgressItem('Dikerjakan', '...', Colors.orange),
-                        _buildProgressItem('Selesai', '...', Colors.green),
+                        _buildProgressItem(context, 'Terkirim', '...', AppTheme.info),
+                        _buildProgressItem(context, 'Dikerjakan', '...', AppTheme.warning),
+                        _buildProgressItem(context, 'Selesai', '...', AppTheme.success),
                       ],
                     ),
                     error: (error, stack) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildProgressItem('Terkirim', '0', Colors.blue),
-                        _buildProgressItem('Dikerjakan', '0', Colors.orange),
-                        _buildProgressItem('Selesai', '0', Colors.green),
+                        _buildProgressItem(context, 'Terkirim', '0', AppTheme.info),
+                        _buildProgressItem(context, 'Dikerjakan', '0', AppTheme.warning),
+                        _buildProgressItem(context, 'Selesai', '0', AppTheme.success),
                       ],
                     ),
                   ),
@@ -152,19 +164,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 // Header dengan tombol Buat Laporan
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  // elevation, shape, color from CardTheme
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Laporkan Masalah Kebersihan',
-                          style: TextStyle(
-                            fontSize: 20,
+                          style: textTheme.titleLarge?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -176,22 +184,21 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.indigo[600],
+                              color: colorScheme.primary,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Column(
+                            child: Column(
                               children: [
                                 Icon(
                                   Icons.camera_alt,
-                                  color: Colors.white,
+                                  color: colorScheme.onPrimary,
                                   size: 32,
                                 ),
-                                SizedBox(height: 8),
+                                const SizedBox(height: 8),
                                 Text(
                                   'Buat Laporan Baru',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
+                                  style: textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.onPrimary,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -211,14 +218,13 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.history),
-                          SizedBox(width: 8),
+                          const Icon(Icons.history),
+                          const SizedBox(width: 8),
                           Text(
                             'Riwayat Laporan Anda',
-                            style: TextStyle(
-                              fontSize: 18,
+                            style: textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -230,7 +236,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                       reportsAsync.when(
                         data: (reports) {
                           if (reports.isEmpty) {
-                            return _buildEmptyState();
+                            return _buildEmptyState(context);
                           }
 
                           return ListView.builder(
@@ -239,12 +245,12 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                             itemCount: reports.length,
                             itemBuilder: (context, index) {
                               final report = reports[index];
-                              return _buildReportCard(report);
+                              return _buildReportCard(context, report);
                             },
                           );
                         },
                         loading: () => _buildLoadingState(),
-                        error: (error, stack) => _buildErrorState(error),
+                        error: (error, stack) => _buildErrorState(context, error),
                       ),
                     ],
                   ),
@@ -259,20 +265,23 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         onPressed: () {
           Navigator.pushNamed(context, '/create_report');
         },
-        backgroundColor: Colors.indigo,
+        // backgroundColor and child color from theme
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  Widget _buildReportCard(Report report) {
+  Widget _buildReportCard(BuildContext context, Report report) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Dismissible(
       key: Key(report.id),
       background: Container(
-        color: Colors.red,
+        color: colorScheme.error,
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 16),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: Icon(Icons.delete, color: colorScheme.onError),
       ),
       direction: DismissDirection.endToStart,
       confirmDismiss: (direction) async {
@@ -290,7 +299,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
               ),
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('HAPUS'),
+                child: Text('HAPUS', style: TextStyle(color: colorScheme.error)),
               ),
             ],
           ),
@@ -314,7 +323,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('Gagal menghapus: $e'),
-                backgroundColor: Colors.red,
+                backgroundColor: colorScheme.error,
               ),
             );
           }
@@ -322,33 +331,33 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
-        elevation: 0,
+        // elevation from CardTheme
         child: ListTile(
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.cleaning_services_outlined,
-              color: Colors.indigo,
+              color: colorScheme.primary,
             ),
           ),
           title: Text(
             report.location,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           subtitle: Text(_formatDate(report.date)),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: _getStatusColor(report.status),
+              color: report.status.color,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               report.status.displayName,
-              style: const TextStyle(color: Colors.white, fontSize: 12),
+              style: textTheme.bodySmall?.copyWith(color: Colors.white),
             ),
           ),
           onTap: () {
@@ -368,23 +377,24 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
+            Icon(Icons.inbox_outlined, size: 64, color: AppTheme.textHint),
             const SizedBox(height: 16),
             Text(
               'Belum ada laporan.',
-              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              style: textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
             ),
             const SizedBox(height: 8),
             Text(
               'Buat laporan pertama Anda!',
-              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+              style: textTheme.bodyMedium?.copyWith(color: AppTheme.textHint),
             ),
           ],
         ),
@@ -401,27 +411,28 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     );
   }
 
-  Widget _buildErrorState(Object error) {
+  Widget _buildErrorState(BuildContext context, Object error) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+            Icon(Icons.error_outline, size: 64, color: colorScheme.error),
             const SizedBox(height: 16),
             Text(
               'Terjadi kesalahan',
-              style: TextStyle(
-                fontSize: 18,
+              style: textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: Colors.red[700],
+                color: colorScheme.error,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: TextStyle(color: Colors.grey[600]),
+              style: textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -450,7 +461,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('KELUAR'),
+            child: Text('KELUAR', style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ),
         ],
       ),

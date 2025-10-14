@@ -57,7 +57,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: Color(report.status.colorValue),
+                      color: report.status.color,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(

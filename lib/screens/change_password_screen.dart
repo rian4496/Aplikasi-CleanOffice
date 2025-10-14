@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_theme.dart';
-import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_password_field.dart';
 import '../providers/riverpod/auth_providers.dart';
 
@@ -89,16 +88,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       final isChanging = state.isLoading;
 
       return Scaffold(
-        appBar: const CustomAppBar(title: 'Ubah Password'),
-        body: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [AppTheme.primary.withOpacity(0.05), Colors.white],
-            ),
-          ),
-          child: SingleChildScrollView(
+        appBar: AppBar(title: const Text('Ubah Password'), backgroundColor: Colors.indigo[800]),
+        body: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
@@ -106,13 +97,17 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withOpacity(0.1),
+                          color: Colors.white,
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.grey[200]!,
+                            width: 2.0,
+                          ),      
                         ),
                         child: Icon(
                           Icons.lock_reset_rounded,
                           size: 64,
-                          color: AppTheme.primary,
+                          color: Colors.grey[700],
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -123,18 +118,13 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 15,
-                          color: AppTheme.textMedium,
+                          color: AppTheme.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 32),
 
                       // Form Card
                       Card(
-                        elevation: 4,
-                        shadowColor: AppTheme.primary.withOpacity(0.1),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(20),
-                        ),
                         child: Padding(
                           padding: const EdgeInsets.all(24),
                           child: Form(
@@ -209,15 +199,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                                 );
                                           },
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primary,
+                                      backgroundColor: Colors.indigo[800],
                                       foregroundColor: Colors.white,
-                                      elevation: 4,
-                                      shadowColor: AppTheme.primary.withOpacity(
-                                        0.4,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
                                     ),
                                     child: isChanging
                                         ? const SizedBox(
@@ -267,7 +250,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                 'Gunakan password yang kuat dengan kombinasi huruf, angka, dan simbol',
                                 style: TextStyle(
                                   fontSize: 13,
-                                  color: AppTheme.textMedium,
+                                  color: AppTheme.textSecondary,
                                 ),
                               ),
                             ),

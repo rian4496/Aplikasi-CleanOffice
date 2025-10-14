@@ -67,14 +67,14 @@ class ReportListItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Color(report.status.colorValue).withValues(alpha: 0.1),
+                color: report.status.color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
                 _getStatusIcon(
                   report.status,
                 ), // FIXED: Tidak pakai IconData dynamic
-                color: Color(report.status.colorValue),
+                color: report.status.color,
                 size: 24,
               ),
             ),
@@ -179,12 +179,10 @@ class ReportListItem extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: Color(report.status.colorValue).withValues(alpha: 0.1),
+                  color: report.status.color.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color(
-                      report.status.colorValue,
-                    ).withValues(alpha: 0.3),
+                    color: report.status.color.withOpacity(0.3),
                   ),
                 ),
                 child: Text(
@@ -192,7 +190,7 @@ class ReportListItem extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: Color(report.status.colorValue),
+                  color: report.status.color,
                   ),
                 ),
               ),
@@ -215,14 +213,14 @@ class ReportListItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: Color(report.status.colorValue).withValues(alpha: 0.1),
+            color: report.status.color.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
             _getStatusIcon(
               report.status,
             ), // FIXED: Tidak pakai IconData dynamic
-            color: Color(report.status.colorValue),
+            color: report.status.color,
             size: 20,
           ),
         ),
@@ -261,7 +259,7 @@ class ReportListItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: Color(report.status.colorValue).withValues(alpha: 0.1),
+              color: report.status.color.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -269,7 +267,7 @@ class ReportListItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.bold,
-                color: Color(report.status.colorValue),
+                color: report.status.color,
               ),
             ),
           ),

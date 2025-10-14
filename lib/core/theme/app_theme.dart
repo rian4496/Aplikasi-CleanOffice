@@ -1,62 +1,30 @@
 import 'package:flutter/material.dart';
 
-/// Enhanced App Theme dengan Color Harmony & Modern Design
 class AppTheme {
-  // ==================== COLOR PALETTE ====================
+  // ==================== PALET WARNA UTAMA ====================
 
-  // Primary Colors - Purple Gradient
-  static const Color primaryDark = Color(0xFF4A148C);
-  static const Color primary = Color(0xFF5E35B1);
-  static const Color primaryLight = Color(0xFF7E57C2);
+  // Primary Colors (Biru/Indigo)
+  static const Color primary = Color(0xFF3F51B5); // Indigo 500
+  static const Color primaryDark = Color(0xFF303F9F); // Indigo 700
+  static const Color primaryLight = Color(0xFFC5CAE9); // Indigo 100
 
-  // Secondary Colors - Blue to Cyan Gradient
-  static const Color secondary = Color(0xFF1976D2);
-  static const Color secondaryLight = Color(0xFF42A5F5);
-  static const Color accent = Color(0xFF00BCD4);
+  // Secondary/Accent Color
+  static const Color secondary = Color(0xFF448AFF); // Blue A200
+  static const Color accent = Color(0xFF00BCD4); // Cyan
 
-  // Status Colors - More Vibrant
-  static const Color success = Color(0xFF00C853);
-  static const Color warning = Color(0xFFFF6F00);
-  static const Color error = Color(0xFFD32F2F);
-  static const Color info = Color(0xFF0288D1);
+  // Status Colors
+  static const Color success = Color(0xFF4CAF50); // Green
+  static const Color warning = Color(0xFFFF9800); // Orange
+  static const Color error = Color(0xFFF44336); // Red
+  static const Color info = Color(0xFF2196F3); // Blue
 
   // Neutral Colors
-  static const Color backgroundLight = Color(0xFFF8F9FA);
-  static const Color backgroundWhite = Colors.white;
-  static const Color textDark = Color(0xFF212121);
-  static const Color textMedium = Color(0xFF757575);
-  static const Color textLight = Color(0xFFBDBDBD);
-
-  // Card Background Gradients
-  static const LinearGradient primaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF5E35B1), Color(0xFF7E57C2)],
-  );
-
-  static const LinearGradient secondaryGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF1976D2), Color(0xFF42A5F5)],
-  );
-
-  static const LinearGradient accentGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF00BCD4), Color(0xFF00E5FF)],
-  );
-
-  static const LinearGradient successGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFF00C853), Color(0xFF69F0AE)],
-  );
-
-  static const LinearGradient warningGradient = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [Color(0xFFFF6F00), Color(0xFFFFB74D)],
-  );
+  static const Color background = Color(0xFFF4F6F8); // Abu-abu sangat muda
+  static const Color card = Colors.white;
+  static const Color textPrimary = Color(0xFF212121); // Hampir hitam
+  static const Color textSecondary = Color(0xFF757575); // Abu-abu tua
+  static const Color textHint = Color(0xFFBDBDBD); // Abu-abu muda
+  static const Color divider = Color(0xFFE0E0E0);
 
   // ==================== THEME DATA ====================
 
@@ -68,23 +36,23 @@ class AppTheme {
       // Color Scheme
       colorScheme: const ColorScheme.light(
         primary: primary,
-        secondary: secondary,
-        tertiary: accent,
-        error: error,
-        surface: backgroundWhite,
         onPrimary: Colors.white,
+        secondary: secondary,
         onSecondary: Colors.white,
-        onSurface: textDark,
+        error: error,
+        onError: Colors.white,
+        surface: card,
+        onSurface: textPrimary,
       ),
 
       // Scaffold
-      scaffoldBackgroundColor: backgroundLight,
+      scaffoldBackgroundColor: background,
 
       // App Bar
       appBarTheme: const AppBarTheme(
-        elevation: 0,
+        elevation: 1,
         centerTitle: false,
-        backgroundColor: primary,
+        backgroundColor: primaryDark, // Menggunakan warna primary gelap
         foregroundColor: Colors.white,
         iconTheme: IconThemeData(color: Colors.white),
         titleTextStyle: TextStyle(
@@ -94,98 +62,60 @@ class AppTheme {
         ),
       ),
 
-      // Card - FIXED: Ganti CardTheme jadi CardThemeData
+      // Card
       cardTheme: CardThemeData(
-        elevation: 3,
-        shadowColor: Colors.black.withOpacity(0.1),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        color: backgroundWhite,
+        elevation: 1,
+        shadowColor: Colors.black.withOpacity(0.05),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: card,
+        margin: EdgeInsets.zero,
       ),
 
       // Elevated Button
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 4,
-          shadowColor: primary.withOpacity(0.3),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
-
-      // Input Decoration
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: backgroundWhite,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: textLight.withOpacity(0.3)),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: textLight.withOpacity(0.3)),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primary, width: 2),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: error),
-        ),
-      ),
-
+      
       // FloatingActionButton
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        elevation: 6,
         backgroundColor: primary,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
-      // Bottom Navigation Bar
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        elevation: 8,
-        selectedItemColor: primary,
-        unselectedItemColor: textMedium,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
+      // Input Decoration
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: divider),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide(color: divider),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primary, width: 2),
+        ),
+      ),
+
+      // Chip Theme
+      chipTheme: ChipThemeData(
+        backgroundColor: primary.withOpacity(0.1),
+        labelStyle: const TextStyle(color: primary, fontWeight: FontWeight.bold),
+        side: BorderSide.none,
       ),
     );
   }
-
-  // ==================== CUSTOM SHADOWS ====================
-
-  static List<BoxShadow> get cardShadow => [
-    BoxShadow(
-      color: Colors.black.withOpacity(0.08),
-      blurRadius: 20,
-      offset: const Offset(0, 4),
-      spreadRadius: 0,
-    ),
-  ];
-
-  static List<BoxShadow> get elevatedShadow => [
-    BoxShadow(
-      color: primary.withOpacity(0.15),
-      blurRadius: 24,
-      offset: const Offset(0, 8),
-      spreadRadius: 0,
-    ),
-  ];
-
-  static List<BoxShadow> get buttonShadow => [
-    BoxShadow(
-      color: primary.withOpacity(0.3),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
-      spreadRadius: 0,
-    ),
-  ];
 }

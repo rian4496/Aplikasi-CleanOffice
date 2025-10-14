@@ -27,6 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            const SizedBox(height: 16), // Ditambahkan untuk jarak atas
             Center(
               child: Column(
                 children: [

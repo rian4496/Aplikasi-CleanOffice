@@ -93,6 +93,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
+                      const SizedBox(height: 24), // Ditambahkan untuk jarak atas
                       // Icon
                       Container(
                         padding: const EdgeInsets.all(20),
@@ -235,10 +236,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppTheme.info.withOpacity(0.1),
+                          color: AppTheme.info.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppTheme.info.withOpacity(0.3),
+                            color: AppTheme.info.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -260,7 +261,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ],
                   ),
                 ),
-        ),
       );
     });
   }

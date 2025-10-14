@@ -28,7 +28,7 @@ final _logger = AppLogger('Main');
 // 🔧 DEVELOPMENT MODE SWITCH
 // Set ke true untuk test UI tanpa Firebase Auth
 // Set ke false untuk mode production normal
-const bool devMode = true; // ← UBAH INI KE false SAAT PRODUCTION
+const bool devMode = false; // ← UBAH INI KE false SAAT PRODUCTION
 
 void main() async {
   // Ensure Flutter bindings are initialized

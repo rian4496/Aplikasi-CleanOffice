@@ -67,7 +67,7 @@ class ReportListItem extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: report.status.color.withOpacity(0.1),
+                color: report.status.color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
@@ -179,10 +179,10 @@ class ReportListItem extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: report.status.color.withOpacity(0.1),
+                  color: report.status.color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: report.status.color.withOpacity(0.3),
+                    color: report.status.color.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -213,7 +213,7 @@ class ReportListItem extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: report.status.color.withOpacity(0.1),
+            color: report.status.color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
@@ -259,7 +259,7 @@ class ReportListItem extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: report.status.color.withOpacity(0.1),
+              color: report.status.color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(

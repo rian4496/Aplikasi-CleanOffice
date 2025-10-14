@@ -33,10 +33,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
 
     _controller.forward();
   }
@@ -80,10 +77,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         duration: const Duration(milliseconds: 800),
                         curve: Curves.elasticOut,
                         builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: child,
-                          );
+                          return Transform.scale(scale: value, child: child);
                         },
                         child: Image.asset(
                           'assets/images/welcome_illustration.png',
@@ -114,10 +108,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       Text(
                         'Selamat datang di Clean Office,\nkelola kebersihan kantor Anda dengan mudah',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       ),
 
                       const SizedBox(height: 40),
@@ -157,7 +148,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       // Sign Up Button (Outlined)
                       SizedBox(
                         width: MediaQuery.of(context).size.width * 0.85,
-                        child: OutlinedButton( // <-- Ganti menjadi OutlinedButton
+                        child: OutlinedButton(
+                          // <-- Ganti menjadi OutlinedButton
                           onPressed: () {
                             Navigator.push(
                               context,
@@ -166,15 +158,17 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                               ),
                             );
                           },
-                          style: OutlinedButton.styleFrom( // <-- Gunakan OutlinedButton.styleFrom
+                          style: OutlinedButton.styleFrom(
+                            // <-- Gunakan OutlinedButton.styleFrom
                             minimumSize: const Size(double.infinity, 54),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                             // Atur warna teks dan garis tepi
-                            foregroundColor: Colors.indigo[600], 
+                            foregroundColor: Colors.indigo[600],
                             side: BorderSide(
-                              color: Colors.indigo[600]!, // <-- Tambahkan ini untuk warna garis tepi
+                              color: Colors
+                                  .indigo[600]!, // <-- Tambahkan ini untuk warna garis tepi
                               width: 1.5, // Atur ketebalan garis jika perlu
                             ),
                           ),
@@ -188,23 +182,24 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         ),
                       ),
 
-                        // Text Copyright
+                      // Text Copyright
                       Column(
-                        crossAxisAlignment: CrossAxisAlignment.center, // Agar teks rata tengah
+                        crossAxisAlignment:
+                            CrossAxisAlignment.center, // Agar teks rata tengah
                         children: [
                           // Jarak Teks
-                          const SizedBox(height: 30), 
+                          const SizedBox(height: 30),
 
                           Text(
                             '© 2025 Clean Office',
                             style: TextStyle(
-                              color: Colors.grey[600], // Warna abu-abu yang soft
+                              color:
+                                  Colors.grey[600], // Warna abu-abu yang soft
                               fontSize: 12,
                             ),
                           ),
                         ],
                       ),
-                      
                     ],
                   ),
                 ),
@@ -228,18 +223,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.waving_hand,
-            size: 80,
-            color: Colors.indigo[850],
-          ),
+          Icon(Icons.waving_hand, size: 80, color: Colors.indigo[850]),
           const SizedBox(height: 8),
           Text(
             'Welcome Illustration',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[500],
-            ),
+            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
           ),
         ],
       ),

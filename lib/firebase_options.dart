@@ -66,5 +66,4 @@ class DefaultFirebaseOptions {
     projectId: 'clean-office-app',
     storageBucket: 'clean-office-app.firebasestorage.app',
   );
-
 }

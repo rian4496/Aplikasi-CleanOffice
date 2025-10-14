@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/theme/app_theme.dart';
+import '../widgets/custom_app_bar.dart';
+import '../widgets/custom_password_field.dart';
+import '../providers/riverpod/auth_providers.dart';
+
 
 /// Modern Change Password Screen
 class ChangePasswordScreen extends StatefulWidget {
@@ -12,14 +17,9 @@ class ChangePasswordScreen extends StatefulWidget {
 
 class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _auth = FirebaseAuth.instance;
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  bool _isChanging = false;
-  bool _obscureCurrentPassword = true;
-  bool _obscureNewPassword = true;
-  bool _obscureConfirmPassword = true;
 
   @override
   void dispose() {
@@ -29,142 +29,76 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     super.dispose();
   }
 
-  Future<void> _changePassword() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Password baru tidak cocok'),
-          backgroundColor: AppTheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isChanging = true);
-
-    try {
-      final user = _auth.currentUser;
-      if (user != null && user.email != null) {
-        // Re-authenticate user before changing password
-        final credential = EmailAuthProvider.credential(
-          email: user.email!,
-          password: _currentPasswordController.text,
-        );
-        
-        await user.reauthenticateWithCredential(credential);
-        await user.updatePassword(_newPasswordController.text);
-
-        if (!mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: const [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Password berhasil diubah'),
-              ],
-            ),
-            backgroundColor: AppTheme.success,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-        Navigator.pop(context);
-      }
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      String message;
-      switch (e.code) {
-        case 'wrong-password':
-          message = 'Password saat ini salah';
-          break;
-        case 'weak-password':
-          message = 'Password baru terlalu lemah';
-          break;
-        default:
-          message = 'Terjadi kesalahan: ${e.message}';
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: AppTheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() => _isChanging = false);
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.primary.withValues(alpha: 0.1),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Custom App Bar with Gradient
-              Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppTheme.primary,
-                      AppTheme.primaryLight,
+    // Mengubah widget menjadi Consumer untuk mengakses ref
+    return Consumer(builder: (context, ref, child) {
+      // Listener untuk menangani side-effects (SnackBar, Navigasi)
+      ref.listen<AsyncValue<void>>(authActionsProvider, (previous, next) {
+        next.when(
+          error: (error, stackTrace) {
+            String message;
+            if (error is FirebaseAuthException) {
+              switch (error.code) {
+                case 'wrong-password':
+                case 'user-mismatch':
+                  message = 'Password saat ini salah';
+                  break;
+                case 'weak-password':
+                  message = 'Password baru terlalu lemah';
+                  break;
+                default:
+                  message = 'Terjadi kesalahan. Silahkan coba lagi.';
+              }
+            } else {
+              message = 'Terjadi kesalahan yang tidak diketahui.';
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(message),
+                backgroundColor: AppTheme.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          },
+          data: (_) {
+            // Hanya tampilkan snackbar jika state sebelumnya tidak null (bukan state awal)
+            if (previous != null && !previous.isLoading) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: const [
+                      Icon(Icons.check_circle, color: Colors.white),
+                      SizedBox(width: 8),
+                      Text('Password berhasil diubah'),
                     ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+                  backgroundColor: AppTheme.success,
+                  behavior: SnackBarBehavior.floating,
                 ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Ubah Password',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              );
+              Navigator.pop(context);
+            }
+          },
+          loading: () {}, // Tidak perlu melakukan apa-apa saat loading
+        );
+      });
 
-              // Content
-              Expanded(
-                child: SingleChildScrollView(
+      // Mendapatkan state saat ini untuk mengontrol UI
+      final state = ref.watch(authActionsProvider);
+      final isChanging = state.isLoading;
+
+      return Scaffold(
+        appBar: const CustomAppBar(title: 'Ubah Password'),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppTheme.primary.withOpacity(0.05), Colors.white],
+            ),
+          ),
+          child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     children: [
@@ -172,7 +106,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.primary.withValues(alpha: 0.1),
+                          color: AppTheme.primary.withOpacity(0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -197,7 +131,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       // Form Card
                       Card(
                         elevation: 4,
-                        shadowColor: AppTheme.primary.withValues(alpha: 0.1),
+                        shadowColor: AppTheme.primary.withOpacity(0.1),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -207,67 +141,23 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                             key: _formKey,
                             child: Column(
                               children: [
-                                // Current Password
-                                TextFormField(
+                                CustomPasswordField(
                                   controller: _currentPasswordController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Password Saat Ini',
-                                    hintText: '••••••••',
-                                    prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primary),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscureCurrentPassword ? Icons.visibility_off : Icons.visibility,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                      onPressed: () {
-                                        setState(() => _obscureCurrentPassword = !_obscureCurrentPassword);
-                                      },
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: AppTheme.primary, width: 2),
-                                    ),
-                                  ),
-                                  obscureText: _obscureCurrentPassword,
+                                  labelText: 'Password Saat Ini',
+                                  enabled: !isChanging,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Password saat ini tidak boleh kosong';
                                     }
                                     return null;
                                   },
-                                  enabled: !_isChanging,
                                 ),
                                 const SizedBox(height: 16),
-
-                                // New Password
-                                TextFormField(
+                                CustomPasswordField(
                                   controller: _newPasswordController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Password Baru',
-                                    hintText: '••••••••',
-                                    prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primary),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscureNewPassword ? Icons.visibility_off : Icons.visibility,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                      onPressed: () {
-                                        setState(() => _obscureNewPassword = !_obscureNewPassword);
-                                      },
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: AppTheme.primary, width: 2),
-                                    ),
-                                    helperText: 'Minimal 6 karakter',
-                                  ),
-                                  obscureText: _obscureNewPassword,
+                                  labelText: 'Password Baru',
+                                  helperText: 'Minimal 6 karakter',
+                                  enabled: !isChanging,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Password baru tidak boleh kosong';
@@ -277,35 +167,12 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                     }
                                     return null;
                                   },
-                                  enabled: !_isChanging,
                                 ),
                                 const SizedBox(height: 16),
-
-                                // Confirm New Password
-                                TextFormField(
+                                CustomPasswordField(
                                   controller: _confirmPasswordController,
-                                  decoration: InputDecoration(
-                                    labelText: 'Konfirmasi Password Baru',
-                                    hintText: '••••••••',
-                                    prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primary),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
-                                        color: AppTheme.textMedium,
-                                      ),
-                                      onPressed: () {
-                                        setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-                                      },
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: AppTheme.primary, width: 2),
-                                    ),
-                                  ),
-                                  obscureText: _obscureConfirmPassword,
+                                  labelText: 'Konfirmasi Password Baru',
+                                  enabled: !isChanging,
                                   validator: (value) {
                                     if (value == null || value.isEmpty) {
                                       return 'Konfirmasi password tidak boleh kosong';
@@ -315,7 +182,6 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                     }
                                     return null;
                                   },
-                                  enabled: !_isChanging,
                                 ),
                                 const SizedBox(height: 24),
 
@@ -324,23 +190,45 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                                   width: double.infinity,
                                   height: 54,
                                   child: ElevatedButton(
-                                    onPressed: _isChanging ? null : _changePassword,
+                                    onPressed: isChanging
+                                        ? null
+                                        : () {
+                                            final isFormValid = _formKey
+                                                    .currentState
+                                                    ?.validate() ??
+                                                false;
+                                            if (!isFormValid) return;
+
+                                            ref
+                                                .read(authActionsProvider.notifier)
+                                                .changePassword(
+                                                  currentPassword:
+                                                      _currentPasswordController.text,
+                                                  newPassword:
+                                                      _newPasswordController.text,
+                                                );
+                                          },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.primary,
                                       foregroundColor: Colors.white,
                                       elevation: 4,
-                                      shadowColor: AppTheme.primary.withValues(alpha: 0.4),
+                                      shadowColor: AppTheme.primary.withOpacity(
+                                        0.4,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                       ),
                                     ),
-                                    child: _isChanging
+                                    child: isChanging
                                         ? const SizedBox(
                                             width: 20,
                                             height: 20,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
                                             ),
                                           )
                                         : const Text(
@@ -364,10 +252,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: AppTheme.info.withValues(alpha: 0.1),
+                          color: AppTheme.info.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: AppTheme.info.withValues(alpha: 0.3),
+                            color: AppTheme.info.withOpacity(0.3),
                           ),
                         ),
                         child: Row(
@@ -389,11 +277,8 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     ],
                   ),
                 ),
-              ),
-            ],
-          ),
         ),
-      ),
-    );
+      );
+    });
   }
 }

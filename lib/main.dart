@@ -43,11 +43,7 @@ void main() async {
     _logger.info('Firebase initialized successfully');
 
     // Run app with Riverpod
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+    runApp(const ProviderScope(child: MyApp()));
   } catch (e, stackTrace) {
     _logger.critical('Failed to initialize app', e, stackTrace);
     // Show error screen
@@ -90,48 +86,48 @@ class MyApp extends ConsumerWidget {
     return MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
-      
+
       // ✨ Menggunakan AppTheme.lightTheme yang sudah ada
       theme: AppTheme.lightTheme,
-      
+
       // 🔧 DEVELOPMENT MODE: Langsung ke Dev Menu
       // PRODUCTION MODE: Ke Welcome Screen (bukan langsung Login)
       initialRoute: devMode ? '/dev_menu' : '/welcome',
-      
+
       routes: {
         // Dev Menu Route
         '/dev_menu': (context) => const DevMenuScreen(),
-        
+
         // Auth Routes - UPDATED!
         '/welcome': (context) => const WelcomeScreen(),
         AppConstants.loginRoute: (context) => const LoginScreen(),
         '/sign-up': (context) => const SignUpScreen(), // CHANGED from /register
-        
         // Home Routes
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),
         AppConstants.homeAdminRoute: (context) => const AdminDashboardScreen(),
         AppConstants.homeCleanerRoute: (context) => const CleanerHomeScreen(),
-        
+
         // Feature Routes
         AppConstants.createReportRoute: (context) => const CreateReportScreen(),
-        AppConstants.createRequestRoute: (context) => const CreateRequestScreen(),
-        AppConstants.requestHistoryRoute: (context) => const RequestHistoryScreen(),
-        
+        AppConstants.createRequestRoute: (context) =>
+            const CreateRequestScreen(),
+        AppConstants.requestHistoryRoute: (context) =>
+            const RequestHistoryScreen(),
+
         // Profile Routes
         AppConstants.profileRoute: (context) => const ProfileScreen(),
         AppConstants.editProfileRoute: (context) => const EditProfileScreen(),
-        AppConstants.changePasswordRoute: (context) => const ChangePasswordScreen(),
+        AppConstants.changePasswordRoute: (context) =>
+            const ChangePasswordScreen(),
       },
-      
+
       // Unknown route handler
       onUnknownRoute: (settings) {
         _logger.warning('Unknown route: ${settings.name}');
         return MaterialPageRoute(
           builder: (context) => Scaffold(
             appBar: AppBar(title: const Text('Error')),
-            body: const Center(
-              child: Text('Page not found'),
-            ),
+            body: const Center(child: Text('Page not found')),
           ),
         );
       },

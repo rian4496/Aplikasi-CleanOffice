@@ -31,10 +31,7 @@ class DevMenuScreen extends StatelessWidget {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Colors.deepPurple.shade50,
-              Colors.white,
-            ],
+            colors: [Colors.deepPurple.shade50, Colors.white],
           ),
         ),
         child: ListView(
@@ -48,7 +45,11 @@ class DevMenuScreen extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
-                    Icon(Icons.warning_amber_rounded, size: 48, color: Colors.orange.shade800),
+                    Icon(
+                      Icons.warning_amber_rounded,
+                      size: 48,
+                      color: Colors.orange.shade800,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       'DEVELOPMENT MODE',
@@ -70,9 +71,9 @@ class DevMenuScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Welcome Screen (NEW!)
             _buildSectionTitle('👋 Welcome & Onboarding'),
             _buildScreenCard(
@@ -83,9 +84,9 @@ class DevMenuScreen extends StatelessWidget {
               color: Colors.purple,
               screen: const WelcomeScreen(),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Authentication Screens
             _buildSectionTitle('🔐 Authentication Screens'),
             _buildScreenCard(
@@ -112,9 +113,9 @@ class DevMenuScreen extends StatelessWidget {
               color: Colors.orange,
               screen: const ResetPasswordScreen(),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Home Screens
             _buildSectionTitle('🏠 Home Screens'),
             _buildScreenCard(
@@ -141,9 +142,9 @@ class DevMenuScreen extends StatelessWidget {
               color: Colors.blue,
               screen: const MockCleanerHomeScreen(),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Feature Screens
             _buildSectionTitle('✨ Feature Screens'),
             _buildScreenCard(
@@ -170,9 +171,9 @@ class DevMenuScreen extends StatelessWidget {
               color: Colors.brown,
               screen: const RequestHistoryScreen(),
             ),
-            
+
             const SizedBox(height: 24),
-            
+
             // Profile Screens
             _buildSectionTitle('👤 Profile Screens'),
             _buildScreenCard(
@@ -199,9 +200,9 @@ class DevMenuScreen extends StatelessWidget {
               color: Colors.red,
               screen: const ChangePasswordScreen(),
             ),
-            
+
             const SizedBox(height: 32),
-            
+
             // Info Card
             Card(
               elevation: 2,
@@ -233,14 +234,14 @@ class DevMenuScreen extends StatelessWidget {
                 ),
               ),
             ),
-            
+
             const SizedBox(height: 16),
           ],
         ),
       ),
     );
   }
-  
+
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, top: 8),
@@ -254,7 +255,7 @@ class DevMenuScreen extends StatelessWidget {
       ),
     );
   }
-  
+
   Widget _buildScreenCard(
     BuildContext context, {
     required String title,
@@ -266,9 +267,7 @@ class DevMenuScreen extends StatelessWidget {
     return Card(
       elevation: 2,
       margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
           Navigator.push(
@@ -304,10 +303,7 @@ class DevMenuScreen extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                     ),
                   ],
                 ),

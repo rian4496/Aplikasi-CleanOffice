@@ -1,103 +1,44 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aplikasi_cleanoffice/models/user_role.dart';
+import 'package:aplikasi_cleanoffice/providers/riverpod/auth_providers.dart';
 import 'package:aplikasi_cleanoffice/screens/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/cleaner_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 
-class HomeScreen extends StatefulWidget {
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the user profile provider. Riverpod handles loading/error states.
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
 
-class _HomeScreenState extends State<HomeScreen> {
-  final _auth = FirebaseAuth.instance;
-  String? _userRole;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserRole();
-  }
-
-  Future<void> _loadUserRole() async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      if (mounted && docSnapshot.exists) {
-        final userData = docSnapshot.data();
-        setState(() {
-          _userRole = userData?['role'] as String?;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // If role not loaded yet, show loading indicator
-    if (_userRole == null) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    // Check authentication and role
-    final userRef = FirebaseAuth.instance.currentUser;
-    if (userRef == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/login');
-      });
-      return const SizedBox();
-    }
-
-    // Redirect to role-specific screen or show error
-    if (_userRole == UserRole.employee) {
-      return const EmployeeHomeScreen();
-    } else if (_userRole == UserRole.cleaner) {
-      return const CleanerHomeScreen();
-    } else if (_userRole == UserRole.supervisor) { // TAMBAHAN
-      return const AdminDashboardScreen();
-    } else {
-      // Show error for invalid role
-      return Scaffold(
+    return userProfileAsync.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (error, stackTrace) => Scaffold(
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Colors.red[300],
-              ),
+              Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
               const SizedBox(height: 16),
               const Text(
-                'Peran tidak valid',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                'Gagal memuat data pengguna',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                'Role: $_userRole',
+                error.toString(),
                 style: TextStyle(color: Colors.grey[600]),
+                textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               ElevatedButton.icon(
                 onPressed: () async {
-                  await FirebaseAuth.instance.signOut();
-                  if (!mounted) return;
-                  Navigator.pushReplacementNamed(context, '/login');
+                  // Use the auth actions provider to logout
+                  await ref.read(authActionsProvider.notifier).logout();
                 },
                 icon: const Icon(Icons.logout),
                 label: const Text('Kembali ke Login'),
@@ -111,7 +52,60 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-      );
-    }
+      ),
+      data: (userProfile) {
+        // If user is logged out or profile doesn't exist, redirect to login
+        if (userProfile == null) {
+          // Use addPostFrameCallback to avoid calling Navigator during a build.
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (context.mounted) {
+              Navigator.pushReplacementNamed(context, '/login');
+            }
+          });
+          return const Scaffold(
+              body: Center(child: CircularProgressIndicator()));
+        }
+
+        // Redirect to role-specific screen
+        switch (userProfile.role) {
+          case UserRole.employee:
+            return const EmployeeHomeScreen();
+          case UserRole.cleaner:
+            return const CleanerHomeScreen();
+          case UserRole.admin:
+            return const AdminDashboardScreen();
+          default:
+            // Show error for invalid role
+            return Scaffold(
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Peran tidak valid',
+                      style:
+                          TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Role: ${userProfile.role}',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: () async =>
+                          await ref.read(authActionsProvider.notifier).logout(),
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Kembali ke Login'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+        }
+      },
+    );
   }
 }

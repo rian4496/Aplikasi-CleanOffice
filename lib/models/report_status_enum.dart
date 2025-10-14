@@ -1,5 +1,5 @@
 /// Enum untuk status laporan kebersihan
-/// 
+///
 /// Flow status:
 /// 1. pending - Laporan baru dibuat oleh employee, menunggu petugas
 /// 2. assigned - Sudah ditugaskan ke petugas tertentu

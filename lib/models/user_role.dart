@@ -3,10 +3,10 @@ class UserRole {
   // Role constants
   static const String cleaner = 'cleaner';
   static const String employee = 'employee';
-  static const String supervisor = 'supervisor';
+  static const String admin = 'admin';
 
   /// Mendapatkan semua role yang tersedia
-  static List<String> get allRoles => [cleaner, employee, supervisor];
+  static List<String> get allRoles => [cleaner, employee, admin];
 
   /// Mendapatkan nama tampilan role dalam Bahasa Indonesia
   static String getRoleDisplayName(String role) {
@@ -15,8 +15,8 @@ class UserRole {
         return 'Petugas Kebersihan';
       case employee:
         return 'Karyawan';
-      case supervisor:
-        return 'Supervisor';
+      case admin:
+        return 'Admin';
       default:
         return role;
     }
@@ -29,8 +29,8 @@ class UserRole {
         return 'Melakukan tugas kebersihan dan membuat laporan';
       case employee:
         return 'Membuat permintaan dan evaluasi kebersihan';
-      case supervisor:
-        return 'Memantau dan memverifikasi laporan kebersihan';
+      case admin:
+        return 'Mengelola sistem dan memverifikasi laporan';
       default:
         return 'Akses terbatas ke sistem';
     }
@@ -50,22 +50,22 @@ class UserRole {
 
   /// Supervisor dapat memverifikasi laporan
   static bool canVerifyReports(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Supervisor dapat melihat semua laporan
   static bool canViewAllReports(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Supervisor dapat melihat dashboard analytics
   static bool canViewDashboard(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Supervisor dapat mengelola assignment tugas
   static bool canAssignTasks(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Employee dapat memberikan rating
@@ -80,12 +80,12 @@ class UserRole {
 
   /// Supervisor dapat melihat performance metrics petugas
   static bool canViewPerformanceMetrics(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Supervisor dapat export data/laporan
   static bool canExportData(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   // ==================== ROUTE HELPERS ====================
@@ -97,8 +97,8 @@ class UserRole {
         return '/home_employee';
       case cleaner:
         return '/home_cleaner';
-      case supervisor:
-        return '/home_supervisor';
+      case admin:
+        return '/home_admin';
       default:
         return '/login';
     }
@@ -116,7 +116,7 @@ class UserRole {
         return 0xe14a; // Icons.cleaning_services
       case employee:
         return 0xe7fd; // Icons.person
-      case supervisor:
+      case admin:
         return 0xe8f2; // Icons.admin_panel_settings
       default:
         return 0xe7fd; // Icons.person
@@ -130,7 +130,7 @@ class UserRole {
         return 0xFF42A5F5; // Blue
       case employee:
         return 0xFF66BB6A; // Green
-      case supervisor:
+      case admin:
         return 0xFF5E35B1; // Purple
       default:
         return 0xFF9E9E9E; // Grey
@@ -142,7 +142,7 @@ class UserRole {
   /// Mendapatkan level hierarki role (semakin tinggi semakin besar authority)
   static int getRoleLevel(String role) {
     switch (role) {
-      case supervisor:
+      case admin:
         return 3;
       case cleaner:
         return 2;
@@ -160,7 +160,7 @@ class UserRole {
 
   /// Check apakah role adalah management level
   static bool isManagementLevel(String role) {
-    return role == supervisor;
+    return role == admin;
   }
 
   /// Check apakah role adalah operational level

@@ -11,7 +11,7 @@ class MockEmployeeHomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Karyawan'),
-        backgroundColor: Colors.grey[100],
+        backgroundColor: Colors.indigo[700],
         elevation: 0,
         foregroundColor: Colors.black,
         actions: [
@@ -27,18 +27,18 @@ class MockEmployeeHomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.history),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock: Riwayat')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Mock: Riwayat')));
             },
             tooltip: 'Riwayat',
           ),
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock: Profile')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Mock: Profile')));
             },
           ),
         ],
@@ -97,7 +97,11 @@ class MockEmployeeHomeScreen extends StatelessWidget {
                           ),
                           child: const Column(
                             children: [
-                              Icon(Icons.camera_alt, color: Colors.white, size: 32),
+                              Icon(
+                                Icons.camera_alt,
+                                color: Colors.white,
+                                size: 32,
+                              ),
                               SizedBox(height: 8),
                               Text(
                                 'Buat Laporan Baru',
@@ -115,7 +119,7 @@ class MockEmployeeHomeScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              
+
               const SizedBox(height: 16),
 
               // Riwayat Laporan section
@@ -135,7 +139,7 @@ class MockEmployeeHomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
-              
+
               const SizedBox(height: 16),
 
               // Mock Reports List
@@ -147,9 +151,9 @@ class MockEmployeeHomeScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         heroTag: 'add_report_btn',
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mock: Buat Laporan')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Mock: Buat Laporan')));
         },
         backgroundColor: Colors.indigo,
         child: const Icon(Icons.add),
@@ -178,13 +182,7 @@ class MockEmployeeHomeScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-              ),
-            ),
+            Text(label, style: TextStyle(fontSize: 12, color: color)),
           ],
         ),
       ),
@@ -243,20 +241,14 @@ class MockEmployeeHomeScreen extends StatelessWidget {
             DateFormat('d MMM yyyy').format(report['date'] as DateTime),
           ),
           trailing: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: report['statusColor'] as Color,
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               report['status'] as String,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
           onTap: () {

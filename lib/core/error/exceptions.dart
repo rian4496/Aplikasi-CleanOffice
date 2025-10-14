@@ -17,7 +17,8 @@ abstract class AppException implements Exception {
   });
 
   @override
-  String toString() => 'AppException: $message${code != null ? ' (code: $code)' : ''}';
+  String toString() =>
+      'AppException: $message${code != null ? ' (code: $code)' : ''}';
 }
 
 // ==================== FIREBASE EXCEPTIONS ====================
@@ -67,11 +68,7 @@ class AuthException extends AppException {
         message = error.message ?? 'Terjadi kesalahan autentikasi';
     }
 
-    return AuthException(
-      message: message,
-      code: code,
-      originalError: error,
-    );
+    return AuthException(message: message, code: code, originalError: error);
   }
 }
 
@@ -152,11 +149,7 @@ class StorageException extends AppException {
         message = error.message ?? 'Terjadi kesalahan storage';
     }
 
-    return StorageException(
-      message: message,
-      code: code,
-      originalError: error,
-    );
+    return StorageException(message: message, code: code, originalError: error);
   }
 }
 
@@ -251,18 +244,15 @@ AppException toAppException(dynamic error, {StackTrace? stackTrace}) {
   if (error.runtimeType.toString().contains('FirebaseAuth')) {
     return AuthException.fromFirebaseAuth(error);
   }
-  
+
   if (error.runtimeType.toString().contains('FirebaseFirestore')) {
     return FirestoreException.fromFirebase(error);
   }
-  
+
   if (error.runtimeType.toString().contains('FirebaseStorage')) {
     return StorageException.fromFirebase(error);
   }
 
   // Default to server exception
-  return ServerException(
-    message: error.toString(),
-    stackTrace: stackTrace,
-  );
+  return ServerException(message: error.toString(), stackTrace: stackTrace);
 }

@@ -14,38 +14,48 @@ final firestoreServiceProvider = Provider<FirestoreService>((ref) {
 
 /// Provider untuk stream semua laporan
 /// Digunakan oleh supervisor untuk melihat semua laporan
-final allReportsProvider = StreamProvider.family<List<Report>, String?>((ref, departmentId) {
+final allReportsProvider = StreamProvider.family<List<Report>, String?>((
+  ref,
+  departmentId,
+) {
   final service = ref.watch(firestoreServiceProvider);
   return service.getAllReports(departmentId: departmentId);
 });
 
 /// Provider untuk stream laporan berdasarkan user ID
-final userReportsProvider = StreamProvider.family<List<Report>, String>((ref, userId) {
+final userReportsProvider = StreamProvider.family<List<Report>, String>((
+  ref,
+  userId,
+) {
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportsByUser(userId);
 });
 
 /// Provider untuk stream laporan berdasarkan cleaner ID
-final cleanerReportsProvider = StreamProvider.family<List<Report>, String>((ref, cleanerId) {
+final cleanerReportsProvider = StreamProvider.family<List<Report>, String>((
+  ref,
+  cleanerId,
+) {
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportsByCleaner(cleanerId);
 });
 
 /// Provider untuk stream laporan berdasarkan status
-final reportsByStatusProvider = StreamProvider.family<List<Report>, ReportStatusQuery>((ref, query) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getReportsByStatus(query.status, departmentId: query.departmentId);
-});
+final reportsByStatusProvider =
+    StreamProvider.family<List<Report>, ReportStatusQuery>((ref, query) {
+      final service = ref.watch(firestoreServiceProvider);
+      return service.getReportsByStatus(
+        query.status,
+        departmentId: query.departmentId,
+      );
+    });
 
 /// Helper class untuk query dengan status dan departmentId
 class ReportStatusQuery {
   final ReportStatus status;
   final String? departmentId;
 
-  const ReportStatusQuery({
-    required this.status,
-    this.departmentId,
-  });
+  const ReportStatusQuery({required this.status, this.departmentId});
 
   @override
   bool operator ==(Object other) =>
@@ -60,36 +70,44 @@ class ReportStatusQuery {
 }
 
 /// Provider untuk summary report berdasarkan status
-final reportSummaryProvider = StreamProvider.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getReportSummary(departmentId: departmentId);
-});
+final reportSummaryProvider =
+    StreamProvider.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
+      final service = ref.watch(firestoreServiceProvider);
+      return service.getReportSummary(departmentId: departmentId);
+    });
 
 /// Provider untuk laporan yang selesai hari ini
-final todayCompletedReportsProvider = StreamProvider.family<List<Report>, String?>((ref, departmentId) {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getTodayCompletedReports(departmentId: departmentId);
-});
+final todayCompletedReportsProvider =
+    StreamProvider.family<List<Report>, String?>((ref, departmentId) {
+      final service = ref.watch(firestoreServiceProvider);
+      return service.getTodayCompletedReports(departmentId: departmentId);
+    });
 
 // ==================== FUTURE PROVIDERS ====================
 
 /// Provider untuk mendapatkan single report by ID
-final reportByIdProvider = FutureProvider.family<Report?, String>((ref, reportId) async {
+final reportByIdProvider = FutureProvider.family<Report?, String>((
+  ref,
+  reportId,
+) async {
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportById(reportId);
 });
 
 /// Provider untuk average completion time
-final averageCompletionTimeProvider = FutureProvider.family<Duration?, String?>((ref, departmentId) async {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getAverageCompletionTime(departmentId: departmentId);
-});
+final averageCompletionTimeProvider = FutureProvider.family<Duration?, String?>(
+  (ref, departmentId) async {
+    final service = ref.watch(firestoreServiceProvider);
+    return service.getAverageCompletionTime(departmentId: departmentId);
+  },
+);
 
 /// Provider untuk cleaner statistics
-final cleanerStatsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, cleanerId) async {
-  final service = ref.watch(firestoreServiceProvider);
-  return service.getCleanerStats(cleanerId);
-});
+final cleanerStatsProvider =
+    FutureProvider.family<Map<String, dynamic>, String>((ref, cleanerId) async {
+      final service = ref.watch(firestoreServiceProvider);
+      return service.getCleanerStats(cleanerId);
+    });
 
 // ==================== NOTIFIER PROVIDERS (Riverpod 3.0+) ====================
 
@@ -122,12 +140,7 @@ class ReportFilterState {
   }
 }
 
-enum ReportSortBy {
-  newest,
-  oldest,
-  urgent,
-  location,
-}
+enum ReportSortBy { newest, oldest, urgent, location }
 
 /// Notifier untuk mengelola filter dan sorting laporan (Riverpod 3.0+)
 class ReportFilterNotifier extends Notifier<ReportFilterState> {
@@ -157,21 +170,26 @@ class ReportFilterNotifier extends Notifier<ReportFilterState> {
   }
 }
 
-final reportFilterProvider = NotifierProvider<ReportFilterNotifier, ReportFilterState>(() {
-  return ReportFilterNotifier();
-});
+final reportFilterProvider =
+    NotifierProvider<ReportFilterNotifier, ReportFilterState>(() {
+      return ReportFilterNotifier();
+    });
 
 /// Provider untuk filtered reports berdasarkan filter state
 final filteredReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final filterState = ref.watch(reportFilterProvider);
-  final allReportsAsync = ref.watch(allReportsProvider(filterState.departmentFilter));
+  final allReportsAsync = ref.watch(
+    allReportsProvider(filterState.departmentFilter),
+  );
 
   return allReportsAsync.whenData((reports) {
     var filtered = reports;
 
     // Apply status filter
     if (filterState.statusFilter != null) {
-      filtered = filtered.where((r) => r.status == filterState.statusFilter).toList();
+      filtered = filtered
+          .where((r) => r.status == filterState.statusFilter)
+          .toList();
     }
 
     // Apply urgent filter

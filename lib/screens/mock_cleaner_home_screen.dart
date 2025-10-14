@@ -14,9 +14,9 @@ class MockCleanerHomeScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.person),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock: Profile')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Mock: Profile')));
             },
           ),
         ],
@@ -44,9 +44,9 @@ class MockCleanerHomeScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Mock: Buat Laporan')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Mock: Buat Laporan')));
         },
         icon: const Icon(Icons.add),
         label: const Text('Buat Laporan'),
@@ -63,18 +63,12 @@ class MockCleanerHomeScreen extends StatelessWidget {
           children: [
             const Text(
               'Selamat Datang,\nPetugas Kebersihan!',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
               'Hari ini: ${DateTime.now().toString().split(' ')[0]}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 16),
             ),
           ],
         ),
@@ -130,9 +124,7 @@ class MockCleanerHomeScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               title,
-              style: TextStyle(
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -170,10 +162,7 @@ class MockCleanerHomeScreen extends StatelessWidget {
       children: [
         const Text(
           'Permintaan Terbaru',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Card(
@@ -185,10 +174,12 @@ class MockCleanerHomeScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final request = mockRequests[index];
               final isUrgent = request['isUrgent'] as bool;
-              
+
               return ListTile(
                 leading: CircleAvatar(
-                  backgroundColor: isUrgent ? Colors.red[100] : Colors.indigo[100],
+                  backgroundColor: isUrgent
+                      ? Colors.red[100]
+                      : Colors.indigo[100],
                   child: Icon(
                     isUrgent ? Icons.priority_high : Icons.cleaning_services,
                     color: isUrgent ? Colors.red : Colors.indigo,

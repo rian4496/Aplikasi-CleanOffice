@@ -42,16 +42,12 @@ class RequestHistoryScreen extends StatelessWidget {
 
     if (userId == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('Silakan login terlebih dahulu'),
-        ),
+        body: Center(child: Text('Silakan login terlebih dahulu')),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Riwayat Permintaan'),
-      ),
+      appBar: AppBar(title: const Text('Riwayat Permintaan')),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('requests')
@@ -60,15 +56,11 @@ class RequestHistoryScreen extends StatelessWidget {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(
-              child: Text('Error: ${snapshot.error}'),
-            );
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
@@ -76,18 +68,11 @@ class RequestHistoryScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(
-                    Icons.history,
-                    size: 64,
-                    color: Colors.grey[400],
-                  ),
+                  Icon(Icons.history, size: 64, color: Colors.grey[400]),
                   const SizedBox(height: 16),
                   Text(
                     'Belum ada riwayat permintaan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton.icon(
@@ -117,9 +102,7 @@ class RequestHistoryScreen extends StatelessWidget {
                   contentPadding: const EdgeInsets.all(16),
                   title: Text(
                     data['location'] as String? ?? '',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

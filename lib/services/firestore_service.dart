@@ -16,33 +16,37 @@ class FirestoreService {
   final Logger _logger = Logger('FirestoreService');
 
   // Collection references
-  CollectionReference get _reportsCollection => _firestore.collection('reports');
+  CollectionReference get _reportsCollection =>
+      _firestore.collection('reports');
   // ❌ REMOVED: Unused collections to fix warnings
   // CollectionReference get _usersCollection => _firestore.collection('users');
   // CollectionReference get _requestsCollection => _firestore.collection('requests');
 
   // ==================== REPORT QUERIES ====================
 
-  /// Stream semua laporan (untuk supervisor)
+  /// Stream semua laporan (untuk admin)
   /// Diurutkan berdasarkan tanggal terbaru
   Stream<List<Report>> getAllReports({String? departmentId}) {
     try {
       Query query = _reportsCollection.orderBy('date', descending: true);
-      
+
       // Filter by department jika ada
       if (departmentId != null && departmentId.isNotEmpty) {
         query = query.where('departmentId', isEqualTo: departmentId);
       }
 
       return query.snapshots().map((snapshot) {
-        return snapshot.docs.map((doc) {
-          try {
-            return Report.fromFirestore(doc);
-          } catch (e) {
-            _logger.warning('Error parsing report ${doc.id}: $e');
-            return null;
-          }
-        }).whereType<Report>().toList();
+        return snapshot.docs
+            .map((doc) {
+              try {
+                return Report.fromFirestore(doc);
+              } catch (e) {
+                _logger.warning('Error parsing report ${doc.id}: $e');
+                return null;
+              }
+            })
+            .whereType<Report>()
+            .toList();
       });
     } catch (e) {
       _logger.severe('Error getting all reports: $e');
@@ -58,10 +62,10 @@ class FirestoreService {
           .orderBy('date', descending: true)
           .snapshots()
           .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Report.fromFirestore(doc))
-            .toList();
-      });
+            return snapshot.docs
+                .map((doc) => Report.fromFirestore(doc))
+                .toList();
+          });
     } catch (e) {
       _logger.severe('Error getting reports by user: $e');
       return Stream.value([]);
@@ -76,10 +80,10 @@ class FirestoreService {
           .orderBy('date', descending: true)
           .snapshots()
           .map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Report.fromFirestore(doc))
-            .toList();
-      });
+            return snapshot.docs
+                .map((doc) => Report.fromFirestore(doc))
+                .toList();
+          });
     } catch (e) {
       _logger.severe('Error getting reports by cleaner: $e');
       return Stream.value([]);
@@ -87,20 +91,21 @@ class FirestoreService {
   }
 
   /// Stream laporan berdasarkan status
-  Stream<List<Report>> getReportsByStatus(ReportStatus status, {String? departmentId}) {
+  Stream<List<Report>> getReportsByStatus(
+    ReportStatus status, {
+    String? departmentId,
+  }) {
     try {
       Query query = _reportsCollection
           .where('status', isEqualTo: status.toFirestore())
           .orderBy('date', descending: true);
-      
+
       if (departmentId != null && departmentId.isNotEmpty) {
         query = query.where('departmentId', isEqualTo: departmentId);
       }
 
       return query.snapshots().map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Report.fromFirestore(doc))
-            .toList();
+        return snapshot.docs.map((doc) => Report.fromFirestore(doc)).toList();
       });
     } catch (e) {
       _logger.severe('Error getting reports by status: $e');
@@ -129,7 +134,7 @@ class FirestoreService {
   Stream<Map<ReportStatus, int>> getReportSummary({String? departmentId}) {
     try {
       Query query = _reportsCollection;
-      
+
       if (departmentId != null && departmentId.isNotEmpty) {
         query = query.where('departmentId', isEqualTo: departmentId);
       }
@@ -147,7 +152,9 @@ class FirestoreService {
         for (var doc in snapshot.docs) {
           try {
             final data = doc.data() as Map<String, dynamic>;
-            final status = ReportStatus.fromString(data['status'] as String? ?? 'pending');
+            final status = ReportStatus.fromString(
+              data['status'] as String? ?? 'pending',
+            );
             summary[status] = (summary[status] ?? 0) + 1;
           } catch (e) {
             _logger.warning('Error parsing document ${doc.id} for summary: $e');
@@ -171,8 +178,14 @@ class FirestoreService {
 
       Query query = _reportsCollection
           .where('status', whereIn: ['completed', 'verified'])
-          .where('completedAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
-          .where('completedAt', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .where(
+            'completedAt',
+            isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay),
+          )
+          .where(
+            'completedAt',
+            isLessThanOrEqualTo: Timestamp.fromDate(endOfDay),
+          )
           .orderBy('completedAt', descending: true);
 
       if (departmentId != null && departmentId.isNotEmpty) {
@@ -180,13 +193,14 @@ class FirestoreService {
       }
 
       return query.snapshots().map((snapshot) {
-        return snapshot.docs
-            .map((doc) => Report.fromFirestore(doc))
-            .toList();
+        return snapshot.docs.map((doc) => Report.fromFirestore(doc)).toList();
       });
     } catch (e) {
       _logger.severe('Error getting today completed reports: $e');
-      return getReportsByStatus(ReportStatus.completed, departmentId: departmentId);
+      return getReportsByStatus(
+        ReportStatus.completed,
+        departmentId: departmentId,
+      );
     }
   }
 
@@ -205,7 +219,10 @@ class FirestoreService {
   }
 
   /// Update existing report
-  Future<void> updateReport(String reportId, Map<String, dynamic> updates) async {
+  Future<void> updateReport(
+    String reportId,
+    Map<String, dynamic> updates,
+  ) async {
     try {
       await _reportsCollection.doc(reportId).update(updates);
       _logger.info('Report $reportId updated');
@@ -216,10 +233,13 @@ class FirestoreService {
   }
 
   /// Update report status
-  Future<void> updateReportStatus(String reportId, ReportStatus newStatus) async {
+  Future<void> updateReportStatus(
+    String reportId,
+    ReportStatus newStatus,
+  ) async {
     try {
       final updates = <String, dynamic>{'status': newStatus.toFirestore()};
-      
+
       // Add timestamp based on status
       switch (newStatus) {
         case ReportStatus.assigned:
@@ -245,21 +265,21 @@ class FirestoreService {
     }
   }
 
-  /// Verify report (untuk supervisor)
+  /// Verify report (untuk admin)
   Future<void> verifyReport(
     String reportId,
-    String supervisorId,
-    String supervisorName, {
+    String adminId,
+    String adminName, {
     String? notes,
     bool approved = true,
   }) async {
     try {
       final updates = <String, dynamic>{
-        'status': approved 
-            ? ReportStatus.verified.toFirestore() 
+        'status': approved
+            ? ReportStatus.verified.toFirestore()
             : ReportStatus.rejected.toFirestore(),
-        'verifiedBy': supervisorId,
-        'verifiedByName': supervisorName,
+        'verifiedBy': adminId,
+        'verifiedByName': adminName,
         'verifiedAt': FieldValue.serverTimestamp(),
       };
 
@@ -268,7 +288,9 @@ class FirestoreService {
       }
 
       await updateReport(reportId, updates);
-      _logger.info('Report $reportId ${approved ? "verified" : "rejected"} by $supervisorName');
+      _logger.info(
+        'Report $reportId ${approved ? "verified" : "rejected"} by $adminName',
+      );
     } catch (e) {
       _logger.severe('Error verifying report: $e');
       rethrow;
@@ -321,7 +343,7 @@ class FirestoreService {
       }
 
       final snapshot = await query.get();
-      
+
       if (snapshot.docs.isEmpty) return null;
 
       int totalMinutes = 0;
@@ -362,7 +384,7 @@ class FirestoreService {
       for (var doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         final status = data['status'] as String?;
-        
+
         if (status == 'completed') completedReports++;
         if (status == 'verified') verifiedReports++;
         if (status == 'rejected') rejectedReports++;
@@ -373,7 +395,7 @@ class FirestoreService {
         'completedReports': completedReports,
         'verifiedReports': verifiedReports,
         'rejectedReports': rejectedReports,
-        'successRate': totalReports > 0 
+        'successRate': totalReports > 0
             ? (verifiedReports / totalReports * 100).toStringAsFixed(1)
             : '0.0',
       };

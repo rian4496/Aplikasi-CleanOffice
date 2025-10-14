@@ -129,11 +129,13 @@ class AppConstants {
   static const String fullDateTimeFormat = 'dd MMMM yyyy HH:mm:ss';
 
   // ==================== ERROR MESSAGES ====================
-  static const String genericErrorMessage = 'Terjadi kesalahan. Silakan coba lagi';
+  static const String genericErrorMessage =
+      'Terjadi kesalahan. Silakan coba lagi';
   static const String networkErrorMessage = 'Koneksi internet bermasalah';
   static const String noDataMessage = 'Tidak ada data';
   static const String unauthorizedMessage = 'Anda tidak memiliki akses';
-  static const String sessionExpiredMessage = 'Sesi Anda telah berakhir. Silakan login kembali';
+  static const String sessionExpiredMessage =
+      'Sesi Anda telah berakhir. Silakan login kembali';
 
   // ==================== SUCCESS MESSAGES ====================
   static const String loginSuccessMessage = 'Login berhasil';
@@ -144,14 +146,17 @@ class AppConstants {
   static const String submitSuccessMessage = 'Data berhasil dikirim';
 
   // ==================== CONFIRMATION MESSAGES ====================
-  static const String deleteConfirmMessage = 'Apakah Anda yakin ingin menghapus?';
+  static const String deleteConfirmMessage =
+      'Apakah Anda yakin ingin menghapus?';
   static const String logoutConfirmMessage = 'Apakah Anda yakin ingin keluar?';
-  static const String cancelConfirmMessage = 'Apakah Anda yakin ingin membatalkan?';
+  static const String cancelConfirmMessage =
+      'Apakah Anda yakin ingin membatalkan?';
 
   // ==================== VALIDATION MESSAGES ====================
   static const String requiredFieldMessage = 'Field ini wajib diisi';
   static const String invalidEmailMessage = 'Format email tidak valid';
-  static const String passwordTooShortMessage = 'Password minimal $minPasswordLength karakter';
+  static const String passwordTooShortMessage =
+      'Password minimal $minPasswordLength karakter';
   static const String passwordMismatchMessage = 'Password tidak cocok';
   static const String invalidPhoneMessage = 'Nomor telepon tidak valid';
 
@@ -159,12 +164,8 @@ class AppConstants {
   static final RegExp emailRegex = RegExp(
     r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
   );
-  static final RegExp phoneRegex = RegExp(
-    r'^(\+62|62|0)[0-9]{9,13}$',
-  );
-  static final RegExp nameRegex = RegExp(
-    r'^[a-zA-Z\s]+$',
-  );
+  static final RegExp phoneRegex = RegExp(r'^(\+62|62|0)[0-9]{9,13}$');
+  static final RegExp nameRegex = RegExp(r'^[a-zA-Z\s]+$');
 
   // ==================== HELPER METHODS ====================
 
@@ -180,15 +181,15 @@ class AppConstants {
 
   /// Validate name (only letters and spaces)
   static bool isValidName(String name) {
-    return nameRegex.hasMatch(name) && 
-           name.length >= minNameLength && 
-           name.length <= maxNameLength;
+    return nameRegex.hasMatch(name) &&
+        name.length >= minNameLength &&
+        name.length <= maxNameLength;
   }
 
   /// Validate password strength
   static bool isValidPassword(String password) {
-    return password.length >= minPasswordLength && 
-           password.length <= maxPasswordLength;
+    return password.length >= minPasswordLength &&
+        password.length <= maxPasswordLength;
   }
 
   /// Check if file size is valid
@@ -209,12 +210,12 @@ extension BuildContextExtension on BuildContext {
   // Easy access ke theme colors
   ColorScheme get colors => Theme.of(this).colorScheme;
   TextTheme get textTheme => Theme.of(this).textTheme;
-  
+
   // Easy access ke screen size
   Size get screenSize => MediaQuery.of(this).size;
   double get screenWidth => screenSize.width;
   double get screenHeight => screenSize.height;
-  
+
   // Easy access ke padding
   EdgeInsets get padding => MediaQuery.of(this).padding;
   EdgeInsets get viewInsets => MediaQuery.of(this).viewInsets;

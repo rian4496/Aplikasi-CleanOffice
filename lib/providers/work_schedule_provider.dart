@@ -38,9 +38,7 @@ class WorkScheduleProvider extends ChangeNotifier {
   Future<void> addSchedule(WorkSchedule schedule) async {
     try {
       _error = null;
-      await _firestore
-          .collection('schedules')
-          .add(schedule.toMap());
+      await _firestore.collection('schedules').add(schedule.toMap());
 
       final newSchedule = schedule.copyWith();
       _schedules.insert(0, newSchedule);
@@ -75,10 +73,7 @@ class WorkScheduleProvider extends ChangeNotifier {
   Future<void> deleteSchedule(String scheduleId) async {
     try {
       _error = null;
-      await _firestore
-          .collection('schedules')
-          .doc(scheduleId)
-          .delete();
+      await _firestore.collection('schedules').doc(scheduleId).delete();
 
       _schedules.removeWhere((s) => s.id == scheduleId);
       notifyListeners();

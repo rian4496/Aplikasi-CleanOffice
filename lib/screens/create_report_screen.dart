@@ -49,19 +49,21 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       if (pickedImage == null) return;
 
       final file = File(pickedImage.path);
-      
+
       final bytes = await file.length();
       if (!AppConstants.isValidFileSize(bytes)) {
         if (!mounted) return;
         // ✅ FIXED: Removed unnecessary braces
-        _showError('Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}');
+        _showError(
+          'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
+        );
         return;
       }
 
       setState(() {
         _selectedImage = file;
       });
-      
+
       _logger.info('Image selected: ${pickedImage.path}');
     } catch (e, stackTrace) {
       _logger.error('Error picking image', e, stackTrace);
@@ -74,19 +76,21 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
     try {
       final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) throw const AuthException(message: 'User not logged in');
+      if (user == null) {
+        throw const AuthException(message: 'User not logged in');
+      }
 
       _logger.info('Uploading report image for user: ${user.uid}');
-      
+
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'report_$timestamp.jpg';
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('${AppConstants.reportImagesPath}/${user.uid}/$fileName');
+      final storageRef = FirebaseStorage.instance.ref().child(
+        '${AppConstants.reportImagesPath}/${user.uid}/$fileName',
+      );
 
       final uploadTask = await storageRef.putFile(_selectedImage!);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
-      
+
       _logger.info('Image uploaded successfully');
       return downloadUrl;
     } on FirebaseException catch (e, stackTrace) {
@@ -107,9 +111,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
     try {
       _logger.info('Submitting report');
-      
+
       final imageUrl = await _uploadImage();
-      
+
       if (imageUrl == null) {
         throw const StorageException(message: 'Failed to upload image');
       }
@@ -139,7 +143,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       );
 
       Navigator.pop(context);
-      
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
@@ -176,9 +179,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Laporkan Masalah Kebersihan'),
-      ),
+      appBar: AppBar(title: const Text('Laporkan Masalah Kebersihan')),
       body: Stack(
         children: [
           SingleChildScrollView(
@@ -192,33 +193,34 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   const SizedBox(height: AppConstants.largePadding),
 
                   Autocomplete<String>(
-                    fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                      _locationController.text = controller.text;
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(
-                          labelText: 'Lokasi',
-                          hintText: 'Ketik atau pilih lokasi',
-                          prefixIcon: Icon(Icons.location_on),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppConstants.requiredFieldMessage;
-                          }
-                          return null;
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onSubmit) {
+                          _locationController.text = controller.text;
+                          return TextFormField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Lokasi',
+                              hintText: 'Ketik atau pilih lokasi',
+                              prefixIcon: Icon(Icons.location_on),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return AppConstants.requiredFieldMessage;
+                              }
+                              return null;
+                            },
+                            enabled: !_isSubmitting,
+                          );
                         },
-                        enabled: !_isSubmitting,
-                      );
-                    },
                     optionsBuilder: (textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
                         return const Iterable<String>.empty();
                       }
                       return AppConstants.predefinedLocations.where((location) {
-                        return location
-                            .toLowerCase()
-                            .contains(textEditingValue.text.toLowerCase());
+                        return location.toLowerCase().contains(
+                          textEditingValue.text.toLowerCase(),
+                        );
                       });
                     },
                     onSelected: (selection) {
@@ -240,7 +242,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                       if (value == null || value.trim().isEmpty) {
                         return AppConstants.requiredFieldMessage;
                       }
-                      if (value.trim().length < AppConstants.minDescriptionLength) {
+                      if (value.trim().length <
+                          AppConstants.minDescriptionLength) {
                         return 'Deskripsi minimal ${AppConstants.minDescriptionLength} karakter';
                       }
                       return null;
@@ -253,9 +256,11 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                     title: const Text('Tandai sebagai Urgen'),
                     subtitle: const Text('Masalah yang perlu segera ditangani'),
                     value: _isUrgent,
-                    onChanged: _isSubmitting ? null : (value) {
-                      setState(() => _isUrgent = value);
-                    },
+                    onChanged: _isSubmitting
+                        ? null
+                        : (value) {
+                            setState(() => _isUrgent = value);
+                          },
                     secondary: Icon(
                       Icons.priority_high,
                       color: _isUrgent ? AppConstants.errorColor : null,
@@ -276,7 +281,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Row(
@@ -332,10 +339,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
           children: [
             const Text(
               'Foto Masalah',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppConstants.smallPadding),
             GestureDetector(
@@ -345,14 +349,18 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.defaultRadius,
+                  ),
                   border: Border.all(color: Colors.grey.shade400, width: 2),
                 ),
                 child: _selectedImage != null
                     ? Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(AppConstants.defaultRadius - 2),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.defaultRadius - 2,
+                            ),
                             child: Image.file(
                               _selectedImage!,
                               fit: BoxFit.cover,
@@ -363,9 +371,14 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                             right: 8,
                             top: 8,
                             child: CircleAvatar(
-                              backgroundColor: Colors.black.withValues(alpha: 0.5),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: 0.5,
+                              ),
                               child: IconButton(
-                                icon: const Icon(Icons.refresh, color: Colors.white),
+                                icon: const Icon(
+                                  Icons.refresh,
+                                  color: Colors.white,
+                                ),
                                 onPressed: _isSubmitting ? null : _takePicture,
                               ),
                             ),

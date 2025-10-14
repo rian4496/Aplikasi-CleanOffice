@@ -9,10 +9,7 @@ import '../../providers/riverpod/admin_providers.dart';
 class VerificationScreen extends ConsumerStatefulWidget {
   final Report report;
 
-  const VerificationScreen({
-    super.key,
-    required this.report,
-  });
+  const VerificationScreen({super.key, required this.report});
 
   @override
   ConsumerState<VerificationScreen> createState() => _VerificationScreenState();
@@ -47,10 +44,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.deepPurple[700]!,
-                    Colors.deepPurple[500]!,
-                  ],
+                  colors: [Colors.deepPurple[700]!, Colors.deepPurple[500]!],
                 ),
               ),
               padding: const EdgeInsets.all(24),
@@ -58,7 +52,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Color(report.status.colorValue),
                       borderRadius: BorderRadius.circular(20),
@@ -84,18 +81,28 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.calendar_today, color: Colors.white70, size: 16),
+                      const Icon(
+                        Icons.calendar_today,
+                        color: Colors.white70,
+                        size: 16,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         DateFormat('dd MMM yyyy HH:mm').format(report.date),
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
                   if (report.isUrgent) ...[
                     const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red[100],
                         borderRadius: BorderRadius.circular(20),
@@ -103,7 +110,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.priority_high, size: 16, color: Colors.red[900]),
+                          Icon(
+                            Icons.priority_high,
+                            size: 16,
+                            color: Colors.red[900],
+                          ),
                           const SizedBox(width: 4),
                           Text(
                             'LAPORAN URGEN',
@@ -157,16 +168,29 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                   // Informasi Detail
                   _buildDetailSection('Pelapor', report.userName, Icons.person),
                   if (report.userEmail != null)
-                    _buildDetailSection('Email', report.userEmail!, Icons.email),
-                  
+                    _buildDetailSection(
+                      'Email',
+                      report.userEmail!,
+                      Icons.email,
+                    ),
+
                   const SizedBox(height: 16),
-                  
+
                   if (report.cleanerName != null)
-                    _buildDetailSection('Petugas', report.cleanerName!, Icons.engineering),
-                  
-                  if (report.description != null && report.description!.isNotEmpty) ...[
+                    _buildDetailSection(
+                      'Petugas',
+                      report.cleanerName!,
+                      Icons.engineering,
+                    ),
+
+                  if (report.description != null &&
+                      report.description!.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    _buildDetailSection('Deskripsi', report.description!, Icons.description),
+                    _buildDetailSection(
+                      'Deskripsi',
+                      report.description!,
+                      Icons.description,
+                    ),
                   ],
 
                   const SizedBox(height: 16),
@@ -228,10 +252,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                   // Catatan Verifikasi
                   const Text(
                     'Catatan (Opsional)',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   TextField(
@@ -254,7 +275,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                     children: [
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _isProcessing ? null : () => _handleReject(context),
+                          onPressed: _isProcessing
+                              ? null
+                              : () => _handleReject(context),
                           icon: const Icon(Icons.close),
                           label: const Text('Tolak'),
                           style: ElevatedButton.styleFrom(
@@ -270,7 +293,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       const SizedBox(width: 16),
                       Expanded(
                         child: ElevatedButton.icon(
-                          onPressed: _isProcessing ? null : () => _handleApprove(context),
+                          onPressed: _isProcessing
+                              ? null
+                              : () => _handleApprove(context),
                           icon: const Icon(Icons.check),
                           label: const Text('Setujui'),
                           style: ElevatedButton.styleFrom(
@@ -315,10 +340,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.only(left: 28),
-          child: Text(
-            content,
-            style: const TextStyle(fontSize: 16),
-          ),
+          child: Text(content, style: const TextStyle(fontSize: 16)),
         ),
       ],
     );
@@ -369,10 +391,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                 ),
                 Text(
                   DateFormat('dd MMM yyyy, HH:mm').format(time),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -410,7 +429,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       final actions = ref.read(verificationActionsProvider);
       await actions.approveReport(
         widget.report,
-        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+        notes: _notesController.text.trim().isEmpty
+            ? null
+            : _notesController.text.trim(),
       );
 
       if (!mounted) return;

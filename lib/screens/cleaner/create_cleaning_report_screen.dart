@@ -15,10 +15,12 @@ class CreateCleaningReportScreen extends ConsumerStatefulWidget {
   const CreateCleaningReportScreen({super.key});
 
   @override
-  ConsumerState<CreateCleaningReportScreen> createState() => _CreateCleaningReportScreenState();
+  ConsumerState<CreateCleaningReportScreen> createState() =>
+      _CreateCleaningReportScreenState();
 }
 
-class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningReportScreen> {
+class _CreateCleaningReportScreenState
+    extends ConsumerState<CreateCleaningReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
@@ -44,19 +46,21 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
       if (pickedImage == null) return;
 
       final file = File(pickedImage.path);
-      
+
       // Validate file size
       final bytes = await file.length();
       if (!AppConstants.isValidFileSize(bytes)) {
         if (!mounted) return;
-        _showError('Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}');
+        _showError(
+          'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
+        );
         return;
       }
 
       setState(() {
         _selectedImage = file;
       });
-      
+
       _logger.info('Image selected for cleaning report');
     } catch (e, stackTrace) {
       _logger.error('Error picking image', e, stackTrace);
@@ -69,19 +73,21 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
 
     try {
       final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) throw const AuthException(message: 'User not logged in');
+      if (user == null) {
+        throw const AuthException(message: 'User not logged in');
+      }
 
       _logger.info('Uploading cleaning report image');
-      
+
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'cleaning_report_$timestamp.jpg';
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('${AppConstants.reportImagesPath}/${user.uid}/$fileName');
+      final storageRef = FirebaseStorage.instance.ref().child(
+        '${AppConstants.reportImagesPath}/${user.uid}/$fileName',
+      );
 
       final uploadTask = await storageRef.putFile(_selectedImage!);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
-      
+
       _logger.info('Cleaning report image uploaded successfully');
       return downloadUrl;
     } on FirebaseException catch (e, stackTrace) {
@@ -94,12 +100,12 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
     if (!_formKey.currentState!.validate()) return;
 
     // Image optional for cleaning reports
-    
+
     setState(() => _isSubmitting = true);
 
     try {
       _logger.info('Creating cleaning report');
-      
+
       // Upload image if exists
       String? imageUrl;
       if (_selectedImage != null) {
@@ -133,7 +139,6 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
 
       // Navigate back
       Navigator.pop(context);
-      
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
@@ -187,7 +192,9 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
                   Card(
                     color: Colors.blue[50],
                     child: Padding(
-                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                      padding: const EdgeInsets.all(
+                        AppConstants.defaultPadding,
+                      ),
                       child: Row(
                         children: [
                           Icon(Icons.info_outline, color: Colors.blue[700]),
@@ -210,33 +217,34 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
 
                   // Location Field with Autocomplete
                   Autocomplete<String>(
-                    fieldViewBuilder: (context, controller, focusNode, onSubmit) {
-                      _locationController.text = controller.text;
-                      return TextFormField(
-                        controller: controller,
-                        focusNode: focusNode,
-                        decoration: const InputDecoration(
-                          labelText: 'Lokasi',
-                          hintText: 'Ketik atau pilih lokasi',
-                          prefixIcon: Icon(Icons.location_on),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return AppConstants.requiredFieldMessage;
-                          }
-                          return null;
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onSubmit) {
+                          _locationController.text = controller.text;
+                          return TextFormField(
+                            controller: controller,
+                            focusNode: focusNode,
+                            decoration: const InputDecoration(
+                              labelText: 'Lokasi',
+                              hintText: 'Ketik atau pilih lokasi',
+                              prefixIcon: Icon(Icons.location_on),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return AppConstants.requiredFieldMessage;
+                              }
+                              return null;
+                            },
+                            enabled: !_isSubmitting,
+                          );
                         },
-                        enabled: !_isSubmitting,
-                      );
-                    },
                     optionsBuilder: (textEditingValue) {
                       if (textEditingValue.text.isEmpty) {
                         return const Iterable<String>.empty();
                       }
                       return AppConstants.predefinedLocations.where((location) {
-                        return location
-                            .toLowerCase()
-                            .contains(textEditingValue.text.toLowerCase());
+                        return location.toLowerCase().contains(
+                          textEditingValue.text.toLowerCase(),
+                        );
                       });
                     },
                     onSelected: (selection) {
@@ -259,7 +267,8 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
                       if (value == null || value.trim().isEmpty) {
                         return AppConstants.requiredFieldMessage;
                       }
-                      if (value.trim().length < AppConstants.minDescriptionLength) {
+                      if (value.trim().length <
+                          AppConstants.minDescriptionLength) {
                         return 'Keterangan minimal ${AppConstants.minDescriptionLength} karakter';
                       }
                       return null;
@@ -282,7 +291,9 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
                         : Row(
@@ -340,17 +351,11 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
               children: const [
                 Text(
                   'Foto (Opsional)',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(width: 8),
                 Chip(
-                  label: Text(
-                    'Opsional',
-                    style: TextStyle(fontSize: 10),
-                  ),
+                  label: Text('Opsional', style: TextStyle(fontSize: 10)),
                   padding: EdgeInsets.symmetric(horizontal: 4),
                   visualDensity: VisualDensity.compact,
                 ),
@@ -364,14 +369,18 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.defaultRadius,
+                  ),
                   border: Border.all(color: Colors.grey.shade400, width: 2),
                 ),
                 child: _selectedImage != null
                     ? Stack(
                         children: [
                           ClipRRect(
-                            borderRadius: BorderRadius.circular(AppConstants.defaultRadius - 2),
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.defaultRadius - 2,
+                            ),
                             child: Image.file(
                               _selectedImage!,
                               fit: BoxFit.cover,
@@ -382,9 +391,14 @@ class _CreateCleaningReportScreenState extends ConsumerState<CreateCleaningRepor
                             right: 8,
                             top: 8,
                             child: CircleAvatar(
-                              backgroundColor: Colors.black.withValues(alpha: 0.5),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: 0.5,
+                              ),
                               child: IconButton(
-                                icon: const Icon(Icons.refresh, color: Colors.white),
+                                icon: const Icon(
+                                  Icons.refresh,
+                                  color: Colors.white,
+                                ),
                                 onPressed: _isSubmitting ? null : _takePicture,
                               ),
                             ),

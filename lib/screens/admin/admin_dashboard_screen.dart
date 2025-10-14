@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import '../notification_screen.dart';
+import '../create_report_screen.dart';
 
-/// Admin Dashboard Screen - COMPLETE FIXED VERSION
-/// ✅ No Overflow
-/// ✅ No Syntax Errors
-/// ✅ Clean Layout
+// Refactored Admin Dashboard Screen
+// - Minimalist & Professional UI/UX
+// - Strategic Color Accents
+// - Clean, Data-Focused Layout
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -11,175 +13,111 @@ class AdminDashboardScreen extends StatefulWidget {
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
 
-class _AdminDashboardScreenState extends State<AdminDashboardScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _headerController;
-  late Animation<double> _headerFadeAnimation;
-  
-  @override
-  void initState() {
-    super.initState();
-    _headerController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    );
-    _headerFadeAnimation = CurvedAnimation(
-      parent: _headerController,
-      curve: Curves.easeOut,
-    );
-    _headerController.forward();
-  }
-
-  @override
-  void dispose() {
-    _headerController.dispose();
-    super.dispose();
-  }
+class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
+  // --- NEW COLOR PALETTE ---
+  static const Color _primaryColor = Color(0xFF2C3E50);
+  static const Color _backgroundColor = Color(0xFFF7F9FA);
+  static const Color _cardBackgroundColor = Colors.white;
+  static const Color _primaryTextColor = Colors.black87;
+  static const Color _secondaryTextColor = Color(
+    0xFF757575,
+  ); // Colors.grey[600]
+  static const Color _accentColor = Color(0xFF3498DB);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              const Color(0xFF5E35B1).withValues(alpha: 0.05),
-              const Color(0xFF1976D2).withValues(alpha: 0.03),
-              Colors.white,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: RefreshIndicator(
-            onRefresh: () async {
-              await Future.delayed(const Duration(seconds: 1));
-            },
-            child: CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // App Bar
-                SliverAppBar(
-                  floating: true,
-                  snap: true,
-                  elevation: 0,
-                  backgroundColor: Colors.transparent,
-                  flexibleSpace: _buildAppBar(),
+      backgroundColor: _backgroundColor,
+      body: SafeArea(
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // --- 1. Refactored Header ---
+            // Solid primary color, no gradient, white text/icons.
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: _primaryColor,
+              elevation: 2,
+              title: const Text(
+                'Dashboard',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  color: Colors.white,
                 ),
-                
-                // Content
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Welcome Header
-                        FadeTransition(
-                          opacity: _headerFadeAnimation,
-                          child: _buildWelcomeHeader(),
-                        ),
-                        
-                        const SizedBox(height: 32),
-                        
-                        // Statistics Cards
-                        _buildStatisticsGrid(),
-                        
-                        const SizedBox(height: 32),
-                        
-                        // Quick Actions
-                        _buildQuickActions(),
-                        
-                        const SizedBox(height: 32),
-                        
-                        // Recent Activities
-                        _buildRecentActivities(),
-                      ],
+              ),
+              actions: [
+                IconButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const NotificationScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.notifications_outlined,
+                    color: Colors.white,
+                  ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(right: 16.0),
+                  child: CircleAvatar(
+                    backgroundColor: _accentColor,
+                    child: Icon(
+                      Icons.person_outline,
+                      size: 22,
+                      color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
-          ),
-        ),
-      ),
-      floatingActionButton: _buildFAB(),
-    );
-  }
 
-  Widget _buildAppBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF5E35B1), Color(0xFF7E57C2)],
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF5E35B1).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Text(
-            'Dashboard',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: -0.5,
+            // --- Main Content ---
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Welcome Header
+                    _buildWelcomeHeader(),
+                    const SizedBox(height: 24),
+
+                    // --- 2. Refactored Statistics Cards ---
+                    _buildStatisticsGrid(),
+                    const SizedBox(height: 32),
+
+                    // Quick Actions (Optional: Can be refactored similarly if needed)
+                    _buildQuickActions(),
+                    const SizedBox(height: 32),
+
+                    // Recent Activities
+                    _buildRecentActivities(),
+                  ],
+                ),
+              ),
             ),
-          ),
-          Row(
-            children: [
-              Stack(
-                children: [
-                  IconButton(
-                    onPressed: () {},
-                    icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Color(0xFFFF6F00),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Text(
-                        '3',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
-                ),
-                child: const CircleAvatar(
-                  backgroundColor: Colors.white24,
-                  child: Icon(Icons.person, color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ],
+          ],
+        ),
+      ),
+      // --- 3. Refactored Floating Action Button ---
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreateReportScreen()),
+          );
+        },
+        backgroundColor: _accentColor,
+        icon: const Icon(Icons.add, color: Colors.white),
+        label: const Text(
+          'Buat Laporan',
+          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.white),
+        ),
+        elevation: 4,
       ),
     );
   }
@@ -188,167 +126,116 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Selamat Datang Kembali! 👋',
           style: TextStyle(
-            fontSize: 28,
+            fontSize: 26,
             fontWeight: FontWeight.bold,
-            color: Color(0xFF212121),
-            letterSpacing: -0.5,
+            color: _primaryTextColor,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Kelola kebersihan kantor dengan mudah',
-          style: TextStyle(
-            fontSize: 16,
-            color: Colors.grey[600],
-          ),
+          'Kelola kebersihan kantor dengan mudah.',
+          style: TextStyle(fontSize: 16, color: _secondaryTextColor),
         ),
       ],
     );
   }
 
   Widget _buildStatisticsGrid() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // --- Card data remains the same, only presentation changes ---
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      crossAxisSpacing: 16,
+      mainAxisSpacing: 16,
+      childAspectRatio: 1.0, // Adjusted for a more square look
       children: [
-        const Text(
-          'Statistik Hari Ini',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
+        _buildStatCard(
+          title: 'Menunggu',
+          value: '8',
+          icon: Icons.pending_actions_outlined, // Outline icon
+          accentColor: const Color(0xFFFF9800), // Orange accent
         ),
-        const SizedBox(height: 16),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: 2.2,
-          children: [
-            _buildStatCard(
-              title: 'Menunggu',
-              value: '8',
-              icon: Icons.pending_actions,
-              colors: const [Color(0xFFFF6F00), Color(0xFFFFB74D)],
-              delay: 0,
-            ),
-            _buildStatCard(
-              title: 'Perlu Verifikasi',
-              value: '5',
-              icon: Icons.verified_user,
-              colors: const [Color(0xFF1976D2), Color(0xFF42A5F5)],
-              delay: 100,
-            ),
-            _buildStatCard(
-              title: 'Selesai',
-              value: '23',
-              icon: Icons.check_circle,
-              colors: const [Color(0xFF00C853), Color(0xFF69F0AE)],
-              delay: 200,
-            ),
-            _buildStatCard(
-              title: 'Total Aktif',
-              value: '36',
-              icon: Icons.trending_up,
-              colors: const [Color(0xFF5E35B1), Color(0xFF7E57C2)],
-              delay: 300,
-            ),
-          ],
+        _buildStatCard(
+          title: 'Verifikasi',
+          value: '5',
+          icon: Icons.verified_user_outlined, // Outline icon
+          accentColor: const Color(0xFF2196F3), // Blue accent
+        ),
+        _buildStatCard(
+          title: 'Selesai',
+          value: '23',
+          icon: Icons.check_circle_outline, // Outline icon
+          accentColor: const Color(0xFF4CAF50), // Green accent
+        ),
+        _buildStatCard(
+          title: 'Total Aktif',
+          value: '36',
+          icon: Icons.trending_up,
+          accentColor: const Color(0xFF673AB7), // Purple accent
         ),
       ],
     );
   }
 
+  // --- REFACTORED STAT CARD WIDGET ---
   Widget _buildStatCard({
     required String title,
     required String value,
     required IconData icon,
-    required List<Color> colors,
-    required int delay,
+    required Color accentColor,
   }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 500 + delay),
-      curve: Curves.easeOutCubic,
-      builder: (context, animValue, child) {
-        return Transform.translate(
-          offset: Offset(0, 30 * (1 - animValue)),
-          child: Opacity(
-            opacity: animValue,
-            child: child,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _cardBackgroundColor, // White background
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        );
-      },
-      child: GestureDetector(
-        onTap: () {},
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: colors,
-            ),
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: colors[0].withValues(alpha: 0.4),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Row(
+        ],
+        border: Border.all(
+          color: Colors.grey.shade200,
+          width: 1,
+        ), // Subtle border
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Icon(icon, color: accentColor, size: 32),
+          const SizedBox(height: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon di kiri
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(10),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 32, // Large, bold number
+                  fontWeight: FontWeight.bold,
+                  color: accentColor, // Accent color for the number
                 ),
-                child: Icon(icon, color: Colors.white, size: 24),
               ),
-              const SizedBox(width: 12),
-              // Konten di kanan
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    TweenAnimationBuilder<int>(
-                      tween: IntTween(begin: 0, end: int.parse(value)),
-                      duration: const Duration(milliseconds: 800),
-                      builder: (context, value, child) {
-                        return Text(
-                          value.toString(),
-                          style: const TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withValues(alpha: 0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: _secondaryTextColor, // Secondary text color
+                  fontWeight: FontWeight.w500,
                 ),
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
-        ),
+        ],
       ),
     );
   }
@@ -357,11 +244,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Aksi Cepat',
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
+            color: _primaryTextColor,
           ),
         ),
         const SizedBox(height: 16),
@@ -370,8 +258,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Expanded(
               child: _buildActionButton(
                 'Verifikasi',
-                Icons.verified,
-                const Color(0xFF1976D2),
+                Icons.verified_outlined,
+                const Color(0xFF2196F3),
                 () {},
               ),
             ),
@@ -379,8 +267,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Expanded(
               child: _buildActionButton(
                 'Laporan',
-                Icons.assessment,
-                const Color(0xFF00C853),
+                Icons.assessment_outlined,
+                const Color(0xFF4CAF50),
                 () {},
               ),
             ),
@@ -388,8 +276,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
             Expanded(
               child: _buildActionButton(
                 'Petugas',
-                Icons.people,
-                const Color(0xFFFF6F00),
+                Icons.people_outline,
+                const Color(0xFFFF9800),
                 () {},
               ),
             ),
@@ -405,191 +293,152 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
     Color color,
     VoidCallback onTap,
   ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+    // This widget is slightly restyled for consistency
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        decoration: BoxDecoration(
+          color: _cardBackgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              style: TextStyle(
+                color: _primaryTextColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildRecentActivities() {
+    // This widget already follows the new design principles, so it remains largely unchanged.
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Aktivitas Terbaru',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
+                color: _primaryTextColor,
               ),
             ),
             TextButton(
               onPressed: () {},
+              style: TextButton.styleFrom(foregroundColor: _accentColor),
               child: const Text('Lihat Semua'),
             ),
           ],
         ),
-        const SizedBox(height: 16),
-        ...List.generate(3, (index) => _buildActivityItem(index)),
+        const SizedBox(height: 8),
+        _buildActivityItem(
+          icon: Icons.cleaning_services_outlined,
+          title: 'Toilet Lt. 2',
+          time: '10 menit lalu',
+          status: 'Selesai',
+          statusColor: const Color(0xFF4CAF50),
+        ),
+        _buildActivityItem(
+          icon: Icons.hourglass_top_rounded,
+          title: 'Ruang Rapat A',
+          time: '25 menit lalu',
+          status: 'Dikerjakan',
+          statusColor: const Color(0xFF2196F3),
+        ),
+        _buildActivityItem(
+          icon: Icons.notifications_active_outlined,
+          title: 'Area Pantry',
+          time: '1 jam lalu',
+          status: 'Menunggu',
+          statusColor: const Color(0xFFFF9800),
+        ),
       ],
     );
   }
 
-  Widget _buildActivityItem(int index) {
-    final activities = [
-      {
-        'title': 'Toilet Lt. 2',
-        'status': 'Selesai',
-        'time': '10 menit lalu',
-        'color': const Color(0xFF00C853),
-      },
-      {
-        'title': 'Ruang Rapat A',
-        'status': 'Dikerjakan',
-        'time': '25 menit lalu',
-        'color': const Color(0xFF1976D2),
-      },
-      {
-        'title': 'Area Pantry',
-        'status': 'Menunggu',
-        'time': '1 jam lalu',
-        'color': const Color(0xFFFF6F00),
-      },
-    ];
-    
-    final activity = activities[index];
-    
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 400 + (index * 100)),
-      curve: Curves.easeOut,
-      builder: (context, value, child) {
-        return Transform.translate(
-          offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: (activity['color'] as Color).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                Icons.cleaning_services,
-                color: activity['color'] as Color,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    activity['title'] as String,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    activity['time'] as String,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: (activity['color'] as Color).withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                activity['status'] as String,
-                style: TextStyle(
-                  color: activity['color'] as Color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
-              ),
-            ),
-          ],
-        ),
+  Widget _buildActivityItem({
+    required IconData icon,
+    required String title,
+    required String time,
+    required String status,
+    required Color statusColor,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: _cardBackgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
       ),
-    );
-  }
-
-  Widget _buildFAB() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 800),
-      curve: Curves.elasticOut,
-      builder: (context, value, child) {
-        return Transform.scale(
-          scale: value,
-          child: child,
-        );
-      },
-      child: FloatingActionButton.extended(
-        onPressed: () {},
-        backgroundColor: const Color(0xFF5E35B1),
-        icon: const Icon(Icons.add),
-        label: const Text(
-          'Buat Laporan',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        elevation: 8,
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: statusColor),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                    color: _primaryTextColor,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  time,
+                  style: TextStyle(color: _secondaryTextColor, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(
+                color: statusColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

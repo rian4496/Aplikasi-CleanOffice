@@ -9,7 +9,8 @@ class ReportingScreen extends StatefulWidget {
   State<ReportingScreen> createState() => _ReportingScreenState();
 }
 
-class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProviderStateMixin {
+class _ReportingScreenState extends State<ReportingScreen>
+    with SingleTickerProviderStateMixin {
   final List<bool> _isSelected = [true, false];
   final _notesController = TextEditingController();
   bool _isLoading = false;
@@ -24,10 +25,7 @@ class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProv
       duration: const Duration(milliseconds: 300),
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(
-        parent: _animationController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
   }
 
@@ -173,7 +171,10 @@ class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProv
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.cleaning_services, color: Colors.indigo[800]),
+                        Icon(
+                          Icons.cleaning_services,
+                          color: Colors.indigo[800],
+                        ),
                         const SizedBox(width: 8),
                         const Text(
                           'Status Kebersihan',
@@ -187,29 +188,29 @@ class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProv
                     ),
                     const SizedBox(height: 16),
                     ToggleButtons(
-              isSelected: _isSelected,
-              onPressed: (int index) {
-                setState(() {
-                  // Memastikan hanya satu tombol yang bisa dipilih
-                  for (int i = 0; i < _isSelected.length; i++) {
-                    _isSelected[i] = i == index;
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(8.0),
-              selectedColor: Colors.white,
-              fillColor: Colors.indigo,
-              children: const [
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text('Bersih'),
-                ),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Text('Perlu Dibersihkan'),
-                ),
-              ],
-            ),
+                      isSelected: _isSelected,
+                      onPressed: (int index) {
+                        setState(() {
+                          // Memastikan hanya satu tombol yang bisa dipilih
+                          for (int i = 0; i < _isSelected.length; i++) {
+                            _isSelected[i] = i == index;
+                          }
+                        });
+                      },
+                      borderRadius: BorderRadius.circular(8.0),
+                      selectedColor: Colors.white,
+                      fillColor: Colors.indigo,
+                      children: const [
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text('Bersih'),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text('Perlu Dibersihkan'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -241,26 +242,26 @@ class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProv
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
-              controller: _notesController,
-              maxLines: 4,
-              style: const TextStyle(fontSize: 16),
-              decoration: InputDecoration(
-                hintText: 'Tambahkan catatan jika diperlukan...',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: BorderSide(color: Colors.indigo[800]!),
-                ),
-                filled: true,
-                fillColor: Colors.white,
-              ),
-            ),
+                      controller: _notesController,
+                      maxLines: 4,
+                      style: const TextStyle(fontSize: 16),
+                      decoration: InputDecoration(
+                        hintText: 'Tambahkan catatan jika diperlukan...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.indigo[800]!),
+                        ),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -269,39 +270,41 @@ class _ReportingScreenState extends State<ReportingScreen> with SingleTickerProv
             ScaleTransition(
               scale: _scaleAnimation,
               child: ElevatedButton(
-              onPressed: _isLoading ? null : _submitReport,
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 54),
-                backgroundColor: Colors.indigo[800],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                onPressed: _isLoading ? null : _submitReport,
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 54),
+                  backgroundColor: Colors.indigo[800],
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 2,
                 ),
-                elevation: 2,
-              ),
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.send, size: 20),
-                        SizedBox(width: 8),
-                        Text(
-                          'Kirim Laporan',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
                           ),
                         ),
-                      ],
-                    ),
-            )
+                      )
+                    : Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.send, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Kirim Laporan',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
             ),
           ],
         ),

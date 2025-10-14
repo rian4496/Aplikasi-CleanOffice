@@ -8,7 +8,6 @@ import 'package:aplikasi_cleanoffice/models/report_status_enum.dart';
 import 'package:aplikasi_cleanoffice/providers/riverpod/employee_providers.dart';
 import 'report_detail_screen.dart';
 
-
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
 
@@ -48,13 +47,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
               ),
             ),
             const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                color: color,
-              ),
-            ),
+            Text(label, style: TextStyle(fontSize: 12, color: color)),
           ],
         ),
       ),
@@ -76,7 +69,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Karyawan'),
-        backgroundColor: Colors.grey[100],
+        backgroundColor: Colors.indigo[100],
         elevation: 0,
         foregroundColor: Colors.black,
         automaticallyImplyLeading: false,
@@ -120,9 +113,21 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                     data: (summary) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildProgressItem('Terkirim', summary.pending.toString(), Colors.blue),
-                        _buildProgressItem('Dikerjakan', summary.inProgress.toString(), Colors.orange),
-                        _buildProgressItem('Selesai', summary.completed.toString(), Colors.green),
+                        _buildProgressItem(
+                          'Terkirim',
+                          summary.pending.toString(),
+                          Colors.blue,
+                        ),
+                        _buildProgressItem(
+                          'Dikerjakan',
+                          summary.inProgress.toString(),
+                          Colors.orange,
+                        ),
+                        _buildProgressItem(
+                          'Selesai',
+                          summary.completed.toString(),
+                          Colors.green,
+                        ),
                       ],
                     ),
                     loading: () => Row(
@@ -165,7 +170,8 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                         ),
                         const SizedBox(height: 16),
                         InkWell(
-                          onTap: () => Navigator.pushNamed(context, '/create_report'),
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/create_report'),
                           child: Container(
                             width: double.infinity,
                             padding: const EdgeInsets.symmetric(vertical: 12),
@@ -175,7 +181,11 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                             ),
                             child: const Column(
                               children: [
-                                Icon(Icons.camera_alt, color: Colors.white, size: 32),
+                                Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 32,
+                                ),
                                 SizedBox(height: 8),
                                 Text(
                                   'Buat Laporan Baru',
@@ -215,7 +225,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      
+
                       // Reports List
                       reportsAsync.when(
                         data: (reports) {
@@ -270,7 +280,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           context: context,
           builder: (ctx) => AlertDialog(
             title: const Text('Hapus Laporan'),
-            content: const Text('Apakah Anda yakin ingin menghapus laporan ini?'),
+            content: const Text(
+              'Apakah Anda yakin ingin menghapus laporan ini?',
+            ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(ctx).pop(false),
@@ -288,7 +300,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         try {
           final actions = ref.read(employeeActionsProvider);
           await actions.deleteReport(report.id);
-          
+
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -329,20 +341,14 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
           subtitle: Text(_formatDate(report.date)),
           trailing: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 12,
-              vertical: 6,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
               color: _getStatusColor(report.status),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               report.status.displayName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-              ),
+              style: const TextStyle(color: Colors.white, fontSize: 12),
             ),
           ),
           onTap: () {
@@ -369,26 +375,16 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.inbox_outlined,
-              size: 64,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[400]),
             const SizedBox(height: 16),
             Text(
               'Belum ada laporan.',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             ),
             const SizedBox(height: 8),
             Text(
               'Buat laporan pertama Anda!',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[500],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[500]),
             ),
           ],
         ),
@@ -412,11 +408,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red[300],
-            ),
+            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
             const SizedBox(height: 16),
             Text(
               'Terjadi kesalahan',

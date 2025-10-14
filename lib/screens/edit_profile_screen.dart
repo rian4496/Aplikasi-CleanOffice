@@ -80,9 +80,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (pickedFile != null) {
         final file = File(pickedFile.path);
         final bytes = await file.length();
-        
+
         if (!AppConstants.isValidFileSize(bytes)) {
-          _showError('Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}');
+          _showError(
+            'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
+          );
           return;
         }
 
@@ -141,7 +143,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     try {
       final actions = ref.read(profileActionsProvider.notifier);
       await actions.deleteProfilePicture(_currentPhotoUrl!, _userProfile!.uid);
-      
+
       setState(() {
         _currentPhotoUrl = null;
         _imageFile = null;
@@ -169,8 +171,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           imageFile: _imageFile!,
           profile: _userProfile!.copyWith(
             displayName: _nameController.text.trim(),
-            phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-            location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+            phoneNumber: _phoneController.text.trim().isEmpty
+                ? null
+                : _phoneController.text.trim(),
+            location: _locationController.text.trim().isEmpty
+                ? null
+                : _locationController.text.trim(),
           ),
         );
       } else {
@@ -178,8 +184,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         await actions.updateProfile(
           _userProfile!.copyWith(
             displayName: _nameController.text.trim(),
-            phoneNumber: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-            location: _locationController.text.trim().isEmpty ? null : _locationController.text.trim(),
+            phoneNumber: _phoneController.text.trim().isEmpty
+                ? null
+                : _phoneController.text.trim(),
+            location: _locationController.text.trim().isEmpty
+                ? null
+                : _locationController.text.trim(),
           ),
         );
       }
@@ -187,10 +197,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       if (!mounted) return;
 
       _showSuccess(AppConstants.updateSuccessMessage);
-      
+
       // Return true to indicate successful update
       Navigator.pop(context, true);
-      
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
@@ -243,16 +252,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final isSaving = profileState.isLoading;
 
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Profil'),
-        elevation: 0,
-      ),
+      appBar: AppBar(title: const Text('Edit Profil'), elevation: 0),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
         child: Form(
@@ -285,23 +289,23 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                             child: _imageFile != null
                                 ? Image.file(_imageFile!, fit: BoxFit.cover)
                                 : _currentPhotoUrl != null
-                                    ? CachedNetworkImage(
-                                        imageUrl: _currentPhotoUrl!,
-                                        fit: BoxFit.cover,
-                                        placeholder: (context, url) => const Center(
-                                          child: CircularProgressIndicator(),
-                                        ),
-                                        errorWidget: (context, url, error) => Icon(
-                                          Icons.person,
-                                          size: 64,
-                                          color: Colors.grey[400],
-                                        ),
-                                      )
-                                    : Icon(
-                                        Icons.person,
-                                        size: 64,
-                                        color: Colors.grey[400],
-                                      ),
+                                ? CachedNetworkImage(
+                                    imageUrl: _currentPhotoUrl!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                    errorWidget: (context, url, error) => Icon(
+                                      Icons.person,
+                                      size: 64,
+                                      color: Colors.grey[400],
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.person,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
                           ),
                         ),
                       ),
@@ -312,7 +316,11 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       child: CircleAvatar(
                         backgroundColor: AppConstants.primaryColor,
                         child: IconButton(
-                          icon: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
+                          icon: const Icon(
+                            Icons.camera_alt,
+                            color: Colors.white,
+                            size: 20,
+                          ),
                           onPressed: isSaving ? null : _showImageSourceDialog,
                         ),
                       ),
@@ -378,7 +386,9 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : const Text(

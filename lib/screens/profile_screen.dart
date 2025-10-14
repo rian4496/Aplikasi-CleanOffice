@@ -33,7 +33,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   CircleAvatar(
                     radius: 50,
                     backgroundColor: Colors.indigo[100],
-                    backgroundImage: photoURL != null ? NetworkImage(photoURL) : null,
+                    backgroundImage: photoURL != null
+                        ? NetworkImage(photoURL)
+                        : null,
                     child: photoURL == null
                         ? Text(
                             displayName[0].toUpperCase(),
@@ -55,10 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 8),
                   Text(
                     email,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                   ),
                 ],
               ),

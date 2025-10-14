@@ -28,7 +28,10 @@ class UserProfileProvider extends ChangeNotifier {
           role: 'Petugas',
           joinDate: DateTime.now(),
         );
-        await _firestore.collection('users').doc(user.uid).set(newProfile.toMap());
+        await _firestore
+            .collection('users')
+            .doc(user.uid)
+            .set(newProfile.toMap());
         _userProfile = newProfile;
       }
       notifyListeners();

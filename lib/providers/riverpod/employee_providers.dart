@@ -22,11 +22,11 @@ final currentEmployeeIdProvider = Provider<String?>((ref) {
 /// Provider untuk semua laporan employee
 final employeeReportsProvider = StreamProvider<List<Report>>((ref) {
   final userId = ref.watch(currentEmployeeIdProvider);
-  
+
   if (userId == null) {
     return Stream.value([]);
   }
-  
+
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportsByUser(userId);
 });
@@ -46,48 +46,58 @@ class EmployeeReportsSummary {
   });
 }
 
-final employeeReportsSummaryProvider = Provider<AsyncValue<EmployeeReportsSummary>>((ref) {
-  final reportsAsync = ref.watch(employeeReportsProvider);
-  
-  return reportsAsync.whenData((reports) {
-    final pending = reports.where((r) => r.status == ReportStatus.pending).length;
-    final inProgress = reports.where((r) => 
-      r.status == ReportStatus.assigned || r.status == ReportStatus.inProgress
-    ).length;
-    final completed = reports.where((r) => 
-      r.status == ReportStatus.completed || r.status == ReportStatus.verified
-    ).length;
-    
-    return EmployeeReportsSummary(
-      pending: pending,
-      inProgress: inProgress,
-      completed: completed,
-      total: reports.length,
-    );
-  });
-});
+final employeeReportsSummaryProvider =
+    Provider<AsyncValue<EmployeeReportsSummary>>((ref) {
+      final reportsAsync = ref.watch(employeeReportsProvider);
+
+      return reportsAsync.whenData((reports) {
+        final pending = reports
+            .where((r) => r.status == ReportStatus.pending)
+            .length;
+        final inProgress = reports
+            .where(
+              (r) =>
+                  r.status == ReportStatus.assigned ||
+                  r.status == ReportStatus.inProgress,
+            )
+            .length;
+        final completed = reports
+            .where(
+              (r) =>
+                  r.status == ReportStatus.completed ||
+                  r.status == ReportStatus.verified,
+            )
+            .length;
+
+        return EmployeeReportsSummary(
+          pending: pending,
+          inProgress: inProgress,
+          completed: completed,
+          total: reports.length,
+        );
+      });
+    });
 
 /// Provider untuk laporan employee berdasarkan status
-final employeeReportsByStatusProvider = Provider.family<AsyncValue<List<Report>>, ReportStatus>(
-  (ref, status) {
-    final reportsAsync = ref.watch(employeeReportsProvider);
-    
-    return reportsAsync.whenData((reports) {
-      return reports.where((r) => r.status == status).toList();
+final employeeReportsByStatusProvider =
+    Provider.family<AsyncValue<List<Report>>, ReportStatus>((ref, status) {
+      final reportsAsync = ref.watch(employeeReportsProvider);
+
+      return reportsAsync.whenData((reports) {
+        return reports.where((r) => r.status == status).toList();
+      });
     });
-  },
-);
 
 /// Provider untuk laporan urgent employee
 final employeeUrgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final reportsAsync = ref.watch(employeeReportsProvider);
-  
+
   return reportsAsync.whenData((reports) {
     // FIXED: Ganti r.isFinal dengan kondisi langsung
     return reports.where((r) {
-      return r.isUrgent && 
-             r.status != ReportStatus.verified && 
-             r.status != ReportStatus.rejected;
+      return r.isUrgent &&
+          r.status != ReportStatus.verified &&
+          r.status != ReportStatus.rejected;
     }).toList();
   });
 });
@@ -95,7 +105,7 @@ final employeeUrgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
 /// Provider untuk laporan terbaru employee (5 terakhir)
 final employeeRecentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final reportsAsync = ref.watch(employeeReportsProvider);
-  
+
   return reportsAsync.whenData((reports) {
     final sortedReports = List<Report>.from(reports)
       ..sort((a, b) => b.date.compareTo(a.date));
@@ -112,7 +122,7 @@ final employeeActionsProvider = Provider<EmployeeActions>((ref) {
 
 class EmployeeActions {
   final Ref ref;
-  
+
   EmployeeActions(this.ref);
 
   /// Create new report
@@ -126,7 +136,7 @@ class EmployeeActions {
     if (user == null) throw Exception('User not logged in');
 
     final service = ref.read(firestoreServiceProvider);
-    
+
     final report = Report(
       id: '', // Will be set by Firestore
       title: location, // Using location as title
@@ -140,7 +150,7 @@ class EmployeeActions {
       imageUrl: imageUrl,
       isUrgent: isUrgent,
     );
-    
+
     await service.createReport(report);
   }
 

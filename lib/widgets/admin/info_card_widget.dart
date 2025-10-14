@@ -40,9 +40,10 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
       vsync: this,
       duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.95,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -116,10 +117,7 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                         duration: const Duration(milliseconds: 500),
                         curve: Curves.elasticOut,
                         builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: child,
-                          );
+                          return Transform.scale(scale: value, child: child);
                         },
                         child: Container(
                           padding: const EdgeInsets.all(12),
@@ -134,7 +132,7 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                           ),
                         ),
                       ),
-                      
+
                       // Arrow Indicator
                       if (widget.onTap != null)
                         TweenAnimationBuilder<double>(
@@ -142,10 +140,7 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                           duration: const Duration(milliseconds: 400),
                           curve: Curves.easeOut,
                           builder: (context, value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: child,
-                            );
+                            return Opacity(opacity: value, child: child);
                           },
                           child: const Icon(
                             Icons.arrow_forward_ios,
@@ -155,9 +150,9 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                         ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // Value dengan animasi
                   if (widget.isLoading)
                     const SizedBox(
@@ -173,7 +168,8 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                         ),
                       ),
                     )
-                  else if (widget.animateValue && int.tryParse(widget.value) != null)
+                  else if (widget.animateValue &&
+                      int.tryParse(widget.value) != null)
                     TweenAnimationBuilder<int>(
                       tween: IntTween(begin: 0, end: int.parse(widget.value)),
                       duration: const Duration(milliseconds: 800),
@@ -202,9 +198,9 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  
+
                   const SizedBox(height: 8),
-                  
+
                   // Title
                   Text(
                     widget.title,
@@ -216,7 +212,7 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  
+
                   // Subtitle
                   if (widget.subtitle != null) ...[
                     const SizedBox(height: 4),
@@ -242,45 +238,21 @@ class _EnhancedInfoCardState extends State<EnhancedInfoCard>
 
 /// Preset Gradient Colors
 class CardGradients {
-  static const List<Color> purple = [
-    Color(0xFF5E35B1),
-    Color(0xFF7E57C2),
-  ];
-  
-  static const List<Color> blue = [
-    Color(0xFF1976D2),
-    Color(0xFF42A5F5),
-  ];
-  
-  static const List<Color> cyan = [
-    Color(0xFF00BCD4),
-    Color(0xFF4DD0E1),
-  ];
-  
-  static const List<Color> green = [
-    Color(0xFF00C853),
-    Color(0xFF69F0AE),
-  ];
-  
-  static const List<Color> orange = [
-    Color(0xFFFF6F00),
-    Color(0xFFFFB74D),
-  ];
-  
-  static const List<Color> red = [
-    Color(0xFFD32F2F),
-    Color(0xFFEF5350),
-  ];
-  
-  static const List<Color> pink = [
-    Color(0xFFE91E63),
-    Color(0xFFF06292),
-  ];
-  
-  static const List<Color> teal = [
-    Color(0xFF00897B),
-    Color(0xFF4DB6AC),
-  ];
+  static const List<Color> purple = [Color(0xFF5E35B1), Color(0xFF7E57C2)];
+
+  static const List<Color> blue = [Color(0xFF1976D2), Color(0xFF42A5F5)];
+
+  static const List<Color> cyan = [Color(0xFF00BCD4), Color(0xFF4DD0E1)];
+
+  static const List<Color> green = [Color(0xFF00C853), Color(0xFF69F0AE)];
+
+  static const List<Color> orange = [Color(0xFFFF6F00), Color(0xFFFFB74D)];
+
+  static const List<Color> red = [Color(0xFFD32F2F), Color(0xFFEF5350)];
+
+  static const List<Color> pink = [Color(0xFFE91E63), Color(0xFFF06292)];
+
+  static const List<Color> teal = [Color(0xFF00897B), Color(0xFF4DB6AC)];
 }
 
 /// Grid Layout untuk Info Cards
@@ -319,10 +291,7 @@ class InfoCardsGrid extends StatelessWidget {
           builder: (context, value, child) {
             return Transform.translate(
               offset: Offset(0, 30 * (1 - value)),
-              child: Opacity(
-                opacity: value,
-                child: child,
-              ),
+              child: Opacity(opacity: value, child: child),
             );
           },
           child: cards[index],

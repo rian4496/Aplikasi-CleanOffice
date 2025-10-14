@@ -192,10 +192,7 @@ class ReportDetailScreen extends StatelessWidget {
           padding: const EdgeInsets.only(left: 28),
           child: Text(
             content,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.black87,
-            ),
+            style: const TextStyle(fontSize: 16, color: Colors.black87),
           ),
         ),
       ],

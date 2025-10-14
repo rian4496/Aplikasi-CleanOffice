@@ -107,14 +107,14 @@ class WorkSchedule {
   }
 
   static List<String> get allWorkDays => [
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-        'sunday'
-      ];
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ];
 
   static String getWorkDayDisplayName(String day) {
     switch (day) {

@@ -10,63 +10,56 @@ final _logger = AppLogger('CleanerProviders');
 // ==================== CLEANER REQUESTS PROVIDERS ====================
 
 /// Provider untuk available requests (pending & not assigned)
-final availableRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+final availableRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((
+  ref,
+) {
   final firestore = ref.watch(firestoreProvider);
-  
+
   return firestore
       .collection('requests')
       .where('status', whereIn: ['pending'])
       .orderBy('createdAt', descending: true)
       .snapshots()
       .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return {
-        'id': doc.id,
-        ...doc.data(),
-      };
-    }).toList();
-  });
+        return snapshot.docs.map((doc) {
+          return {'id': doc.id, ...doc.data()};
+        }).toList();
+      });
 });
 
 /// Provider untuk cleaner's assigned requests
-final cleanerAssignedRequestsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
-  if (userId == null) return Stream.value([]);
-  
-  final firestore = ref.watch(firestoreProvider);
-  
-  return firestore
-      .collection('requests')
-      .where('cleanerId', isEqualTo: userId)
-      .where('status', whereIn: ['accepted', 'in_progress'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return {
-        'id': doc.id,
-        ...doc.data(),
-      };
-    }).toList();
-  });
-});
+final cleanerAssignedRequestsProvider =
+    StreamProvider<List<Map<String, dynamic>>>((ref) {
+      final userId = ref.watch(currentUserIdProvider);
+      if (userId == null) return Stream.value([]);
+
+      final firestore = ref.watch(firestoreProvider);
+
+      return firestore
+          .collection('requests')
+          .where('cleanerId', isEqualTo: userId)
+          .where('status', whereIn: ['accepted', 'in_progress'])
+          .orderBy('createdAt', descending: true)
+          .snapshots()
+          .map((snapshot) {
+            return snapshot.docs.map((doc) {
+              return {'id': doc.id, ...doc.data()};
+            }).toList();
+          });
+    });
 
 /// Provider untuk single request by ID
-final requestByIdProvider = StreamProvider.family<Map<String, dynamic>?, String>((ref, requestId) {
-  final firestore = ref.watch(firestoreProvider);
-  
-  return firestore
-      .collection('requests')
-      .doc(requestId)
-      .snapshots()
-      .map((doc) {
-    if (!doc.exists) return null;
-    return {
-      'id': doc.id,
-      ...doc.data()!,
-    };
-  });
-});
+final requestByIdProvider =
+    StreamProvider.family<Map<String, dynamic>?, String>((ref, requestId) {
+      final firestore = ref.watch(firestoreProvider);
+
+      return firestore.collection('requests').doc(requestId).snapshots().map((
+        doc,
+      ) {
+        if (!doc.exists) return null;
+        return {'id': doc.id, ...doc.data()!};
+      });
+    });
 
 // ==================== CLEANER STATISTICS ====================
 
@@ -74,36 +67,33 @@ final requestByIdProvider = StreamProvider.family<Map<String, dynamic>?, String>
 final cleanerStatsProvider = StreamProvider<Map<String, int>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) {
-    return Stream.value({
-      'completed': 0,
-      'inProgress': 0,
-      'total': 0,
-    });
+    return Stream.value({'completed': 0, 'inProgress': 0, 'total': 0});
   }
-  
+
   final reportsAsync = ref.watch(cleanerReportsProvider(userId));
-  
+
   return reportsAsync.when(
     data: (reports) {
-      final completed = reports.where((r) => r.status.toFirestore() == 'completed' || r.status.toFirestore() == 'verified').length;
-      final inProgress = reports.where((r) => r.status.toFirestore() == 'in_progress').length;
-      
+      final completed = reports
+          .where(
+            (r) =>
+                r.status.toFirestore() == 'completed' ||
+                r.status.toFirestore() == 'verified',
+          )
+          .length;
+      final inProgress = reports
+          .where((r) => r.status.toFirestore() == 'in_progress')
+          .length;
+
       return Stream.value({
         'completed': completed,
         'inProgress': inProgress,
         'total': reports.length,
       });
     },
-    loading: () => Stream.value({
-      'completed': 0,
-      'inProgress': 0,
-      'total': 0,
-    }),
-    error: (error, stack) => Stream.value({
-      'completed': 0,
-      'inProgress': 0,
-      'total': 0,
-    }),
+    loading: () => Stream.value({'completed': 0, 'inProgress': 0, 'total': 0}),
+    error: (error, stack) =>
+        Stream.value({'completed': 0, 'inProgress': 0, 'total': 0}),
   );
 });
 
@@ -121,7 +111,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Accept a cleaning request
   Future<void> acceptRequest(String requestId) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
@@ -159,7 +149,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Start working on a request
   Future<void> startRequest(String requestId) async {
     state = const AsyncValue.loading();
-    
+
     try {
       _logger.info('Starting request: $requestId');
 
@@ -185,7 +175,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Complete a request
   Future<void> completeRequest(String requestId) async {
     state = const AsyncValue.loading();
-    
+
     try {
       _logger.info('Completing request: $requestId');
 
@@ -215,7 +205,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     String? imageUrl,
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
@@ -261,6 +251,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
   }
 }
 
-final cleanerActionsProvider = NotifierProvider<CleanerActionsNotifier, AsyncValue<void>>(
-  () => CleanerActionsNotifier(),
-);
+final cleanerActionsProvider =
+    NotifierProvider<CleanerActionsNotifier, AsyncValue<void>>(
+      () => CleanerActionsNotifier(),
+    );

@@ -46,14 +46,18 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
   void initState() {
     super.initState();
     _logger.info('Opening reports list: ${widget.title}');
-    
+
     // Set initial filter jika ada
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.filterStatus != null) {
-        ref.read(reportFilterProvider.notifier).setStatusFilter(widget.filterStatus);
+        ref
+            .read(reportFilterProvider.notifier)
+            .setStatusFilter(widget.filterStatus);
       }
       if (widget.departmentId != null) {
-        ref.read(reportFilterProvider.notifier).setDepartmentFilter(widget.departmentId);
+        ref
+            .read(reportFilterProvider.notifier)
+            .setDepartmentFilter(widget.departmentId);
       }
     });
   }
@@ -71,12 +75,16 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
 
     // Filter by status jika ada
     if (widget.filterStatus != null) {
-      filtered = filtered.where((r) => r.status == widget.filterStatus).toList();
+      filtered = filtered
+          .where((r) => r.status == widget.filterStatus)
+          .toList();
     }
 
     // Filter needs verification
     if (widget.showOnlyNeedsVerification) {
-      filtered = filtered.where((r) => r.status == ReportStatus.completed).toList();
+      filtered = filtered
+          .where((r) => r.status == ReportStatus.completed)
+          .toList();
     }
 
     // Filter urgent
@@ -89,9 +97,9 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
       filtered = filtered.where((r) {
         final query = _searchQuery.toLowerCase();
         return r.location.toLowerCase().contains(query) ||
-               r.userName.toLowerCase().contains(query) ||
-               (r.description?.toLowerCase().contains(query) ?? false) ||
-               (r.cleanerName?.toLowerCase().contains(query) ?? false);
+            r.userName.toLowerCase().contains(query) ||
+            (r.description?.toLowerCase().contains(query) ?? false) ||
+            (r.cleanerName?.toLowerCase().contains(query) ?? false);
       }).toList();
     }
 
@@ -120,11 +128,12 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
   @override
   Widget build(BuildContext context) {
     // Watch appropriate provider based on configuration
-    final AsyncValue<List<Report>> reportsAsync = widget.showOnlyNeedsVerification
+    final AsyncValue<List<Report>> reportsAsync =
+        widget.showOnlyNeedsVerification
         ? ref.watch(needsVerificationReportsProvider)
         : widget.showOnlyUrgent
-            ? ref.watch(urgentReportsProvider)
-            : ref.watch(allReportsProvider(widget.departmentId));
+        ? ref.watch(urgentReportsProvider)
+        : ref.watch(allReportsProvider(widget.departmentId));
 
     return Scaffold(
       appBar: AppBar(
@@ -148,13 +157,17 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                     Icon(
                       Icons.access_time,
                       size: 20,
-                      color: _sortBy == ReportSortBy.newest ? Colors.deepPurple : null,
+                      color: _sortBy == ReportSortBy.newest
+                          ? Colors.deepPurple
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Terbaru',
                       style: TextStyle(
-                        fontWeight: _sortBy == ReportSortBy.newest ? FontWeight.bold : null,
+                        fontWeight: _sortBy == ReportSortBy.newest
+                            ? FontWeight.bold
+                            : null,
                       ),
                     ),
                   ],
@@ -167,13 +180,17 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                     Icon(
                       Icons.history,
                       size: 20,
-                      color: _sortBy == ReportSortBy.oldest ? Colors.deepPurple : null,
+                      color: _sortBy == ReportSortBy.oldest
+                          ? Colors.deepPurple
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Terlama',
                       style: TextStyle(
-                        fontWeight: _sortBy == ReportSortBy.oldest ? FontWeight.bold : null,
+                        fontWeight: _sortBy == ReportSortBy.oldest
+                            ? FontWeight.bold
+                            : null,
                       ),
                     ),
                   ],
@@ -186,13 +203,17 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                     Icon(
                       Icons.priority_high,
                       size: 20,
-                      color: _sortBy == ReportSortBy.urgent ? Colors.deepPurple : null,
+                      color: _sortBy == ReportSortBy.urgent
+                          ? Colors.deepPurple
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Urgen',
                       style: TextStyle(
-                        fontWeight: _sortBy == ReportSortBy.urgent ? FontWeight.bold : null,
+                        fontWeight: _sortBy == ReportSortBy.urgent
+                            ? FontWeight.bold
+                            : null,
                       ),
                     ),
                   ],
@@ -205,13 +226,17 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                     Icon(
                       Icons.location_on,
                       size: 20,
-                      color: _sortBy == ReportSortBy.location ? Colors.deepPurple : null,
+                      color: _sortBy == ReportSortBy.location
+                          ? Colors.deepPurple
+                          : null,
                     ),
                     const SizedBox(width: 12),
                     Text(
                       'Lokasi',
                       style: TextStyle(
-                        fontWeight: _sortBy == ReportSortBy.location ? FontWeight.bold : null,
+                        fontWeight: _sortBy == ReportSortBy.location
+                            ? FontWeight.bold
+                            : null,
                       ),
                     ),
                   ],
@@ -244,7 +269,9 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.defaultRadius,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.defaultPadding,
@@ -322,10 +349,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
             const SizedBox(height: AppConstants.largePadding),
             Text(
               message,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 16, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -341,10 +365,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: AppConstants.defaultPadding),
-          Text(
-            'Memuat laporan...',
-            style: TextStyle(color: Colors.grey[600]),
-          ),
+          Text('Memuat laporan...', style: TextStyle(color: Colors.grey[600])),
         ],
       ),
     );
@@ -361,10 +382,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen> {
             const SizedBox(height: AppConstants.defaultPadding),
             const Text(
               'Terjadi kesalahan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppConstants.smallPadding),
             Text(

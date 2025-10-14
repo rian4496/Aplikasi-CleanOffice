@@ -23,7 +23,7 @@ final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
           .collection('users')
           .doc(user.uid)
           .get();
-      
+
       if (docSnapshot.exists) {
         return UserProfile.fromMap(docSnapshot.data()!..['uid'] = user.uid);
       } else {
@@ -42,7 +42,9 @@ final currentUserDepartmentProvider = Provider<String?>((ref) {
 // ==================== ADMIN DASHBOARD PROVIDERS ====================
 
 /// Provider untuk laporan yang perlu verifikasi (status: completed)
-final needsVerificationReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
+final needsVerificationReportsProvider = Provider<AsyncValue<List<Report>>>((
+  ref,
+) {
   final departmentId = ref.watch(currentUserDepartmentProvider);
   final query = ReportStatusQuery(
     status: ReportStatus.completed,
@@ -84,7 +86,7 @@ final todayReportsCountProvider = Provider<int>((ref) {
 final todayVerifiedReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final departmentId = ref.watch(currentUserDepartmentProvider);
   final allReportsAsync = ref.watch(allReportsProvider(departmentId));
-  
+
   return allReportsAsync.whenData((reports) {
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
@@ -93,9 +95,9 @@ final todayVerifiedReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
     return reports.where((report) {
       if (report.status != ReportStatus.verified) return false;
       if (report.verifiedAt == null) return false;
-      
-      return report.verifiedAt!.isAfter(startOfDay) && 
-             report.verifiedAt!.isBefore(endOfDay);
+
+      return report.verifiedAt!.isAfter(startOfDay) &&
+          report.verifiedAt!.isBefore(endOfDay);
     }).toList();
   });
 });
@@ -123,7 +125,7 @@ class DashboardSummary {
     required this.statusBreakdown,
   });
 
-  int get totalActive => 
+  int get totalActive =>
       statusBreakdown[ReportStatus.pending]! +
       statusBreakdown[ReportStatus.assigned]! +
       statusBreakdown[ReportStatus.inProgress]!;
@@ -139,7 +141,7 @@ class DashboardSummary {
 final dashboardSummaryProvider = Provider<AsyncValue<DashboardSummary>>((ref) {
   final departmentId = ref.watch(currentUserDepartmentProvider);
   final summaryAsync = ref.watch(reportSummaryProvider(departmentId));
-  
+
   final pendingCount = ref.watch(pendingReportsCountProvider);
   final needsVerificationCount = ref.watch(needsVerificationCountProvider);
   final completedTodayCount = ref.watch(todayReportsCountProvider);
@@ -165,7 +167,7 @@ final verificationActionsProvider = Provider<VerificationActions>((ref) {
 
 class VerificationActions {
   final Ref ref;
-  
+
   VerificationActions(this.ref);
 
   Future<void> approveReport(Report report, {String? notes}) async {
@@ -196,7 +198,11 @@ class VerificationActions {
     );
   }
 
-  Future<void> assignToCleaner(Report report, String cleanerId, String cleanerName) async {
+  Future<void> assignToCleaner(
+    Report report,
+    String cleanerId,
+    String cleanerName,
+  ) async {
     final service = ref.read(firestoreServiceProvider);
     await service.assignReportToCleaner(report.id, cleanerId, cleanerName);
   }
@@ -208,12 +214,12 @@ class VerificationActions {
 final urgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   final departmentId = ref.watch(currentUserDepartmentProvider);
   final allReportsAsync = ref.watch(allReportsProvider(departmentId));
-  
+
   return allReportsAsync.whenData((reports) {
     return reports.where((report) {
-      return report.isUrgent && 
-             report.status != ReportStatus.verified &&
-             report.status != ReportStatus.rejected;
+      return report.isUrgent &&
+          report.status != ReportStatus.verified &&
+          report.status != ReportStatus.rejected;
     }).toList();
   });
 });

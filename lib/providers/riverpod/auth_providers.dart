@@ -38,29 +38,29 @@ final firestoreProvider = Provider<FirebaseFirestore>((ref) {
 final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
   final auth = ref.watch(firebaseAuthProvider);
   final firestore = ref.watch(firestoreProvider);
-  
+
   return auth.authStateChanges().asyncMap((user) async {
     if (user == null) {
       _logger.info('No authenticated user');
       return null;
     }
-    
+
     try {
       _logger.info('Loading profile for user: ${user.uid}');
       final docSnapshot = await firestore
           .collection('users')
           .doc(user.uid)
           .get();
-      
+
       if (!docSnapshot.exists) {
         _logger.warning('User profile not found for: ${user.uid}');
         return null;
       }
-      
+
       final profile = UserProfile.fromMap(
         docSnapshot.data()!..['uid'] = user.uid,
       );
-      
+
       _logger.info('Profile loaded successfully: ${profile.displayName}');
       return profile;
     } catch (e, stackTrace) {
@@ -97,15 +97,15 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Login with email and password
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
-    
+
     try {
       _logger.info('Attempting login for: $email');
-      
+
       final userCredential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
-      
+
       _logger.logAuth('login_success', userId: userCredential.user?.uid);
       state = const AsyncValue.data(null);
     } on FirebaseAuthException catch (e, stackTrace) {
@@ -128,16 +128,16 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     String role = 'employee',
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       _logger.info('Attempting registration for: $email');
-      
+
       // Create auth user
       final userCredential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
-      
+
       final user = userCredential.user;
       if (user == null) {
         throw const AuthException(message: 'Failed to create user');
@@ -145,7 +145,7 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
 
       // Update display name
       await user.updateDisplayName(displayName.trim());
-      
+
       // Create user profile in Firestore
       final userProfile = UserProfile(
         uid: user.uid,
@@ -155,12 +155,12 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
         joinDate: DateTime.now(),
         status: 'active',
       );
-      
+
       await _firestore
           .collection('users')
           .doc(user.uid)
           .set(userProfile.toMap());
-      
+
       _logger.logAuth('registration_success', userId: user.uid);
       state = const AsyncValue.data(null);
     } on FirebaseAuthException catch (e, stackTrace) {
@@ -192,7 +192,7 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Reset password
   Future<void> resetPassword(String email) async {
     state = const AsyncValue.loading();
-    
+
     try {
       _logger.info('Sending password reset email to: $email');
       await _auth.sendPasswordResetEmail(email: email.trim());
@@ -216,7 +216,7 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     required String newPassword,
   }) async {
     state = const AsyncValue.loading();
-    
+
     try {
       final user = _auth.currentUser;
       if (user == null || user.email == null) {
@@ -234,14 +234,13 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
 
       // Update password
       await user.updatePassword(newPassword);
-      
+
       _logger.info('Password changed successfully');
       state = const AsyncValue.data(null);
     } on FirebaseAuthException catch (e, stackTrace) {
-      _logger.error('Change password error', e, stackTrace);
       final exception = AuthException.fromFirebaseAuth(e);
       state = AsyncValue.error(exception, stackTrace);
-      rethrow;
+      throw exception;
     } catch (e, stackTrace) {
       _logger.error('Unexpected change password error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
@@ -259,13 +258,12 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
 
       _logger.info('Updating display name for user: ${user.uid}');
       await user.updateDisplayName(displayName.trim());
-      
+
       // Also update in Firestore
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .update({'displayName': displayName.trim()});
-      
+      await _firestore.collection('users').doc(user.uid).update({
+        'displayName': displayName.trim(),
+      });
+
       _logger.info('Display name updated successfully');
     } catch (e, stackTrace) {
       _logger.error('Update display name error', e, stackTrace);
@@ -275,9 +273,10 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
 }
 
 /// Provider untuk auth actions
-final authActionsProvider = NotifierProvider<AuthActionsNotifier, AsyncValue<void>>(
-  () => AuthActionsNotifier(),
-);
+final authActionsProvider =
+    NotifierProvider<AuthActionsNotifier, AsyncValue<void>>(
+      () => AuthActionsNotifier(),
+    );
 
 // ==================== HELPER PROVIDERS ====================
 
@@ -290,7 +289,7 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 /// Check if user is admin/supervisor
 final isAdminProvider = Provider<bool>((ref) {
   final role = ref.watch(currentUserRoleProvider);
-  return role == 'supervisor';
+  return role == 'admin';
 });
 
 /// Check if user is cleaner

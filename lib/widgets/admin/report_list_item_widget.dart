@@ -44,9 +44,7 @@ class ReportListItem extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       elevation: 1,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -73,7 +71,9 @@ class ReportListItem extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(
-                _getStatusIcon(report.status), // FIXED: Tidak pakai IconData dynamic
+                _getStatusIcon(
+                  report.status,
+                ), // FIXED: Tidak pakai IconData dynamic
                 color: Color(report.status.colorValue),
                 size: 24,
               ),
@@ -129,13 +129,11 @@ class ReportListItem extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 4),
-                  if (report.description != null && report.description!.isNotEmpty)
+                  if (report.description != null &&
+                      report.description!.isNotEmpty)
                     Text(
                       report.description!,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -176,12 +174,17 @@ class ReportListItem extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: Color(report.status.colorValue).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Color(report.status.colorValue).withValues(alpha: 0.3),
+                    color: Color(
+                      report.status.colorValue,
+                    ).withValues(alpha: 0.3),
                   ),
                 ),
                 child: Text(
@@ -196,10 +199,7 @@ class ReportListItem extends StatelessWidget {
               if (report.completedAt != null)
                 Text(
                   'Selesai: ${_formatDateTime(report.completedAt!)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
             ],
           ),
@@ -219,7 +219,9 @@ class ReportListItem extends StatelessWidget {
             borderRadius: BorderRadius.circular(6),
           ),
           child: Icon(
-            _getStatusIcon(report.status), // FIXED: Tidak pakai IconData dynamic
+            _getStatusIcon(
+              report.status,
+            ), // FIXED: Tidak pakai IconData dynamic
             color: Color(report.status.colorValue),
             size: 20,
           ),
@@ -242,20 +244,13 @@ class ReportListItem extends StatelessWidget {
                     ),
                   ),
                   if (report.isUrgent)
-                    Icon(
-                      Icons.priority_high,
-                      size: 16,
-                      color: Colors.red[700],
-                    ),
+                    Icon(Icons.priority_high, size: 16, color: Colors.red[700]),
                 ],
               ),
               const SizedBox(height: 2),
               Text(
                 report.cleanerName ?? report.userName,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey[600]),
               ),
             ],
           ),
@@ -289,13 +284,7 @@ class ReportListItem extends StatelessWidget {
       children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey[700],
-          ),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[700])),
       ],
     );
   }

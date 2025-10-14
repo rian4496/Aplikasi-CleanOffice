@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:aplikasi_cleanoffice/models/report_status_enum.dart' show ReportStatus;
+import 'package:aplikasi_cleanoffice/models/report_status_enum.dart'
+    show ReportStatus;
 
 /// Model untuk laporan kebersihan yang diperluas dengan field-field tambahan
 /// untuk mendukung workflow lengkap dari pembuatan hingga verifikasi
@@ -9,32 +10,32 @@ class Report {
   final String location;
   final DateTime date;
   final ReportStatus status;
-  
+
   // Informasi Pembuat Laporan (Employee)
   final String userId;
   final String userName;
   final String? userEmail;
-  
+
   // Informasi Petugas Kebersihan (Cleaner)
   final String? cleanerId;
   final String? cleanerName;
-  
+
   // Informasi Supervisor
   final String? verifiedBy;
   final String? verifiedByName;
   final DateTime? verifiedAt;
   final String? verificationNotes;
-  
+
   // Detail Laporan
   final String? imageUrl;
   final String? description;
   final bool isUrgent;
-  
+
   // Timestamp
   final DateTime? assignedAt;
   final DateTime? startedAt;
   final DateTime? completedAt;
-  
+
   // Department (untuk filtering supervisor)
   final String? departmentId;
 
@@ -65,7 +66,7 @@ class Report {
   /// Convert dari Firestore document ke Report object
   factory Report.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return Report(
       id: doc.id,
       title: data['title'] as String? ?? '',
@@ -139,7 +140,9 @@ class Report {
       'isUrgent': isUrgent,
       'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
       'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
-      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
+      'completedAt': completedAt != null
+          ? Timestamp.fromDate(completedAt!)
+          : null,
       'departmentId': departmentId,
     };
   }
@@ -197,7 +200,7 @@ class Report {
   bool get isAssigned => cleanerId != null;
   bool get isVerified => status == ReportStatus.verified;
   bool get needsVerification => status == ReportStatus.completed;
-  
+
   /// Durasi pengerjaan (jika ada)
   Duration? get workDuration {
     if (startedAt != null && completedAt != null) {

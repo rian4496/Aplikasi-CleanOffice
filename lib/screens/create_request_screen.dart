@@ -12,7 +12,8 @@ class CreateRequestScreen extends ConsumerStatefulWidget {
   const CreateRequestScreen({super.key});
 
   @override
-  ConsumerState<CreateRequestScreen> createState() => _CreateRequestScreenState();
+  ConsumerState<CreateRequestScreen> createState() =>
+      _CreateRequestScreenState();
 }
 
 class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
@@ -35,7 +36,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
       context: context,
       initialTime: TimeOfDay.now(),
     );
-    
+
     if (time != null) {
       final now = DateTime.now();
       setState(() {
@@ -95,7 +96,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
       );
 
       Navigator.pop(context);
-      
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Create request error', e, stackTrace);
       final exception = FirestoreException.fromFirebase(e);
@@ -130,9 +130,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Permintaan Kebersihan'),
-      ),
+      appBar: AppBar(title: const Text('Permintaan Kebersihan')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
         child: Form(
@@ -187,9 +185,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                     return const Iterable<String>.empty();
                   }
                   return AppConstants.predefinedLocations.where((location) {
-                    return location
-                        .toLowerCase()
-                        .contains(textEditingValue.text.toLowerCase());
+                    return location.toLowerCase().contains(
+                      textEditingValue.text.toLowerCase(),
+                    );
                   });
                 },
                 onSelected: (selection) {
@@ -245,11 +243,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                 title: const Text('Tandai sebagai Urgen'),
                 subtitle: const Text('Permintaan yang perlu segera ditangani'),
                 value: _isUrgent,
-                onChanged: _isSubmitting ? null : (bool value) {
-                  setState(() {
-                    _isUrgent = value;
-                  });
-                },
+                onChanged: _isSubmitting
+                    ? null
+                    : (bool value) {
+                        setState(() {
+                          _isUrgent = value;
+                        });
+                      },
                 secondary: Icon(
                   Icons.priority_high,
                   color: _isUrgent ? AppConstants.errorColor : null,
@@ -271,7 +271,9 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                         width: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     : Row(

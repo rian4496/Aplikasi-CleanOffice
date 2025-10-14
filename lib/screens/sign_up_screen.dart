@@ -44,10 +44,10 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<void> _createUserProfile(User user) async {
     try {
       _logger.info('Creating user profile in Firestore for ${user.uid}');
-      
+
       final firestore = FirebaseFirestore.instance;
       final role = _determineRoleFromEmail(user.email ?? '');
-      
+
       final profile = UserProfile(
         uid: user.uid,
         displayName: _nameController.text.trim(),
@@ -57,11 +57,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         status: 'active',
       );
 
-      await firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(profile.toMap());
-      
+      await firestore.collection('users').doc(user.uid).set(profile.toMap());
+
       _logger.info('User profile created successfully with role: $role');
     } catch (e) {
       _logger.severe('Error creating user profile: $e');
@@ -93,12 +90,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
     });
 
     try {
-      _logger.info('Attempting to create user account for: ${_emailController.text}');
-      
-      final userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      _logger.info(
+        'Attempting to create user account for: ${_emailController.text}',
       );
+
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       final user = userCredential.user;
       if (user == null) {
@@ -109,7 +109,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       await user.updateDisplayName(_nameController.text.trim());
       _logger.info('Display name updated');
-      
+
       await _createUserProfile(user);
 
       if (!mounted) return;
@@ -120,9 +120,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: const [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Expanded(
-                child: Text('Registrasi berhasil! Silakan login.'),
-              ),
+              Expanded(child: Text('Registrasi berhasil! Silakan login.')),
             ],
           ),
           backgroundColor: Colors.green,
@@ -133,16 +131,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
       if (!mounted) return;
       Navigator.pop(context);
-
     } on FirebaseAuthException catch (e) {
       _logger.warning('Registration failed: ${e.code}', e);
-      
+
       if (!mounted) return;
 
       String errorMessage;
       switch (e.code) {
         case 'email-already-in-use':
-          errorMessage = 'Email sudah terdaftar. Silakan login atau gunakan email lain.';
+          errorMessage =
+              'Email sudah terdaftar. Silakan login atau gunakan email lain.';
           break;
         case 'invalid-email':
           errorMessage = 'Format email tidak valid';
@@ -170,7 +168,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
     } catch (e) {
       _logger.severe('Unexpected error during registration', e);
-      
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -184,10 +182,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 4),
-              Text(
-                e.toString(),
-                style: const TextStyle(fontSize: 12),
-              ),
+              Text(e.toString(), style: const TextStyle(fontSize: 12)),
             ],
           ),
           backgroundColor: Colors.red,
@@ -222,35 +217,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Placeholder Ilustrasi
-                  Container(
-                    height: 180,
-                    width: 180,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.person_add,
-                          size: 70,
-                          color: Colors.indigo[850],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Sign Up Illustration',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
+                  // Icon
+                  Icon(
+                    Icons.person_add,
+                    size: 90, // Ukuran ikon bisa disesuaikan
+                    color: Colors.grey[800],
                   ),
-                  const SizedBox(height: 32),
-                  
+                  const SizedBox(height: 40), // Sesuaikan jarak jika perlu
+
                   // Title
                   Text(
                     'Sign Up',
@@ -263,10 +237,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Buat akun baru',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 32),
 
@@ -338,7 +309,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
                           onPressed: () {
@@ -377,12 +350,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                         prefixIcon: const Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                            _obscureConfirmPassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                             color: Colors.grey,
                           ),
                           onPressed: () {
                             setState(() {
-                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                              _obscureConfirmPassword =
+                                  !_obscureConfirmPassword;
                             });
                           },
                         ),
@@ -457,7 +433,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, color: Colors.blue[700], size: 20),
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.blue[700],
+                            size: 20,
+                          ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(

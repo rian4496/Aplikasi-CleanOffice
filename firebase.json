@@ -1,1 +1,26 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"clean-office-app","appId":"1:112282417853:android:327e339ae3bbef9bd355d4","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"clean-office-app","configurations":{"android":"1:112282417853:android:327e339ae3bbef9bd355d4","web":"1:112282417853:web:4c2b46e4c94fbe7bd355d4"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "clean-office-app",
+          "appId": "1:112282417853:android:327e339ae3bbef9bd355d4",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "clean-office-app",
+          "configurations": {
+            "android": "1:112282417853:android:327e339ae3bbef9bd355d4",
+            "web": "1:112282417853:web:4c2b46e4c94fbe7bd355d4"
+          }
+        }
+      }
+    }
+  }
+}

@@ -3,17 +3,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logging/logging.dart';
 
 /// Screen for handling password reset requests through Firebase Auth.
-/// 
+///
 /// This screen allows users to:
 /// - Enter their email address (or uses pre-filled email)
 /// - Request a password reset link
 /// - See confirmation when the reset link is sent
 /// - Handle various error cases with clear feedback
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({
-    super.key,
-    this.initialEmail,
-  });
+  const ResetPasswordScreen({super.key, this.initialEmail});
 
   /// Optional email address to pre-fill in the form.
   /// Usually provided when navigating from the login screen.
@@ -77,7 +74,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           behavior: SnackBarBehavior.floating,
         ),
       );
-
     } on FirebaseAuthException catch (e) {
       _logger.warning('Password reset failed', e);
       if (!mounted) return;
@@ -94,7 +90,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           errorMessage = 'Terlalu banyak permintaan. Silakan coba lagi nanti';
           break;
         default:
-          errorMessage = e.message ?? 'Terjadi kesalahan saat mengirim email reset';
+          errorMessage =
+              e.message ?? 'Terjadi kesalahan saat mengirim email reset';
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -162,11 +159,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // Icon
-                  Icon(
-                    Icons.lock_reset,
-                    size: 64,
-                    color: Colors.indigo[600],
-                  ),
+                  Icon(Icons.lock_reset, size: 64, color: Colors.grey[800]),
                   const SizedBox(height: 24),
 
                   // Title
@@ -184,10 +177,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   // Description
                   Text(
                     'Masukkan email Anda untuk menerima link reset password',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
@@ -254,9 +244,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       decoration: BoxDecoration(
                         color: Colors.green[50],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Colors.green.shade200,
-                        ),
+                        border: Border.all(color: Colors.green.shade200),
                       ),
                       child: Column(
                         children: [
@@ -277,16 +265,14 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                           const SizedBox(height: 8),
                           Text(
                             'Silakan cek email Anda untuk link reset password',
-                            style: TextStyle(
-                              color: Colors.green[800],
-                            ),
+                            style: TextStyle(color: Colors.green[800]),
                             textAlign: TextAlign.center,
                           ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
-                    
+
                     // Back to Login Button
                     OutlinedButton(
                       onPressed: () => Navigator.pop(context),

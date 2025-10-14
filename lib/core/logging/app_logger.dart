@@ -1,5 +1,5 @@
 /// Centralized logging system untuk aplikasi Clean Office
-/// 
+///
 /// Usage:
 /// ```dart
 /// final logger = AppLogger('ScreenName');
@@ -13,7 +13,7 @@ import 'package:logging/logging.dart';
 
 class AppLogger {
   final Logger _logger;
-  
+
   static bool _isConfigured = false;
 
   AppLogger(String name) : _logger = Logger(name) {
@@ -25,17 +25,17 @@ class AppLogger {
 
   static void _configureLogging() {
     Logger.root.level = kDebugMode ? Level.ALL : Level.WARNING;
-    
+
     Logger.root.onRecord.listen((record) {
       final emoji = _getEmojiForLevel(record.level);
       final timestamp = _formatTimestamp(record.time);
       final loggerName = record.loggerName.padRight(20);
-      
+
       final logMessage = '[$timestamp] $emoji [$loggerName] ${record.message}';
-      
+
       if (kDebugMode) {
         debugPrint(logMessage);
-        
+
         if (record.error != null) {
           debugPrint('   ↳ Error: ${record.error}');
         }
@@ -56,8 +56,8 @@ class AppLogger {
 
   static String _formatTimestamp(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:'
-           '${time.minute.toString().padLeft(2, '0')}:'
-           '${time.second.toString().padLeft(2, '0')}';
+        '${time.minute.toString().padLeft(2, '0')}:'
+        '${time.second.toString().padLeft(2, '0')}';
   }
 
   // ==================== LOGGING METHODS ====================
@@ -112,7 +112,12 @@ class AppLogger {
   }
 
   /// FIXED: Renamed parameter from 'error' to 'err'
-  void logDatabase(String operation, String collection, {bool isSuccess = true, Object? err}) {
+  void logDatabase(
+    String operation,
+    String collection, {
+    bool isSuccess = true,
+    Object? err,
+  }) {
     if (isSuccess) {
       info('DB $operation: $collection');
     } else {

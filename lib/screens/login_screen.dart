@@ -33,12 +33,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!userDoc.exists) {
         debugPrint('Creating user profile for ${user.email}');
-        
+
         String role = 'employee';
         if (user.email?.contains('admin') == true) {
           role = 'admin';
-        } else if (user.email?.contains('cleaner') == true || 
-                   user.email?.contains('petugas') == true) {
+        } else if (user.email?.contains('cleaner') == true ||
+            user.email?.contains('petugas') == true) {
           role = 'cleaner';
         }
 
@@ -72,10 +72,11 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
 
       if (userCredential.user == null) {
         throw Exception('Login failed: No user returned');
@@ -113,13 +114,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, route);
-
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
       _handleAuthError(e);
     } catch (e) {
       if (!mounted) return;
-      
+
       debugPrint('Login error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -156,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen> {
           );
         };
         break;
-        
+
       case 'wrong-password':
         errorMessage = 'Password salah. Silakan coba lagi';
         actionLabel = 'RESET';
@@ -166,30 +166,29 @@ class _LoginScreenState extends State<LoginScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ResetPasswordScreen(
-                initialEmail: _emailController.text,
-              ),
+              builder: (context) =>
+                  ResetPasswordScreen(initialEmail: _emailController.text),
             ),
           );
         };
         break;
-        
+
       case 'invalid-email':
         errorMessage = 'Format email tidak valid';
         break;
-        
+
       case 'user-disabled':
         errorMessage = 'Akun ini telah dinonaktifkan';
         break;
-        
+
       case 'too-many-requests':
         errorMessage = 'Terlalu banyak percobaan. Tunggu sebentar';
         break;
-        
+
       case 'network-request-failed':
         errorMessage = 'Koneksi internet bermasalah';
         break;
-        
+
       default:
         errorMessage = e.message ?? 'Terjadi kesalahan saat login';
     }
@@ -203,9 +202,11 @@ class _LoginScreenState extends State<LoginScreen> {
         action: SnackBarAction(
           label: actionLabel,
           textColor: Colors.white,
-          onPressed: actionCallback ?? () {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          },
+          onPressed:
+              actionCallback ??
+              () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
         ),
       ),
     );
@@ -224,35 +225,13 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Placeholder Ilustrasi
-                  Container(
+                  Image.asset(
+                    'assets/images/login_illustration.png',
                     height: 200,
                     width: 200,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.login,
-                          size: 80,
-                          color: Colors.indigo[850],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Login Illustration',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
                   ),
                   const SizedBox(height: 32),
-                  
+
                   // Title
                   Text(
                     'Login',
@@ -265,13 +244,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 8),
                   Text(
                     'Masuk ke akun Anda',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                   const SizedBox(height: 40),
-                  
+
                   // Email Field
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.85,
@@ -298,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Password Field
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.85,
@@ -312,7 +288,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(Icons.lock),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                           ),
                           onPressed: () {
                             setState(() {
@@ -332,7 +310,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                   ),
-                  
+
                   // Forgot Password
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.85,
@@ -358,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  
+
                   // Login Button
                   SizedBox(
                     width: MediaQuery.of(context).size.width * 0.85,
@@ -391,7 +369,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   // Sign Up Link
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

@@ -13,13 +13,11 @@ final _logger = AppLogger('RequestDetailScreen');
 class RequestDetailScreen extends ConsumerStatefulWidget {
   final String requestId;
 
-  const RequestDetailScreen({
-    super.key,
-    required this.requestId,
-  });
+  const RequestDetailScreen({super.key, required this.requestId});
 
   @override
-  ConsumerState<RequestDetailScreen> createState() => _RequestDetailScreenState();
+  ConsumerState<RequestDetailScreen> createState() =>
+      _RequestDetailScreenState();
 }
 
 class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
@@ -67,28 +65,45 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image if exists
-                if (request['imageUrl'] != null && (request['imageUrl'] as String).isNotEmpty)
+                if (request['imageUrl'] != null &&
+                    (request['imageUrl'] as String).isNotEmpty)
                   _buildImage(request['imageUrl'] as String),
 
-                if (request['imageUrl'] != null) 
+                if (request['imageUrl'] != null)
                   const SizedBox(height: AppConstants.defaultPadding),
 
                 // Info sections
-                _buildInfoSection('Lokasi', request['location'] as String? ?? '-', Icons.location_on),
-                const SizedBox(height: AppConstants.defaultPadding),
-                
-                _buildInfoSection('Deskripsi', request['description'] as String? ?? '-', Icons.description),
+                _buildInfoSection(
+                  'Lokasi',
+                  request['location'] as String? ?? '-',
+                  Icons.location_on,
+                ),
                 const SizedBox(height: AppConstants.defaultPadding),
 
-                _buildInfoSection('Pelapor', request['userName'] as String? ?? '-', Icons.person),
+                _buildInfoSection(
+                  'Deskripsi',
+                  request['description'] as String? ?? '-',
+                  Icons.description,
+                ),
+                const SizedBox(height: AppConstants.defaultPadding),
+
+                _buildInfoSection(
+                  'Pelapor',
+                  request['userName'] as String? ?? '-',
+                  Icons.person,
+                ),
                 const SizedBox(height: AppConstants.defaultPadding),
 
                 if (request['userEmail'] != null)
-                  _buildInfoSection('Email', request['userEmail'] as String, Icons.email),
+                  _buildInfoSection(
+                    'Email',
+                    request['userEmail'] as String,
+                    Icons.email,
+                  ),
 
                 if (request['userEmail'] != null)
                   const SizedBox(height: AppConstants.defaultPadding),
-                
+
                 _buildInfoSection(
                   'Dibuat',
                   _formatDateTime(request['createdAt']),
@@ -112,16 +127,17 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     );
   }
 
-  Widget _buildHeader(Map<String, dynamic> request, String status, bool isUrgent) {
+  Widget _buildHeader(
+    Map<String, dynamic> request,
+    String status,
+    bool isUrgent,
+  ) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Colors.indigo[700]!,
-            Colors.indigo[500]!,
-          ],
+          colors: [Colors.indigo[700]!, Colors.indigo[500]!],
         ),
       ),
       padding: const EdgeInsets.all(AppConstants.largePadding),
@@ -131,7 +147,10 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: _getStatusColor(status),
                   borderRadius: BorderRadius.circular(20),
@@ -148,7 +167,10 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
               if (isUrgent) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(20),
@@ -202,9 +224,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
           return Container(
             height: 200,
             color: Colors.grey[300],
-            child: const Center(
-              child: Icon(Icons.broken_image, size: 64),
-            ),
+            child: const Center(child: Icon(Icons.broken_image, size: 64)),
           );
         },
         loadingBuilder: (context, child, loadingProgress) {
@@ -240,10 +260,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
         const SizedBox(height: 6),
         Padding(
           padding: const EdgeInsets.only(left: 28),
-          child: Text(
-            value,
-            style: const TextStyle(fontSize: 16),
-          ),
+          child: Text(value, style: const TextStyle(fontSize: 16)),
         ),
       ],
     );
@@ -262,10 +279,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
           children: [
             const Text(
               'Timeline',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
             _buildTimelineItem(
@@ -352,10 +366,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
                 ),
                 Text(
                   timeText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -365,7 +376,11 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     );
   }
 
-  Widget _buildActionButtons(String status, String? assignedCleanerId, String? currentUserId) {
+  Widget _buildActionButtons(
+    String status,
+    String? assignedCleanerId,
+    String? currentUserId,
+  ) {
     // If completed, no actions
     if (status == 'completed') {
       return _buildInfoCard(
@@ -440,10 +455,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
             Expanded(
               child: Text(
                 message,
-                style: TextStyle(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: color, fontWeight: FontWeight.w600),
               ),
             ),
           ],
@@ -613,7 +625,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
 
       if (!mounted) return;
       _showSuccessSnackbar('Pekerjaan berhasil diselesaikan!');
-      
+
       // Go back after completion
       Navigator.pop(context);
     } on FirestoreException catch (e) {

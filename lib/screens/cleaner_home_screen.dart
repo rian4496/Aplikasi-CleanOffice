@@ -18,7 +18,8 @@ class CleanerHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
 }
 
-class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with SingleTickerProviderStateMixin {
+class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -47,7 +48,8 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
         actions: [
           IconButton(
             icon: const Icon(Icons.person),
-            onPressed: () => Navigator.pushNamed(context, AppConstants.profileRoute),
+            onPressed: () =>
+                Navigator.pushNamed(context, AppConstants.profileRoute),
             tooltip: 'Profil',
           ),
           IconButton(
@@ -73,10 +75,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  Colors.indigo[700]!,
-                  Colors.indigo[500]!,
-                ],
+                colors: [Colors.indigo[700]!, Colors.indigo[500]!],
               ),
             ),
             child: Column(
@@ -106,7 +105,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()),
+                        DateFormat(
+                          'EEEE, dd MMMM yyyy',
+                          'id_ID',
+                        ).format(DateTime.now()),
                         style: const TextStyle(
                           fontSize: 14,
                           color: Colors.white70,
@@ -147,16 +149,44 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                     ),
                     loading: () => Row(
                       children: [
-                        Expanded(child: _buildStatCard('Selesai', '...', Icons.check_circle, AppConstants.successColor)),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Selesai',
+                            '...',
+                            Icons.check_circle,
+                            AppConstants.successColor,
+                          ),
+                        ),
                         const SizedBox(width: AppConstants.smallPadding),
-                        Expanded(child: _buildStatCard('Proses', '...', Icons.pending_actions, AppConstants.warningColor)),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Proses',
+                            '...',
+                            Icons.pending_actions,
+                            AppConstants.warningColor,
+                          ),
+                        ),
                       ],
                     ),
                     error: (error, stack) => Row(
                       children: [
-                        Expanded(child: _buildStatCard('Selesai', '0', Icons.check_circle, AppConstants.successColor)),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Selesai',
+                            '0',
+                            Icons.check_circle,
+                            AppConstants.successColor,
+                          ),
+                        ),
                         const SizedBox(width: AppConstants.smallPadding),
-                        Expanded(child: _buildStatCard('Proses', '0', Icons.pending_actions, AppConstants.warningColor)),
+                        Expanded(
+                          child: _buildStatCard(
+                            'Proses',
+                            '0',
+                            Icons.pending_actions,
+                            AppConstants.warningColor,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -168,10 +198,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
           Expanded(
             child: TabBarView(
               controller: _tabController,
-              children: [
-                _buildAvailableRequestsTab(),
-                _buildMyTasksTab(),
-              ],
+              children: [_buildAvailableRequestsTab(), _buildMyTasksTab()],
             ),
           ),
         ],
@@ -192,7 +219,12 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
+  Widget _buildStatCard(
+    String label,
+    String value,
+    IconData icon,
+    Color color,
+  ) {
     return Card(
       elevation: 2,
       child: Padding(
@@ -212,10 +244,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
             const SizedBox(height: 4),
             Text(
               label,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
               textAlign: TextAlign.center,
             ),
           ],
@@ -288,7 +317,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
     );
   }
 
-  Widget _buildRequestCard(Map<String, dynamic> request, {bool isMyTask = false}) {
+  Widget _buildRequestCard(
+    Map<String, dynamic> request, {
+    bool isMyTask = false,
+  }) {
     final isUrgent = request['isUrgent'] as bool? ?? false;
     final status = request['status'] as String? ?? 'pending';
     final createdAt = (request['createdAt'] as Timestamp?)?.toDate();
@@ -303,9 +335,8 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => RequestDetailScreen(
-                requestId: request['id'] as String,
-              ),
+              builder: (context) =>
+                  RequestDetailScreen(requestId: request['id'] as String),
             ),
           );
         },
@@ -321,7 +352,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                     padding: const EdgeInsets.all(AppConstants.smallPadding),
                     decoration: BoxDecoration(
                       color: isUrgent ? Colors.red[100] : Colors.indigo[100],
-                      borderRadius: BorderRadius.circular(AppConstants.smallRadius),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.smallRadius,
+                      ),
                     ),
                     child: Icon(
                       isUrgent ? Icons.priority_high : Icons.cleaning_services,
@@ -335,7 +368,8 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          request['location'] as String? ?? 'Lokasi tidak diketahui',
+                          request['location'] as String? ??
+                              'Lokasi tidak diketahui',
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -383,7 +417,11 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                   if (createdAt != null)
                     Row(
                       children: [
-                        Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                        Icon(
+                          Icons.access_time,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           DateFormat('dd MMM HH:mm').format(createdAt),
@@ -396,7 +434,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
                     ),
                   if (isMyTask)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: _getStatusColor(status).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
@@ -443,10 +484,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
             const SizedBox(height: AppConstants.smallPadding),
             Text(
               subtitle,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
               textAlign: TextAlign.center,
             ),
           ],
@@ -466,10 +504,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
             const SizedBox(height: AppConstants.defaultPadding),
             const Text(
               'Terjadi kesalahan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: AppConstants.smallPadding),
             Text(
@@ -534,7 +569,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppConstants.errorColor),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppConstants.errorColor,
+            ),
             child: const Text('KELUAR'),
           ),
         ],
@@ -545,7 +582,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> with Sing
       try {
         final authActions = ref.read(authActionsProvider.notifier);
         await authActions.logout();
-        
+
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
       } catch (e) {

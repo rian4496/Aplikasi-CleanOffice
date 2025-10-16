@@ -1,8 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// 🔥 Import firebase_options dengan alias untuk kejelasan
+import 'package:intl/date_symbol_data_local.dart'; 
 import 'firebase_options.dart' as firebase_options;
 
 import 'core/logging/app_logger.dart';
@@ -34,8 +34,12 @@ void main() async {
   try {
     _logger.info('Initializing Firebase...');
     await Firebase.initializeApp(
-      options: firebase_options.DefaultFirebaseOptions.currentPlatform, // ✅ Pakai alias
+      options: firebase_options.DefaultFirebaseOptions.currentPlatform, // alias
     );
+
+    // INISIALISASI FORMAT TANGGAL
+    await initializeDateFormatting('id_ID', null);
+
     _logger.info('Firebase initialized successfully');
 
     runApp(const ProviderScope(child: MyApp()));

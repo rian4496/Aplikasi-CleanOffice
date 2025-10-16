@@ -1,11 +1,11 @@
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:aplikasi_cleanoffice/models/report_model.dart';
 import 'package:aplikasi_cleanoffice/providers/riverpod/employee_providers.dart';
+import '../core/utils/date_formatter.dart'; 
 import 'report_detail_screen.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
@@ -16,11 +16,7 @@ class EmployeeHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
-  final _dateFormat = DateFormat('d MMM yyyy');
-
-  String _formatDate(DateTime date) {
-    return _dateFormat.format(date);
-  }
+  // Hapus _dateFormat dan _formatDate yang lama
 
   Widget _buildProgressItem(BuildContext context, String label, String value, Color color) {
     final textTheme = Theme.of(context).textTheme;
@@ -29,7 +25,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
+          color: color.withAlpha(30), // Ganti dengan withAlpha
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -72,7 +68,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Karyawan'),
-        // Use theme's AppBar style, but override for a lighter look
         backgroundColor: AppTheme.primaryLight,
         elevation: 0,
         foregroundColor: AppTheme.textPrimary,
@@ -103,7 +98,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
         ],
       ),
-      // backgroundColor is handled by theme
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: () async {
@@ -117,7 +111,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
               children: [
                 // Progress status cards
                 Container(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16), // Add top padding
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                   child: summaryAsync.when(
                     data: (summary) => Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -164,7 +158,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 // Header dengan tombol Buat Laporan
                 Card(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  // elevation, shape, color from CardTheme
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -265,7 +258,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         onPressed: () {
           Navigator.pushNamed(context, '/create_report');
         },
-        // backgroundColor and child color from theme
         child: const Icon(Icons.add),
       ),
     );
@@ -331,12 +323,11 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       },
       child: Card(
         margin: const EdgeInsets.only(bottom: 8),
-        // elevation from CardTheme
         child: ListTile(
           leading: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withValues(alpha: 0.1),
+              color: colorScheme.primary.withAlpha(30),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -348,7 +339,8 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             report.location,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
-          subtitle: Text(_formatDate(report.date)),
+          // ✅ 2. GUNAKAN DATE FORMATTER DI SINI
+          subtitle: Text(DateFormatter.shortDate(report.date)),
           trailing: Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -366,7 +358,8 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
               MaterialPageRoute(
                 builder: (context) => ReportDetailScreen(
                   title: report.location,
-                  date: _formatDate(report.date),
+                  // ✅ 3. GUNAKAN DATE FORMATTER DI SINI JUGA
+                  date: DateFormatter.shortDate(report.date),
                   status: report.status.displayName,
                 ),
               ),

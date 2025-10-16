@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../core/constants/app_constants.dart';
 import '../core/logging/app_logger.dart';
+import '../core/theme/app_theme.dart'; // Impor AppTheme untuk warna status
+import '../core/utils/date_formatter.dart';
 import '../providers/riverpod/auth_providers.dart';
 import '../providers/riverpod/cleaner_providers.dart';
 import 'cleaner/request_detail_screen.dart';
@@ -11,40 +12,18 @@ import 'cleaner/create_cleaning_report_screen.dart';
 
 final _logger = AppLogger('CleanerHomeScreen');
 
-class CleanerHomeScreen extends ConsumerStatefulWidget {
+class CleanerHomeScreen extends ConsumerWidget {
   const CleanerHomeScreen({super.key});
 
   @override
-  ConsumerState<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
-}
-
-class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final userProfile = ref.watch(currentUserProfileProvider);
-    final cleanerStats = ref.watch(cleanerStatsProvider);
+  Widget build(BuildContext context, WidgetRef ref) {
+    // BARU: Ambil tema dan textTheme untuk digunakan di seluruh widget
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard Petugas'),
-        backgroundColor: Colors.indigo[700],
-        elevation: 0,
-        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             icon: const Icon(Icons.person),
@@ -54,154 +33,32 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => _handleLogout(),
+            onPressed: () => _handleLogout(context, ref),
             tooltip: 'Keluar',
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(text: 'Permintaan Baru', icon: Icon(Icons.inbox)),
-            Tab(text: 'Tugas Saya', icon: Icon(Icons.assignment)),
-          ],
-        ),
       ),
-      body: Column(
-        children: [
-          // Welcome & Stats Section
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Colors.indigo[700]!, Colors.indigo[500]!],
-              ),
-            ),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(availableRequestsProvider);
+          ref.invalidate(cleanerStatsProvider);
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Padding(
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      userProfile.when(
-                        data: (profile) => Text(
-                          'Selamat Datang,\n${profile?.displayName ?? "Petugas"}!',
-                          style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        loading: () => const Text(
-                          'Memuat...',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                        error: (error, stack) => const Text(
-                          'Petugas',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        DateFormat(
-                          'EEEE, dd MMMM yyyy',
-                          'id_ID',
-                        ).format(DateTime.now()),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Statistics Cards
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppConstants.defaultPadding,
-                    0,
-                    AppConstants.defaultPadding,
-                    AppConstants.defaultPadding,
-                  ),
-                  child: cleanerStats.when(
-                    data: (stats) => Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Selesai',
-                            stats['completed'].toString(),
-                            Icons.check_circle,
-                            AppConstants.successColor,
-                          ),
-                        ),
-                        const SizedBox(width: AppConstants.smallPadding),
-                        Expanded(
-                          child: _buildStatCard(
-                            'Dalam Proses',
-                            stats['inProgress'].toString(),
-                            Icons.pending_actions,
-                            AppConstants.warningColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    loading: () => Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Selesai',
-                            '...',
-                            Icons.check_circle,
-                            AppConstants.successColor,
-                          ),
-                        ),
-                        const SizedBox(width: AppConstants.smallPadding),
-                        Expanded(
-                          child: _buildStatCard(
-                            'Proses',
-                            '...',
-                            Icons.pending_actions,
-                            AppConstants.warningColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                    error: (error, stack) => Row(
-                      children: [
-                        Expanded(
-                          child: _buildStatCard(
-                            'Selesai',
-                            '0',
-                            Icons.check_circle,
-                            AppConstants.successColor,
-                          ),
-                        ),
-                        const SizedBox(width: AppConstants.smallPadding),
-                        Expanded(
-                          child: _buildStatCard(
-                            'Proses',
-                            '0',
-                            Icons.pending_actions,
-                            AppConstants.warningColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+                _buildWelcomeCard(context, ref, textTheme),
+                const SizedBox(height: 16),
+                _buildStatisticsRow(ref, textTheme),
+                const SizedBox(height: 24),
+                _buildRequestsList(context, ref, textTheme),
               ],
             ),
           ),
-          // Tab Views
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [_buildAvailableRequestsTab(), _buildMyTasksTab()],
-            ),
-          ),
-        ],
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -214,37 +71,98 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         },
         icon: const Icon(Icons.add),
         label: const Text('Buat Laporan'),
-        backgroundColor: Colors.indigo[700],
       ),
     );
   }
 
-  Widget _buildStatCard(
-    String label,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
+  Widget _buildWelcomeCard(
+      BuildContext context, WidgetRef ref, TextTheme textTheme) {
+    final userProfile = ref.watch(currentUserProfileProvider);
     return Card(
-      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            userProfile.when(
+              data: (profile) => Text(
+                'Selamat Datang,\n${profile?.displayName ?? "Petugas Kebersihan"}!',
+                // DIUBAH: Menggunakan gaya dari TextTheme
+                style: textTheme.headlineMedium,
+              ),
+              loading: () => const Text('Memuat...'),
+              error: (err, stack) => const Text('Selamat Datang!'),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Hari ini: ${DateFormatter.fullDate(DateTime.now())}',
+              // DIUBAH: Menggunakan gaya dari TextTheme
+              style: textTheme.titleMedium,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatisticsRow(WidgetRef ref, TextTheme textTheme) {
+    final cleanerStats = ref.watch(cleanerStatsProvider);
+
+    return cleanerStats.when(
+      data: (stats) => Row(
+        children: [
+          Expanded(
+            child: _buildStatisticCard(
+              textTheme: textTheme,
+              icon: Icons.check_circle,
+              title: 'Selesai',
+              value: stats['completed'].toString(),
+              // DIUBAH: Menggunakan warna dari AppTheme
+              color: AppTheme.success,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: _buildStatisticCard(
+              textTheme: textTheme,
+              icon: Icons.pending_actions,
+              title: 'Dalam Proses',
+              value: stats['inProgress'].toString(),
+              // DIUBAH: Menggunakan warna dari AppTheme
+              color: AppTheme.warning,
+            ),
+          ),
+        ],
+      ),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, s) => const Text('Gagal memuat statistik'),
+    );
+  }
+
+  Widget _buildStatisticCard({
+    required TextTheme textTheme,
+    required IconData icon,
+    required String title,
+    required String value,
+    required Color color,
+  }) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Icon(icon, size: 32, color: color),
-            const SizedBox(height: AppConstants.smallPadding),
+            const SizedBox(height: 8),
             Text(
               value,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
+              // DIUBAH: Menggunakan gaya dari TextTheme, dengan warna custom
+              style: textTheme.headlineMedium?.copyWith(color: color),
             ),
             const SizedBox(height: 4),
             Text(
-              label,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+              title,
+              // DIUBAH: Menggunakan gaya dari TextTheme
+              style: textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
           ],
@@ -253,205 +171,114 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  Widget _buildAvailableRequestsTab() {
+  Widget _buildRequestsList(
+      BuildContext context, WidgetRef ref, TextTheme textTheme) {
     final availableRequests = ref.watch(availableRequestsProvider);
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(availableRequestsProvider);
-      },
-      child: availableRequests.when(
-        data: (requests) {
-          if (requests.isEmpty) {
-            return _buildEmptyState(
-              icon: Icons.inbox_outlined,
-              title: 'Tidak ada permintaan baru',
-              subtitle: 'Permintaan baru akan muncul di sini',
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(AppConstants.smallPadding),
-            itemCount: requests.length,
-            itemBuilder: (context, index) {
-              final request = requests[index];
-              return _buildRequestCard(request);
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorState(error.toString()),
-      ),
-    );
-  }
-
-  Widget _buildMyTasksTab() {
-    final myTasks = ref.watch(cleanerAssignedRequestsProvider);
-
-    return RefreshIndicator(
-      onRefresh: () async {
-        ref.invalidate(cleanerAssignedRequestsProvider);
-      },
-      child: myTasks.when(
-        data: (requests) {
-          if (requests.isEmpty) {
-            return _buildEmptyState(
-              icon: Icons.assignment_outlined,
-              title: 'Belum ada tugas',
-              subtitle: 'Tugas yang Anda terima akan muncul di sini',
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(AppConstants.smallPadding),
-            itemCount: requests.length,
-            itemBuilder: (context, index) {
-              final request = requests[index];
-              return _buildRequestCard(request, isMyTask: true);
-            },
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => _buildErrorState(error.toString()),
-      ),
-    );
-  }
-
-  Widget _buildRequestCard(
-    Map<String, dynamic> request, {
-    bool isMyTask = false,
-  }) {
-    final isUrgent = request['isUrgent'] as bool? ?? false;
-    final status = request['status'] as String? ?? 'pending';
-    final createdAt = (request['createdAt'] as Timestamp?)?.toDate();
-
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppConstants.smallPadding,
-        vertical: AppConstants.smallPadding / 2,
-      ),
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  RequestDetailScreen(requestId: request['id'] as String),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
-        child: Padding(
-          padding: const EdgeInsets.all(AppConstants.defaultPadding),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppConstants.smallPadding),
-                    decoration: BoxDecoration(
-                      color: isUrgent ? Colors.red[100] : Colors.indigo[100],
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.smallRadius,
-                      ),
-                    ),
-                    child: Icon(
-                      isUrgent ? Icons.priority_high : Icons.cleaning_services,
-                      color: isUrgent ? Colors.red[700] : Colors.indigo[700],
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.defaultPadding),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          request['location'] as String? ??
-                              'Lokasi tidak diketahui',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          request['description'] as String? ?? '',
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 14,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (isUrgent)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red[300]!),
-                      ),
-                      child: Text(
-                        'URGEN',
-                        style: TextStyle(
-                          color: Colors.red[700],
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Permintaan Terbaru',
+          // DIUBAH: Menggunakan gaya dari TextTheme
+          style: textTheme.titleLarge,
+        ),
+        const SizedBox(height: 8),
+        availableRequests.when(
+          data: (requests) {
+            if (requests.isEmpty) {
+              return _buildEmptyState(
+                icon: Icons.inbox_outlined,
+                title: 'Tidak ada permintaan baru',
+                subtitle: 'Permintaan baru akan muncul di sini',
+              );
+            }
+            return Card(
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: requests.length,
+                // DIUBAH: Divider sekarang menggunakan tema
+                separatorBuilder: (context, index) => const Divider(),
+                itemBuilder: (context, index) {
+                  final request = requests[index];
+                  return _buildRequestTile(context, request);
+                },
               ),
+            );
+          },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => _buildErrorState(ref, error.toString()),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRequestTile(
+      BuildContext context, Map<String, dynamic> request) {
+    final theme = Theme.of(context); // Ambil tema untuk warna
+    final isUrgent = request['isUrgent'] as bool? ?? false;
+
+    return ListTile(
+      leading: CircleAvatar(
+        // DIUBAH: Menggunakan warna dari tema dengan opacity
+        backgroundColor:
+            isUrgent ? theme.colorScheme.error.withValues(alpha: 0.1) : theme.colorScheme.primary.withValues(alpha: 0.1),
+        child: Icon(
+          isUrgent ? Icons.priority_high : Icons.cleaning_services,
+          // DIUBAH: Menggunakan warna utama dari tema
+          color: isUrgent ? theme.colorScheme.error : theme.colorScheme.primary,
+        ),
+      ),
+      title: Text(request['location'] as String? ?? 'Lokasi tidak diketahui'),
+      subtitle: Text(
+        request['description'] as String? ?? '',
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                RequestDetailScreen(requestId: request['id'] as String),
+          ),
+        );
+      },
+    );
+  }
+  
+  // Widget _buildEmptyState dan _buildErrorState tetap sama (tidak perlu diubah)
+
+  Widget _buildEmptyState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+  }) {
+    // ... (kode tidak berubah)
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 48.0, horizontal: 16.0),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 64, color: Colors.grey[400]),
               const SizedBox(height: AppConstants.defaultPadding),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (createdAt != null)
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 16,
-                          color: Colors.grey[600],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          DateFormat('dd MMM HH:mm').format(createdAt),
-                          style: TextStyle(
-                            color: Colors.grey[600],
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  if (isMyTask)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        _getStatusText(status),
-                        style: TextStyle(
-                          color: _getStatusColor(status),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppConstants.smallPadding),
+              Text(
+                subtitle,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
@@ -460,41 +287,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  Widget _buildEmptyState({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.largePadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: AppConstants.defaultPadding),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-            const SizedBox(height: AppConstants.smallPadding),
-            Text(
-              subtitle,
-              style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String error) {
-    return Center(
+  Widget _buildErrorState(WidgetRef ref, String error) {
+    // ... (kode tidak berubah)
+    return Card(
+      color: Colors.red[50],
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.largePadding),
         child: Column(
@@ -526,37 +322,8 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'pending':
-        return AppConstants.warningColor;
-      case 'accepted':
-        return AppConstants.infoColor;
-      case 'in_progress':
-        return AppConstants.primaryColor;
-      case 'completed':
-        return AppConstants.successColor;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'pending':
-        return 'Menunggu';
-      case 'accepted':
-        return 'Diterima';
-      case 'in_progress':
-        return 'Dikerjakan';
-      case 'completed':
-        return 'Selesai';
-      default:
-        return status;
-    }
-  }
-
-  Future<void> _handleLogout() async {
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    // ... (kode tidak berubah)
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -578,16 +345,14 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       ),
     );
 
-    if (shouldLogout == true && mounted) {
+    if (shouldLogout == true) {
       try {
         final authActions = ref.read(authActionsProvider.notifier);
         await authActions.logout();
-
-        if (!mounted) return;
+        
         Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
       } catch (e) {
         _logger.error('Logout error', e);
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal logout: ${e.toString()}'),

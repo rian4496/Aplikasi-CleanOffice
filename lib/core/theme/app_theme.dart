@@ -1,3 +1,5 @@
+// lib/core/theme/app_theme.dart
+
 import 'package:flutter/material.dart';
 
 class AppTheme {
@@ -6,7 +8,7 @@ class AppTheme {
   // Primary Colors (Biru/Indigo)
   static const Color primary = Color(0xFF3F51B5); // Indigo 500
   static const Color primaryDark = Color(0xFF303F9F); // Indigo 700
-  static const Color primaryLight = Color(0xFFC5CAE9); // Indigo 100
+  static const Color primaryLight = Color(0xFFE8EAF6); // Indigo 50
 
   // Secondary/Accent Color
   static const Color secondary = Color(0xFF448AFF); // Blue A200
@@ -43,20 +45,24 @@ class AppTheme {
         onError: Colors.white,
         surface: card,
         onSurface: textPrimary,
+        // DIHAPUS: Properti 'background' di dalam ColorScheme sudah deprecated.
+        // background: background, 
       ),
 
       // Scaffold
+      // Pengaturan ini sudah benar untuk mengatur warna latar belakang utama aplikasi.
       scaffoldBackgroundColor: background,
 
       // App Bar
       appBarTheme: const AppBarTheme(
         elevation: 1,
         centerTitle: false,
-        backgroundColor: primaryDark, // Menggunakan warna primary gelap
-        foregroundColor: Colors.white,
-        iconTheme: IconThemeData(color: Colors.white),
+        backgroundColor: card,
+        foregroundColor: textPrimary,
+        iconTheme: IconThemeData(color: textPrimary),
         titleTextStyle: TextStyle(
-          color: Colors.white,
+          fontFamily: 'Poppins', // Contoh penggunaan custom font
+          color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
@@ -69,6 +75,50 @@ class AppTheme {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         color: card,
         margin: EdgeInsets.zero,
+      ),
+      
+      // TextTheme
+      textTheme: const TextTheme(
+        headlineMedium: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        titleLarge: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+        ),
+        titleMedium: TextStyle(
+          fontSize: 16,
+          color: textSecondary,
+        ),
+        bodyLarge: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+        ),
+        bodyMedium: TextStyle(
+          fontSize: 14,
+          color: textSecondary,
+        ),
+      ),
+      
+      // ListTileTheme
+      listTileTheme: ListTileThemeData(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        titleTextStyle: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w500,
+          color: textPrimary,
+        ),
+        subtitleTextStyle: const TextStyle(
+          fontSize: 14,
+          color: textSecondary,
+        ),
+        iconColor: primary,
       ),
 
       // Elevated Button
@@ -98,11 +148,11 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: divider),
+          borderSide: const BorderSide(color: divider),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: divider),
+          borderSide: const BorderSide(color: divider),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
@@ -115,6 +165,13 @@ class AppTheme {
         backgroundColor: primary.withAlpha(26),
         labelStyle: const TextStyle(color: primary, fontWeight: FontWeight.bold),
         side: BorderSide.none,
+      ),
+      
+      // Divider Theme
+      dividerTheme: const DividerThemeData(
+        color: divider,
+        space: 1,
+        thickness: 1,
       ),
     );
   }

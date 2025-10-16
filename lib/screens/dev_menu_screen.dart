@@ -12,7 +12,7 @@ import 'package:aplikasi_cleanoffice/screens/request_history_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/reset_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
-
+import 'package:aplikasi_cleanoffice/screens/admin/bulk_receipt_screen.dart';
 /// Development Menu untuk test UI tanpa Firebase Authentication
 /// HANYA UNTUK DEVELOPMENT - JANGAN DIPAKAI DI PRODUCTION!
 class DevMenuScreen extends StatelessWidget {
@@ -170,6 +170,14 @@ class DevMenuScreen extends StatelessWidget {
               icon: Icons.history,
               color: Colors.brown,
               screen: const RequestHistoryScreen(),
+            ),
+            _buildScreenCard(
+              context,
+              title: 'Bulk Receipt Generator',
+              subtitle: 'Upload Excel untuk buat kwitansi',
+              icon: Icons.receipt_long,
+              color: Colors.orange,
+              screen: const BulkReceiptScreen(),
             ),
 
             const SizedBox(height: 24),

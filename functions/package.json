@@ -1,0 +1,16 @@
+{
+  "name": "clean-office-functions",
+  "description": "Cloud Functions for Clean Office App",
+  "main": "index.js",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "exceljs": "^4.4.0",
+    "firebase-admin": "^12.1.1",
+    "firebase-functions": "^5.0.1",
+    "puppeteer": "^22.10.0"
+  },
+  "engines": {
+    "node": "18"
+  },
+  "private": true
+}

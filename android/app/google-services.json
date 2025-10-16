@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "112282417853",
-    "project_id": "clean-office-app",
-    "storage_bucket": "clean-office-app.firebasestorage.app"
+    "project_number": "110305390615",
+    "project_id": "cleanoffice-app",
+    "storage_bucket": "cleanoffice-app.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:112282417853:android:327e339ae3bbef9bd355d4",
+        "mobilesdk_app_id": "1:110305390615:android:b6d58a61d15f3cb98aec52",
         "android_client_info": {
           "package_name": "com.example.aplikasi_cleanoffice"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBcD90mzDgYTkiOQFsshIZof1oI3roDIHM"
+          "current_key": "AIzaSyC8Oun2mhqV6QZ0Ynrdn_wdU01Pl458WbY"
         }
       ],
       "services": {

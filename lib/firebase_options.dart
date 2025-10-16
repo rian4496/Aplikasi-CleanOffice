@@ -50,20 +50,21 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDRssnH1E1QOdbfRJtLXO8dcyo6ktsGhmQ',
-    appId: '1:112282417853:web:4c2b46e4c94fbe7bd355d4',
-    messagingSenderId: '112282417853',
-    projectId: 'clean-office-app',
-    authDomain: 'clean-office-app.firebaseapp.com',
-    storageBucket: 'clean-office-app.firebasestorage.app',
-    measurementId: 'G-4KF0L88D97',
+    apiKey: 'AIzaSyAUkGvEo6k0kxGkRjM4a1Ch2WDBw_TTm_I',
+    appId: '1:110305390615:web:bd17087d3332c6718aec52',
+    messagingSenderId: '110305390615',
+    projectId: 'cleanoffice-app',
+    authDomain: 'cleanoffice-app.firebaseapp.com',
+    storageBucket: 'cleanoffice-app.firebasestorage.app',
+    measurementId: 'G-GBWRPB9Z2H',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBcD90mzDgYTkiOQFsshIZof1oI3roDIHM',
-    appId: '1:112282417853:android:327e339ae3bbef9bd355d4',
-    messagingSenderId: '112282417853',
-    projectId: 'clean-office-app',
-    storageBucket: 'clean-office-app.firebasestorage.app',
+    apiKey: 'AIzaSyC8Oun2mhqV6QZ0Ynrdn_wdU01Pl458WbY',
+    appId: '1:110305390615:android:b6d58a61d15f3cb98aec52',
+    messagingSenderId: '110305390615',
+    projectId: 'cleanoffice-app',
+    storageBucket: 'cleanoffice-app.firebasestorage.app',
   );
+
 }

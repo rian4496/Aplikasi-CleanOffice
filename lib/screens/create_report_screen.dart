@@ -1,16 +1,13 @@
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../core/constants/app_constants.dart';
 import '../core/error/exceptions.dart';
 import '../core/logging/app_logger.dart';
-// ❌ REMOVED: import '../models/report_model.dart';
-// ❌ REMOVED: import '../models/report_status_enum.dart';
 import '../providers/riverpod/auth_providers.dart';
 import '../providers/riverpod/employee_providers.dart';
 
@@ -27,7 +24,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  File? _selectedImage;
+  Uint8List? _imageBytes; // ✅ Store image as bytes in memory
   bool _isUrgent = false;
   bool _isSubmitting = false;
 
@@ -35,6 +32,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   void dispose() {
     _locationController.dispose();
     _descriptionController.dispose();
+    // ✅ No file cleanup needed - bytes will be garbage collected
     super.dispose();
   }
 
@@ -49,39 +47,54 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
       if (pickedImage == null) return;
 
-      final file = File(pickedImage.path);
+      // ✅ FIXED: Read image as bytes immediately (no file system involved)
+      final bytes = await pickedImage.readAsBytes();
+      
+      _logger.info('Image captured: ${bytes.length} bytes');
 
-      final bytes = await file.length();
-      if (!AppConstants.isValidFileSize(bytes)) {
+      // Validate file size
+      if (!AppConstants.isValidFileSize(bytes.length)) {
         if (!mounted) return;
-        // ✅ FIXED: Removed unnecessary braces
         _showError(
           'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
         );
         return;
       }
 
+      // Validate image is not empty
+      if (bytes.isEmpty) {
+        if (!mounted) return;
+        _showError('Foto tidak valid atau kosong');
+        return;
+      }
+
       setState(() {
-        _selectedImage = file;
+        _imageBytes = bytes;
       });
 
-      _logger.info('Image selected: ${pickedImage.path}');
+      _logger.info('Image ready for upload: ${bytes.length} bytes');
     } catch (e, stackTrace) {
       _logger.error('Error picking image', e, stackTrace);
-      _showError('Gagal mengambil foto');
+      _showError('Gagal mengambil foto: ${e.toString()}');
     }
   }
 
   Future<String?> _uploadImage() async {
-    if (_selectedImage == null) return null;
+    if (_imageBytes == null) return null;
 
     try {
+      // ✅ FIXED: Validate bytes exist (should always be true if not null)
+      if (_imageBytes!.isEmpty) {
+        throw const StorageException(message: 'File foto kosong');
+      }
+
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
       _logger.info('Uploading report image for user: ${user.uid}');
+      _logger.info('Image size: ${_imageBytes!.length} bytes');
 
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final fileName = 'report_$timestamp.jpg';
@@ -89,14 +102,28 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
         '${AppConstants.reportImagesPath}/${user.uid}/$fileName',
       );
 
-      final uploadTask = await storageRef.putFile(_selectedImage!);
+      // ✅ FIXED: Upload directly from bytes (no file involved!)
+      final metadata = SettableMetadata(
+        contentType: 'image/jpeg',
+        customMetadata: {
+          'uploadedBy': user.uid,
+          'uploadedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      // Use putData instead of putFile
+      final uploadTask = await storageRef.putData(_imageBytes!, metadata);
       final downloadUrl = await uploadTask.ref.getDownloadURL();
 
-      _logger.info('Image uploaded successfully');
+      _logger.info('Image uploaded successfully: $downloadUrl');
+
       return downloadUrl;
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Upload image error', e, stackTrace);
       throw StorageException.fromFirebase(e);
+    } catch (e, stackTrace) {
+      _logger.error('Unexpected upload error', e, stackTrace);
+      rethrow;
     }
   }
 
@@ -105,6 +132,13 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
     if (_selectedImage == null) {
       _showError('Mohon ambil foto terlebih dahulu');
+      return;
+    }
+
+    // ✅ FIXED: Validate file exists before submit
+    if (!await _selectedImage!.exists()) {
+      _showError('File foto tidak ditemukan. Silakan ambil foto ulang');
+      setState(() => _selectedImage = null);
       return;
     }
 
@@ -147,12 +181,36 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
+      
+      // ✅ FIXED: Clean up file on error
+      if (_selectedImage != null && await _selectedImage!.exists()) {
+        _selectedImage!.delete().catchError((err) {
+          _logger.warning('Could not delete file after error: $err');
+          return _selectedImage!; // Return file to satisfy signature
+        });
+      }
     } on FirestoreException catch (e) {
       _logger.error('Firestore error', e);
       _showError(e.message);
+      
+      // Clean up file on error
+      if (_selectedImage != null && await _selectedImage!.exists()) {
+        _selectedImage!.delete().catchError((err) {
+          _logger.warning('Could not delete file after error: $err');
+          return _selectedImage!; // Return file to satisfy signature
+        });
+      }
     } catch (e, stackTrace) {
       _logger.error('Unexpected error', e, stackTrace);
       _showError(AppConstants.genericErrorMessage);
+      
+      // Clean up file on error
+      if (_selectedImage != null && await _selectedImage!.exists()) {
+        _selectedImage!.delete().catchError((err) {
+          _logger.warning('Could not delete file after error: $err');
+          return _selectedImage!; // Return file to satisfy signature
+        });
+      }
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);

@@ -161,7 +161,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       actions: [
         IconButton(
           icon: const Icon(Icons.person),
-          onPressed: () =>
+          onPressed: () => 
               Navigator.pushNamed(context, AppConstants.profileRoute),
           tooltip: 'Profil',
         ),

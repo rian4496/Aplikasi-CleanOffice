@@ -39,28 +39,33 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: _buildAppBar(context),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
           ref.invalidate(cleanerAssignedRequestsProvider);
           ref.invalidate(cleanerStatsProvider);
         },
-        child: Column(
-          children: [
-            // Greeting Section
-            _buildGreetingSection(),
-            const SizedBox(height: 16),
+        child: CustomScrollView(
+          slivers: [
+            // Sliver AppBar dengan Greeting Section
+            _buildSliverHeader(),
 
-            // Stats Cards
-            _buildStatsCards(),
-            const SizedBox(height: 24),
+            // Content
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  const SizedBox(height: 16),
+                  // Stats Cards
+                  _buildStatsCards(),
+                  const SizedBox(height: 24),
+                  // Tab Bar
+                  _buildTabBar(),
+                ],
+              ),
+            ),
 
-            // Tab Bar
-            _buildTabBar(),
-
-            // Tab Views
-            Expanded(
+            // Tab Views sebagai SliverFillRemaining
+            SliverFillRemaining(
               child: TabBarView(
                 controller: _tabController,
                 children: [
@@ -76,13 +81,83 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: const Text('Beranda Petugas'),
-      backgroundColor: AppTheme.primary,
-      foregroundColor: Colors.white,
-      elevation: 0,
+  Widget _buildSliverHeader() {
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
+
+    return SliverAppBar(
+      expandedHeight: 200,
+      floating: false,
+      pinned: true,
       automaticallyImplyLeading: false,
+      backgroundColor: AppTheme.primary,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppTheme.primary, AppTheme.primaryDark],
+            ),
+          ),
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  userProfileAsync.when(
+                    data: (profile) => Text(
+                      'Selamat Datang,',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.9),
+                        fontSize: 16,
+                      ),
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, _) => const SizedBox.shrink(),
+                  ),
+                  const SizedBox(height: 4),
+                  userProfileAsync.when(
+                    data: (profile) => Text(
+                      profile?.displayName ?? 'Petugas Kebersihan',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    loading: () => Container(
+                      height: 24,
+                      width: 150,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                    ),
+                    error: (_, _) => const Text(
+                      'Petugas Kebersihan',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    DateFormatter.fullDate(DateTime.now()),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
       actions: [
         IconButton(
           icon: const Icon(Icons.person),
@@ -96,73 +171,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           tooltip: 'Keluar',
         ),
       ],
-    );
-  }
-
-  Widget _buildGreetingSection() {
-    final userProfileAsync = ref.watch(currentUserProfileProvider);
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [AppTheme.primary, AppTheme.primaryDark],
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          userProfileAsync.when(
-            data: (profile) => Text(
-              'Selamat Datang,',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.9),
-                fontSize: 16,
-              ),
-            ),
-            loading: () => const SizedBox.shrink(),
-            error: (_, _) => const SizedBox.shrink(),
-          ),
-          const SizedBox(height: 4),
-          userProfileAsync.when(
-            data: (profile) => Text(
-              profile?.displayName ?? 'Petugas Kebersihan',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            loading: () => Container(
-              height: 24,
-              width: 150,
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            ),
-            error: (_, _) => const Text(
-              'Petugas Kebersihan',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            DateFormatter.fullDate(DateTime.now()),
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
     );
   }
 

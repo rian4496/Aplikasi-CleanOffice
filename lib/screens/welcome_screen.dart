@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'login_screen.dart';
 
 /// Welcome Screen - Landing page sebelum login
-/// Clean design tanpa border/container berlebihan
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
@@ -54,8 +53,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFFF8F9FA), // Very Light Gray
+            colors: [ 
+              Color(0xFFFFFFFF), // Pure White
               Color(0xFFFFFFFF), // Pure White
             ],
           ),
@@ -82,8 +81,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         child: Image.asset(
                           'assets/images/welcome_illustration.png',
                           height: 200,
-                          fit: BoxFit.contain,
-                          // Fallback jika image tidak ada
+                          width: 200,
                           errorBuilder: (context, error, stackTrace) {
                             return _buildPlaceholderIllustration();
                           },
@@ -149,7 +147,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       SizedBox(
                         width: MediaQuery.of(context).size.width * 0.85,
                         child: OutlinedButton(
-                          // <-- Ganti menjadi OutlinedButton
                           onPressed: () {
                             Navigator.push(
                               context,
@@ -159,17 +156,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             );
                           },
                           style: OutlinedButton.styleFrom(
-                            // <-- Gunakan OutlinedButton.styleFrom
                             minimumSize: const Size(double.infinity, 54),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            // Atur warna teks dan garis tepi
                             foregroundColor: Colors.indigo[600],
                             side: BorderSide(
-                              color: Colors
-                                  .indigo[600]!, // <-- Tambahkan ini untuk warna garis tepi
-                              width: 1.5, // Atur ketebalan garis jika perlu
+                              color: Colors.indigo[600]!,
+                              width: 1.5,
                             ),
                           ),
                           child: const Text(
@@ -184,17 +178,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
                       // Text Copyright
                       Column(
-                        crossAxisAlignment:
-                            CrossAxisAlignment.center, // Agar teks rata tengah
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          // Jarak Teks
                           const SizedBox(height: 30),
-
                           Text(
                             '© 2025 Clean Office',
                             style: TextStyle(
-                              color:
-                                  Colors.grey[600], // Warna abu-abu yang soft
+                              color: Colors.grey[600],
                               fontSize: 12,
                             ),
                           ),
@@ -211,19 +201,15 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     );
   }
 
-  // Placeholder jika image tidak ada
+  // Placeholder jika image tidak ada - TANPA BORDER
   Widget _buildPlaceholderIllustration() {
-    return Container(
+    return SizedBox(
       height: 200,
       width: 200,
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(20),
-      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.waving_hand, size: 80, color: Colors.indigo[850]),
+          Icon(Icons.waving_hand, size: 80, color: Colors.indigo[800]),
           const SizedBox(height: 8),
           Text(
             'Welcome Illustration',

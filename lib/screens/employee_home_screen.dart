@@ -16,7 +16,6 @@ class EmployeeHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
-  // Hapus _dateFormat dan _formatDate yang lama
 
   Widget _buildProgressItem(BuildContext context, String label, String value, Color color) {
     final textTheme = Theme.of(context).textTheme;
@@ -25,7 +24,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         margin: const EdgeInsets.symmetric(horizontal: 4),
         decoration: BoxDecoration(
-          color: color.withAlpha(30), // Ganti dengan withAlpha
+          color: color.withAlpha(30), 
           borderRadius: BorderRadius.circular(8),
         ),
         child: Column(
@@ -68,7 +67,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Karyawan'),
-        backgroundColor: AppTheme.primaryLight,
+        backgroundColor: AppTheme.primaryDark,
         elevation: 0,
         foregroundColor: AppTheme.textPrimary,
         iconTheme: IconThemeData(color: AppTheme.textPrimary),

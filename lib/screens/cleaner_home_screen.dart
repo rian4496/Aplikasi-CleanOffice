@@ -10,7 +10,7 @@ import '../providers/riverpod/cleaner_providers.dart';
 import 'cleaner/request_detail_screen.dart';
 import 'cleaner/create_cleaning_report_screen.dart';
 
-/// Cleaner Home Screen - Match Screenshot 208
+/// Cleaner Home Screen
 /// Modern design dengan tab navigation dan personalized greeting
 class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
@@ -78,7 +78,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      title: const Text('Dashboard Petugas'),
+      title: const Text('Beranda Petugas'),
       backgroundColor: AppTheme.primary,
       foregroundColor: Colors.white,
       elevation: 0,

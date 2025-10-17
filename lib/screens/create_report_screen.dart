@@ -24,7 +24,10 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  Uint8List? _imageBytes; // ✅ Store image as bytes in memory
+  
+  // ✅ FIXED: Hanya gunakan Uint8List (in-memory)
+  Uint8List? _imageBytes;
+  
   bool _isUrgent = false;
   bool _isSubmitting = false;
 
@@ -80,14 +83,12 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   }
 
   Future<String?> _uploadImage() async {
-    if (_imageBytes == null) return null;
+    // ✅ FIXED: Validasi bytes exist
+    if (_imageBytes == null || _imageBytes!.isEmpty) {
+      throw const StorageException(message: 'File foto tidak ditemukan');
+    }
 
     try {
-      // ✅ FIXED: Validate bytes exist (should always be true if not null)
-      if (_imageBytes!.isEmpty) {
-        throw const StorageException(message: 'File foto kosong');
-      }
-
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user == null) {
         throw const AuthException(message: 'User not logged in');
@@ -130,15 +131,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedImage == null) {
+    // ✅ FIXED: Validasi foto WAJIB
+    if (_imageBytes == null) {
       _showError('Mohon ambil foto terlebih dahulu');
-      return;
-    }
-
-    // ✅ FIXED: Validate file exists before submit
-    if (!await _selectedImage!.exists()) {
-      _showError('File foto tidak ditemukan. Silakan ambil foto ulang');
-      setState(() => _selectedImage = null);
       return;
     }
 
@@ -181,36 +176,12 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
-      
-      // ✅ FIXED: Clean up file on error
-      if (_selectedImage != null && await _selectedImage!.exists()) {
-        _selectedImage!.delete().catchError((err) {
-          _logger.warning('Could not delete file after error: $err');
-          return _selectedImage!; // Return file to satisfy signature
-        });
-      }
     } on FirestoreException catch (e) {
       _logger.error('Firestore error', e);
       _showError(e.message);
-      
-      // Clean up file on error
-      if (_selectedImage != null && await _selectedImage!.exists()) {
-        _selectedImage!.delete().catchError((err) {
-          _logger.warning('Could not delete file after error: $err');
-          return _selectedImage!; // Return file to satisfy signature
-        });
-      }
     } catch (e, stackTrace) {
       _logger.error('Unexpected error', e, stackTrace);
       _showError(AppConstants.genericErrorMessage);
-      
-      // Clean up file on error
-      if (_selectedImage != null && await _selectedImage!.exists()) {
-        _selectedImage!.delete().catchError((err) {
-          _logger.warning('Could not delete file after error: $err');
-          return _selectedImage!; // Return file to satisfy signature
-        });
-      }
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -396,9 +367,22 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Foto Masalah',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            Row(
+              children: const [
+                Text(
+                  'Foto Masalah',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                SizedBox(width: 8),
+                // ✅ Badge wajib
+                Chip(
+                  label: Text('Wajib', style: TextStyle(fontSize: 10)),
+                  backgroundColor: Colors.red,
+                  labelStyle: TextStyle(color: Colors.white),
+                  padding: EdgeInsets.symmetric(horizontal: 4),
+                  visualDensity: VisualDensity.compact,
+                ),
+              ],
             ),
             const SizedBox(height: AppConstants.smallPadding),
             GestureDetector(
@@ -411,19 +395,27 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   borderRadius: BorderRadius.circular(
                     AppConstants.defaultRadius,
                   ),
-                  border: Border.all(color: Colors.grey.shade400, width: 2),
+                  border: Border.all(
+                    // ✅ Red border jika belum ada foto
+                    color: _imageBytes == null 
+                        ? Colors.red.shade400 
+                        : Colors.grey.shade400,
+                    width: 2,
+                  ),
                 ),
-                child: _selectedImage != null
+                child: _imageBytes != null
                     ? Stack(
                         children: [
+                          // ✅ FIXED: Display image dari bytes
                           ClipRRect(
                             borderRadius: BorderRadius.circular(
                               AppConstants.defaultRadius - 2,
                             ),
-                            child: Image.file(
-                              _selectedImage!,
+                            child: Image.memory(
+                              _imageBytes!,
                               fit: BoxFit.cover,
                               width: double.infinity,
+                              height: double.infinity,
                             ),
                           ),
                           Positioned(
@@ -444,18 +436,19 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                           ),
                         ],
                       )
-                    : const Column(
+                    : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt, size: 60, color: Colors.grey),
-                          SizedBox(height: 8),
+                          Icon(Icons.camera_alt, size: 60, color: Colors.red.shade300),
+                          const SizedBox(height: 8),
                           Text(
                             'Ketuk untuk mengambil foto',
-                            style: TextStyle(color: Colors.grey),
+                            style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold),
                           ),
+                          const SizedBox(height: 4),
                           Text(
-                            'masalah kebersihan',
-                            style: TextStyle(color: Colors.grey),
+                            '(Foto masalah kebersihan wajib)',
+                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
                           ),
                         ],
                       ),

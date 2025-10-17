@@ -1,103 +1,227 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import '../core/theme/app_theme.dart';
 import '../core/constants/app_constants.dart';
-import '../core/logging/app_logger.dart';
-import '../core/theme/app_theme.dart'; // Impor AppTheme untuk warna status
 import '../core/utils/date_formatter.dart';
 import '../providers/riverpod/auth_providers.dart';
 import '../providers/riverpod/cleaner_providers.dart';
 import 'cleaner/request_detail_screen.dart';
 import 'cleaner/create_cleaning_report_screen.dart';
 
-final _logger = AppLogger('CleanerHomeScreen');
-
-class CleanerHomeScreen extends ConsumerWidget {
+/// Cleaner Home Screen - Match Screenshot 208
+/// Modern design dengan tab navigation dan personalized greeting
+class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    // BARU: Ambil tema dan textTheme untuk digunakan di seluruh widget
-    final theme = Theme.of(context);
-    final textTheme = theme.textTheme;
+  ConsumerState<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
+}
 
+class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Dashboard Petugas'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () =>
-                Navigator.pushNamed(context, AppConstants.profileRoute),
-            tooltip: 'Profil',
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _handleLogout(context, ref),
-            tooltip: 'Keluar',
-          ),
-        ],
-      ),
+      backgroundColor: AppTheme.background,
+      appBar: _buildAppBar(context),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
+          ref.invalidate(cleanerAssignedRequestsProvider);
           ref.invalidate(cleanerStatsProvider);
         },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildWelcomeCard(context, ref, textTheme),
-                const SizedBox(height: 16),
-                _buildStatisticsRow(ref, textTheme),
-                const SizedBox(height: 24),
-                _buildRequestsList(context, ref, textTheme),
-              ],
+        child: Column(
+          children: [
+            // Greeting Section
+            _buildGreetingSection(),
+            const SizedBox(height: 16),
+
+            // Stats Cards
+            _buildStatsCards(),
+            const SizedBox(height: 24),
+
+            // Tab Bar
+            _buildTabBar(),
+
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildAvailableRequestsTab(),
+                  _buildMyTasksTab(),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreateCleaningReportScreen(),
+      floatingActionButton: _buildFAB(context),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    return AppBar(
+      title: const Text('Dashboard Petugas'),
+      backgroundColor: AppTheme.primary,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      automaticallyImplyLeading: false,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.person),
+          onPressed: () =>
+              Navigator.pushNamed(context, AppConstants.profileRoute),
+          tooltip: 'Profil',
+        ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          onPressed: () => _handleLogout(context),
+          tooltip: 'Keluar',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGreetingSection() {
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.primary, AppTheme.primaryDark],
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          userProfileAsync.when(
+            data: (profile) => Text(
+              'Selamat Datang,',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 16,
+              ),
             ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Buat Laporan'),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
+          const SizedBox(height: 4),
+          userProfileAsync.when(
+            data: (profile) => Text(
+              profile?.displayName ?? 'Petugas Kebersihan',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            loading: () => Container(
+              height: 24,
+              width: 150,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            error: (_, _) => const Text(
+              'Petugas Kebersihan',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            DateFormatter.fullDate(DateTime.now()),
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 14,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildWelcomeCard(
-      BuildContext context, WidgetRef ref, TextTheme textTheme) {
-    final userProfile = ref.watch(currentUserProfileProvider);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildStatsCards() {
+    final cleanerStats = ref.watch(cleanerStatsProvider);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: cleanerStats.when(
+        data: (stats) => Row(
           children: [
-            userProfile.when(
-              data: (profile) => Text(
-                'Selamat Datang,\n${profile?.displayName ?? "Petugas Kebersihan"}!',
-                // DIUBAH: Menggunakan gaya dari TextTheme
-                style: textTheme.headlineMedium,
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.check_circle_outline,
+                label: 'Selesai',
+                value: stats['completed'].toString(),
+                color: AppTheme.success,
+                backgroundColor: AppTheme.success.withValues(alpha: 0.1),
               ),
-              loading: () => const Text('Memuat...'),
-              error: (err, stack) => const Text('Selamat Datang!'),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Hari ini: ${DateFormatter.fullDate(DateTime.now())}',
-              // DIUBAH: Menggunakan gaya dari TextTheme
-              style: textTheme.titleMedium,
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.pending_actions_outlined,
+                label: 'Dalam Proses',
+                value: stats['inProgress'].toString(),
+                color: AppTheme.warning,
+                backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
+              ),
+            ),
+          ],
+        ),
+        loading: () => Row(
+          children: [
+            Expanded(child: _buildStatCardSkeleton(AppTheme.success)),
+            const SizedBox(width: 12),
+            Expanded(child: _buildStatCardSkeleton(AppTheme.warning)),
+          ],
+        ),
+        error: (error, stack) => Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.check_circle_outline,
+                label: 'Selesai',
+                value: '0',
+                color: AppTheme.success,
+                backgroundColor: AppTheme.success.withValues(alpha: 0.1),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                icon: Icons.pending_actions_outlined,
+                label: 'Dalam Proses',
+                value: '0',
+                color: AppTheme.warning,
+                backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
+              ),
             ),
           ],
         ),
@@ -105,64 +229,53 @@ class CleanerHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildStatisticsRow(WidgetRef ref, TextTheme textTheme) {
-    final cleanerStats = ref.watch(cleanerStatsProvider);
-
-    return cleanerStats.when(
-      data: (stats) => Row(
-        children: [
-          Expanded(
-            child: _buildStatisticCard(
-              textTheme: textTheme,
-              icon: Icons.check_circle,
-              title: 'Selesai',
-              value: stats['completed'].toString(),
-              // DIUBAH: Menggunakan warna dari AppTheme
-              color: AppTheme.success,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: _buildStatisticCard(
-              textTheme: textTheme,
-              icon: Icons.pending_actions,
-              title: 'Dalam Proses',
-              value: stats['inProgress'].toString(),
-              // DIUBAH: Menggunakan warna dari AppTheme
-              color: AppTheme.warning,
-            ),
-          ),
-        ],
-      ),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, s) => const Text('Gagal memuat statistik'),
-    );
-  }
-
-  Widget _buildStatisticCard({
-    required TextTheme textTheme,
+  Widget _buildStatCard({
     required IconData icon,
-    required String title,
+    required String label,
     required String value,
     required Color color,
+    required Color backgroundColor,
   }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
+      builder: (context, animValue, child) {
+        return Opacity(
+          opacity: animValue,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - animValue)),
+            child: child,
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
+        ),
         child: Column(
           children: [
-            Icon(icon, size: 32, color: color),
-            const SizedBox(height: 8),
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 12),
             Text(
               value,
-              // DIUBAH: Menggunakan gaya dari TextTheme, dengan warna custom
-              style: textTheme.headlineMedium?.copyWith(color: color),
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
-              title,
-              // DIUBAH: Menggunakan gaya dari TextTheme
-              style: textTheme.bodyMedium,
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
               textAlign: TextAlign.center,
             ),
           ],
@@ -171,144 +284,376 @@ class CleanerHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildRequestsList(
-      BuildContext context, WidgetRef ref, TextTheme textTheme) {
-    final availableRequests = ref.watch(availableRequestsProvider);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Permintaan Terbaru',
-          // DIUBAH: Menggunakan gaya dari TextTheme
-          style: textTheme.titleLarge,
-        ),
-        const SizedBox(height: 8),
-        availableRequests.when(
-          data: (requests) {
-            if (requests.isEmpty) {
-              return _buildEmptyState(
-                icon: Icons.inbox_outlined,
-                title: 'Tidak ada permintaan baru',
-                subtitle: 'Permintaan baru akan muncul di sini',
-              );
-            }
-            return Card(
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: requests.length,
-                // DIUBAH: Divider sekarang menggunakan tema
-                separatorBuilder: (context, index) => const Divider(),
-                itemBuilder: (context, index) {
-                  final request = requests[index];
-                  return _buildRequestTile(context, request);
-                },
-              ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _buildErrorState(ref, error.toString()),
-        ),
-      ],
+  Widget _buildStatCardSkeleton(Color color) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.5),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 32,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Container(
+            width: 60,
+            height: 14,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRequestTile(
-      BuildContext context, Map<String, dynamic> request) {
-    final theme = Theme.of(context); // Ambil tema untuk warna
-    final isUrgent = request['isUrgent'] as bool? ?? false;
-
-    return ListTile(
-      leading: CircleAvatar(
-        // DIUBAH: Menggunakan warna dari tema dengan opacity
-        backgroundColor:
-            isUrgent ? theme.colorScheme.error.withValues(alpha: 0.1) : theme.colorScheme.primary.withValues(alpha: 0.1),
-        child: Icon(
-          isUrgent ? Icons.priority_high : Icons.cleaning_services,
-          // DIUBAH: Menggunakan warna utama dari tema
-          color: isUrgent ? theme.colorScheme.error : theme.colorScheme.primary,
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TabBar(
+        controller: _tabController,
+        labelColor: AppTheme.primary,
+        unselectedLabelColor: AppTheme.textSecondary,
+        indicatorColor: AppTheme.primary,
+        indicatorWeight: 3,
+        labelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
         ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.normal,
+        ),
+        tabs: const [
+          Tab(text: 'Permintaan Baru'),
+          Tab(text: 'Tugas Saya'),
+        ],
       ),
-      title: Text(request['location'] as String? ?? 'Lokasi tidak diketahui'),
-      subtitle: Text(
-        request['description'] as String? ?? '',
-        maxLines: 2,
-        overflow: TextOverflow.ellipsis,
-      ),
-      trailing: const Icon(Icons.chevron_right),
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                RequestDetailScreen(requestId: request['id'] as String),
+    );
+  }
+
+  Widget _buildAvailableRequestsTab() {
+    final availableRequests = ref.watch(availableRequestsProvider);
+
+    return availableRequests.when(
+      data: (requests) {
+        if (requests.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.inbox_outlined,
+            title: 'Tidak ada permintaan baru',
+            subtitle: 'Permintaan baru akan muncul di sini',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            return _buildRequestItem(context, requests[index], index);
+          },
+        );
+      },
+      loading: () => _buildLoadingState(),
+      error: (error, stack) => _buildErrorState(context, error),
+    );
+  }
+
+  Widget _buildMyTasksTab() {
+    final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
+
+    return assignedRequests.when(
+      data: (requests) {
+        if (requests.isEmpty) {
+          return _buildEmptyState(
+            icon: Icons.task_alt,
+            title: 'Tidak ada tugas aktif',
+            subtitle: 'Tugas yang Anda terima akan muncul di sini',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          itemBuilder: (context, index) {
+            return _buildRequestItem(context, requests[index], index);
+          },
+        );
+      },
+      loading: () => _buildLoadingState(),
+      error: (error, stack) => _buildErrorState(context, error),
+    );
+  }
+
+  Widget _buildRequestItem(
+    BuildContext context,
+    Map<String, dynamic> request,
+    int index,
+  ) {
+    final isUrgent = request['isUrgent'] as bool? ?? false;
+    final location = request['location'] as String? ?? 'Lokasi tidak diketahui';
+    final description = request['description'] as String? ?? '';
+
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOutCubic,
+      builder: (context, animValue, child) {
+        return Opacity(
+          opacity: animValue,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - animValue)),
+            child: child,
           ),
         );
       },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(
+            color: isUrgent ? AppTheme.error.withValues(alpha: 0.3) : AppTheme.divider,
+          ),
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    RequestDetailScreen(requestId: request['id'] as String),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isUrgent ? AppTheme.error.withValues(alpha: 0.05) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: isUrgent
+                  ? Border(
+                      left: BorderSide(color: AppTheme.error, width: 4),
+                    )
+                  : null,
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              leading: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: isUrgent
+                      ? AppTheme.error.withValues(alpha: 0.1)
+                      : AppTheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isUrgent ? Icons.priority_high : Icons.cleaning_services,
+                  color: isUrgent ? AppTheme.error : AppTheme.primary,
+                  size: 24,
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      location,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  if (isUrgent)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.error,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'URGENT',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: AppTheme.textSecondary,
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
-  
-  // Widget _buildEmptyState dan _buildErrorState tetap sama (tidak perlu diubah)
 
   Widget _buildEmptyState({
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
-    // ... (kode tidak berubah)
-    return Card(
+    return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 48.0, horizontal: 16.0),
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 64, color: Colors.grey[400]),
-              const SizedBox(height: AppConstants.defaultPadding),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.grey[700],
-                ),
-                textAlign: TextAlign.center,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 64, color: AppTheme.textHint),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textSecondary,
               ),
-              const SizedBox(height: AppConstants.smallPadding),
-              Text(
-                subtitle,
-                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                textAlign: TextAlign.center,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 14,
+                color: AppTheme.textHint,
               ),
-            ],
-          ),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(WidgetRef ref, String error) {
-    // ... (kode tidak berubah)
-    return Card(
-      color: Colors.red[50],
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.largePadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red[300]),
-            const SizedBox(height: AppConstants.defaultPadding),
-            const Text(
-              'Terjadi kesalahan',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+  Widget _buildLoadingState() {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: 4,
+      itemBuilder: (context, index) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
-            const SizedBox(height: AppConstants.smallPadding),
+            title: Container(
+              height: 16,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Container(
+                  height: 12,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  height: 12,
+                  width: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, Object error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+            const SizedBox(height: 16),
             Text(
-              error,
-              style: TextStyle(color: Colors.grey[600]),
+              'Terjadi kesalahan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.error,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error.toString(),
+              style: TextStyle(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppConstants.defaultPadding),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: () {
                 ref.invalidate(availableRequestsProvider);
@@ -322,8 +667,22 @@ class CleanerHomeScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    // ... (kode tidak berubah)
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const CreateCleaningReportScreen(),
+          ),
+        );
+      },
+      icon: const Icon(Icons.add),
+      label: const Text('Buat Laporan'),
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -337,7 +696,7 @@ class CleanerHomeScreen extends ConsumerWidget {
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppConstants.errorColor,
+              backgroundColor: AppTheme.error,
             ),
             child: const Text('KELUAR'),
           ),
@@ -345,20 +704,20 @@ class CleanerHomeScreen extends ConsumerWidget {
       ),
     );
 
-    if (shouldLogout == true) {
+    if (shouldLogout == true && mounted) {
       try {
-        final authActions = ref.read(authActionsProvider.notifier);
-        await authActions.logout();
-        
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
         Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
       } catch (e) {
-        _logger.error('Logout error', e);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Gagal logout: ${e.toString()}'),
-            backgroundColor: AppConstants.errorColor,
-          ),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal logout: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
       }
     }
   }

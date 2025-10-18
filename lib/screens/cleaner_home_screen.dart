@@ -7,11 +7,13 @@ import '../core/constants/app_constants.dart';
 import '../core/utils/date_formatter.dart';
 import '../providers/riverpod/auth_providers.dart';
 import '../providers/riverpod/cleaner_providers.dart';
+import '../widgets/cleaner/stats_card_widget.dart';
+import '../widgets/cleaner/request_card_widget.dart';
 import 'cleaner/request_detail_screen.dart';
 import 'cleaner/create_cleaning_report_screen.dart';
 
-/// Cleaner Home Screen
-/// Modern design dengan tab navigation dan personalized greeting
+/// Cleaner Home Screen - FINAL UPGRADED VERSION
+/// Features: Drawer Menu, 3 Stats Cards, Tab Badge Count, Better UX
 class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
 
@@ -39,6 +41,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
+      endDrawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
@@ -47,24 +50,17 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         },
         child: CustomScrollView(
           slivers: [
-            // Sliver AppBar dengan Greeting Section
             _buildSliverHeader(),
-
-            // Content
             SliverToBoxAdapter(
               child: Column(
                 children: [
                   const SizedBox(height: 16),
-                  // Stats Cards
                   _buildStatsCards(),
                   const SizedBox(height: 24),
-                  // Tab Bar
                   _buildTabBar(),
                 ],
               ),
             ),
-
-            // Tab Views sebagai SliverFillRemaining
             SliverFillRemaining(
               child: TabBarView(
                 controller: _tabController,
@@ -81,6 +77,160 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
+  // ==================== DRAWER MENU ====================
+
+  Widget _buildDrawer(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Drawer(
+      child: Container(
+        color: Colors.white,
+        child: Column(
+          children: [
+            _buildDrawerHeader(user),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem(
+                    icon: Icons.home_outlined,
+                    title: 'Beranda',
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.task_alt,
+                    title: 'Tugas Saya',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _tabController.animateTo(1);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.history,
+                    title: 'Riwayat Laporan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Fitur segera hadir')),
+                      );
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.person_outline,
+                    title: 'Profil',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, AppConstants.profileRoute);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.settings_outlined,
+                    title: 'Pengaturan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Fitur segera hadir')),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  _buildDrawerItem(
+                    icon: Icons.logout,
+                    title: 'Keluar',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleLogout(context);
+                    },
+                    isLogout: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDrawerHeader(User? user) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: Colors.grey[300],
+            child: user?.photoURL != null
+                ? ClipOval(
+                    child: Image.network(
+                      user!.photoURL!,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Icon(
+                    Icons.person,
+                    size: 36,
+                    color: Colors.grey[600],
+                  ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            user?.displayName ?? 'Petugas Kebersihan',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            user?.email ?? '',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isLogout = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isLogout ? AppTheme.error : Colors.grey[700],
+        size: 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: isLogout ? AppTheme.error : Colors.grey[900],
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    );
+  }
+
+  // ==================== SLIVER HEADER ====================
+
   Widget _buildSliverHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
 
@@ -90,6 +240,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       pinned: true,
       automaticallyImplyLeading: false,
       backgroundColor: AppTheme.primary,
+      iconTheme: const IconThemeData(color: Colors.white),
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(
@@ -115,7 +266,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                       ),
                     ),
                     loading: () => const SizedBox.shrink(),
-                    error: (_, _) => const SizedBox.shrink(),
+                    error: (error, stackTrace) => const SizedBox.shrink(),
                   ),
                   const SizedBox(height: 4),
                   userProfileAsync.when(
@@ -135,7 +286,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                         borderRadius: BorderRadius.circular(4),
                       ),
                     ),
-                    error: (_, _) => const Text(
+                    error: (error, stackTrace) => const Text(
                       'Petugas Kebersihan',
                       style: TextStyle(
                         color: Colors.white,
@@ -158,174 +309,42 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           ),
         ),
       ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.person),
-          onPressed: () => 
-              Navigator.pushNamed(context, AppConstants.profileRoute),
-          tooltip: 'Profil',
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          onPressed: () => _handleLogout(context),
-          tooltip: 'Keluar',
-        ),
-      ],
     );
   }
+
+  // ==================== STATS CARDS (3 CARDS!) ====================
 
   Widget _buildStatsCards() {
     final cleanerStats = ref.watch(cleanerStatsProvider);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: cleanerStats.when(
-        data: (stats) => Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.check_circle_outline,
-                label: 'Selesai',
-                value: stats['completed'].toString(),
-                color: AppTheme.success,
-                backgroundColor: AppTheme.success.withValues(alpha: 0.1),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.pending_actions_outlined,
-                label: 'Dalam Proses',
-                value: stats['inProgress'].toString(),
-                color: AppTheme.warning,
-                backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
-              ),
-            ),
-          ],
-        ),
-        loading: () => Row(
-          children: [
-            Expanded(child: _buildStatCardSkeleton(AppTheme.success)),
-            const SizedBox(width: 12),
-            Expanded(child: _buildStatCardSkeleton(AppTheme.warning)),
-          ],
-        ),
-        error: (error, stack) => Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.check_circle_outline,
-                label: 'Selesai',
-                value: '0',
-                color: AppTheme.success,
-                backgroundColor: AppTheme.success.withValues(alpha: 0.1),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                icon: Icons.pending_actions_outlined,
-                label: 'Dalam Proses',
-                value: '0',
-                color: AppTheme.warning,
-                backgroundColor: AppTheme.warning.withValues(alpha: 0.1),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-    required Color backgroundColor,
-  }) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
-      builder: (context, animValue, child) {
-        return Opacity(
-          opacity: animValue,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - animValue)),
-            child: child,
-          ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withValues(alpha: 0.2)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: color,
-                fontWeight: FontWeight.w600,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCardSkeleton(Color color) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.2)),
-      ),
-      child: Column(
+      child: Row(
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              shape: BoxShape.circle,
+          Expanded(
+            child: StatsCard(
+              icon: Icons.assignment_outlined,
+              label: 'Ditugaskan',
+              value: (cleanerStats['assigned'] ?? 0).toString(),
+              color: AppTheme.info,
             ),
           ),
-          const SizedBox(height: 12),
-          Container(
-            width: 40,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(4),
+          const SizedBox(width: 8),
+          Expanded(
+            child: StatsCard(
+              icon: Icons.pending_actions_outlined,
+              label: 'Proses',
+              value: (cleanerStats['inProgress'] ?? 0).toString(),
+              color: AppTheme.warning,
             ),
           ),
-          const SizedBox(height: 4),
-          Container(
-            width: 60,
-            height: 14,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.5),
-              borderRadius: BorderRadius.circular(4),
+          const SizedBox(width: 8),
+          Expanded(
+            child: StatsCard(
+              icon: Icons.check_circle_outline,
+              label: 'Selesai',
+              value: (cleanerStats['completed'] ?? 0).toString(),
+              color: AppTheme.success,
             ),
           ),
         ],
@@ -333,7 +352,22 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
+  // ==================== TAB BAR WITH BADGE COUNT ====================
+
   Widget _buildTabBar() {
+    final availableRequests = ref.watch(availableRequestsProvider);
+    final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
+
+    final availableCount = availableRequests.maybeWhen(
+      data: (requests) => requests.length,
+      orElse: () => 0,
+    );
+
+    final assignedCount = assignedRequests.maybeWhen(
+      data: (requests) => requests.length,
+      orElse: () => 0,
+    );
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -354,20 +388,78 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         indicatorColor: AppTheme.primary,
         indicatorWeight: 3,
         labelStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.normal,
         ),
-        tabs: const [
-          Tab(text: 'Permintaan Baru'),
-          Tab(text: 'Tugas Saya'),
+        tabs: [
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Permintaan Baru'),
+                if (availableCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      availableCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Tab(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Tugas Saya'),
+                if (assignedCount > 0) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      assignedCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
+
+  // ==================== TAB VIEWS ====================
 
   Widget _buildAvailableRequestsTab() {
     final availableRequests = ref.watch(availableRequestsProvider);
@@ -386,7 +478,22 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           padding: const EdgeInsets.all(16),
           itemCount: requests.length,
           itemBuilder: (context, index) {
-            return _buildRequestItem(context, requests[index], index);
+            final request = requests[index];
+            return RequestCard(
+              location: request['location'] as String? ?? 'Lokasi tidak diketahui',
+              description: request['description'] as String? ?? '',
+              isUrgent: request['isUrgent'] as bool? ?? false,
+              animationIndex: index,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        RequestDetailScreen(requestId: request['id'] as String),
+                  ),
+                );
+              },
+            );
           },
         );
       },
@@ -412,7 +519,22 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           padding: const EdgeInsets.all(16),
           itemCount: requests.length,
           itemBuilder: (context, index) {
-            return _buildRequestItem(context, requests[index], index);
+            final request = requests[index];
+            return RequestCard(
+              location: request['location'] as String? ?? 'Lokasi tidak diketahui',
+              description: request['description'] as String? ?? '',
+              isUrgent: request['isUrgent'] as bool? ?? false,
+              animationIndex: index,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        RequestDetailScreen(requestId: request['id'] as String),
+                  ),
+                );
+              },
+            );
           },
         );
       },
@@ -421,131 +543,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  Widget _buildRequestItem(
-    BuildContext context,
-    Map<String, dynamic> request,
-    int index,
-  ) {
-    final isUrgent = request['isUrgent'] as bool? ?? false;
-    final location = request['location'] as String? ?? 'Lokasi tidak diketahui';
-    final description = request['description'] as String? ?? '';
-
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 50)),
-      curve: Curves.easeOutCubic,
-      builder: (context, animValue, child) {
-        return Opacity(
-          opacity: animValue,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - animValue)),
-            child: child,
-          ),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: isUrgent ? AppTheme.error.withValues(alpha: 0.3) : AppTheme.divider,
-          ),
-        ),
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    RequestDetailScreen(requestId: request['id'] as String),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isUrgent ? AppTheme.error.withValues(alpha: 0.05) : Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: isUrgent
-                  ? Border(
-                      left: BorderSide(color: AppTheme.error, width: 4),
-                    )
-                  : null,
-            ),
-            child: ListTile(
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
-              ),
-              leading: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: isUrgent
-                      ? AppTheme.error.withValues(alpha: 0.1)
-                      : AppTheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  isUrgent ? Icons.priority_high : Icons.cleaning_services,
-                  color: isUrgent ? AppTheme.error : AppTheme.primary,
-                  size: 24,
-                ),
-              ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      location,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  if (isUrgent)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.error,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'URGENT',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              subtitle: Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              trailing: Icon(
-                Icons.chevron_right,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // ==================== STATES ====================
 
   Widget _buildEmptyState({
     required IconData icon,
@@ -562,7 +560,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             const SizedBox(height: 16),
             Text(
               title,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textSecondary,
@@ -572,7 +570,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 14,
                 color: AppTheme.textHint,
               ),
@@ -645,9 +643,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+            const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
             const SizedBox(height: 16),
-            Text(
+            const Text(
               'Terjadi kesalahan',
               style: TextStyle(
                 fontSize: 18,
@@ -658,7 +656,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             const SizedBox(height: 8),
             Text(
               error.toString(),
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: const TextStyle(color: AppTheme.textSecondary),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -675,6 +673,8 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
+  // ==================== FAB ====================
+
   Widget _buildFAB(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () {
@@ -687,8 +687,11 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       },
       icon: const Icon(Icons.add),
       label: const Text('Buat Laporan'),
+      backgroundColor: AppTheme.primary,
     );
   }
+
+  // ==================== LOGOUT ====================
 
   Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(

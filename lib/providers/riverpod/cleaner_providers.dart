@@ -61,39 +61,85 @@ final requestByIdProvider =
       });
     });
 
-// ==================== CLEANER STATISTICS ====================
+// ==================== CLEANER STATISTICS (UPDATED!) ====================
 
-/// Provider untuk cleaner statistics
-final cleanerStatsProvider = StreamProvider<Map<String, int>>((ref) {
+/// Provider untuk cleaner statistics - UPDATED untuk 3 cards
+/// Return data langsung (bukan AsyncValue) untuk simplicity
+final cleanerStatsProvider = Provider<Map<String, int>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
+  
   if (userId == null) {
-    return Stream.value({'completed': 0, 'inProgress': 0, 'total': 0});
+    return {
+      'assigned': 0,
+      'inProgress': 0,
+      'completed': 0,
+      'total': 0,
+    };
   }
 
+  // Watch assigned requests
+  final assignedRequestsAsync = ref.watch(cleanerAssignedRequestsProvider);
+  
+  // Watch reports untuk completed count
   final reportsAsync = ref.watch(cleanerReportsProvider(userId));
 
-  return reportsAsync.when(
-    data: (reports) {
-      final completed = reports
-          .where(
-            (r) =>
-                r.status.toFirestore() == 'completed' ||
-                r.status.toFirestore() == 'verified',
-          )
+  // Extract data dari async providers
+  return assignedRequestsAsync.when(
+    data: (requests) {
+      // Count assigned (status = 'accepted')
+      final assigned = requests
+          .where((r) => r['status'] == 'accepted')
           .length;
-      final inProgress = reports
-          .where((r) => r.status.toFirestore() == 'in_progress')
+      
+      // Count in progress (status = 'in_progress')
+      final inProgress = requests
+          .where((r) => r['status'] == 'in_progress')
           .length;
-
-      return Stream.value({
-        'completed': completed,
-        'inProgress': inProgress,
-        'total': reports.length,
-      });
+      
+      // Get completed from reports
+      return reportsAsync.when(
+        data: (reports) {
+          final completed = reports
+              .where(
+                (r) =>
+                    r.status.toFirestore() == 'completed' ||
+                    r.status.toFirestore() == 'verified',
+              )
+              .length;
+          
+          return {
+            'assigned': assigned,
+            'inProgress': inProgress,
+            'completed': completed,
+            'total': assigned + inProgress + completed,
+          };
+        },
+        loading: () => {
+          'assigned': assigned,
+          'inProgress': inProgress,
+          'completed': 0,
+          'total': assigned + inProgress,
+        },
+        error: (error, stackTrace) => {
+          'assigned': assigned,
+          'inProgress': inProgress,
+          'completed': 0,
+          'total': assigned + inProgress,
+        },
+      );
     },
-    loading: () => Stream.value({'completed': 0, 'inProgress': 0, 'total': 0}),
-    error: (error, stack) =>
-        Stream.value({'completed': 0, 'inProgress': 0, 'total': 0}),
+    loading: () => {
+      'assigned': 0,
+      'inProgress': 0,
+      'completed': 0,
+      'total': 0,
+    },
+    error: (error, stack) => {
+      'assigned': 0,
+      'inProgress': 0,
+      'completed': 0,
+      'total': 0,
+    },
   );
 });
 

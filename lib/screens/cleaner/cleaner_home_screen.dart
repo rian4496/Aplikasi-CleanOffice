@@ -30,7 +30,7 @@ class CleanerHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController _tabController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;

@@ -1,4 +1,4 @@
-// lib/screens/employee_home_screen.dart - FIXED VERSION
+// lib/screens/employee_home_screen.dart - FINAL CLEAN VERSION
 
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +14,6 @@ import 'package:aplikasi_cleanoffice/widgets/employee/report_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/empty_state_widget.dart';
 import 'report_detail_screen.dart';
 
-/// REFACTORED Employee Home Screen dengan:
-/// - Enhanced UI/UX dengan animations
-/// - Search & Filter functionality
-/// - Quick action buttons
-/// - Optimistic updates
-/// - Better loading states
-/// - Improved code organization
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
 
@@ -40,7 +33,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
   String _searchQuery = '';
   ReportStatus? _filterStatus;
   bool _showUrgentOnly = false;
-  String _sortBy = 'newest'; // newest, oldest, urgent, location
+  String _sortBy = 'newest';
 
   // Temporary list untuk optimistic updates
   final List<Report> _deletedReports = [];
@@ -70,171 +63,11 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     super.dispose();
   }
 
-// ==================== DRAWER MENU ====================
-
-Widget _buildDrawer(BuildContext context) {
-  final user = FirebaseAuth.instance.currentUser;
-
-  return Drawer(
-    child: Container(
-      color: Colors.white,
-      child: Column(
-        children: [
-          // Header dengan profil user
-          _buildDrawerHeader(user),
-          
-          // Menu items
-          Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
-              children: [
-                _buildDrawerItem(
-                  icon: Icons.home_outlined,
-                  title: 'Beranda',
-                  onTap: () {
-                    Navigator.pop(context); // Tutup drawer
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Icons.history,
-                  title: 'Riwayat Laporan',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/request_history');
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Icons.cleaning_services_outlined,
-                  title: 'Minta Layanan',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/create_request');
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Icons.person_outline,
-                  title: 'Profil',
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.pushNamed(context, '/profile');
-                  },
-                ),
-                _buildDrawerItem(
-                  icon: Icons.settings_outlined,
-                  title: 'Pengaturan',
-                  onTap: () {
-                    Navigator.pop(context);
-                    // Navigator.pushNamed(context, '/settings');
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Fitur belum tersedia')),
-                    );
-                  },
-                ),
-                const Divider(),
-                _buildDrawerItem(
-                  icon: Icons.logout,
-                  title: 'Keluar',
-                  onTap: () {
-                    Navigator.pop(context);
-                    _handleLogout(context);
-                  },
-                  isLogout: true,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-Widget _buildDrawerHeader(User? user) {
-  return Container(
-    width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-    decoration: BoxDecoration(
-      color: Colors.white, // Warna latar belakang header
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Avatar
-        CircleAvatar(
-          radius: 32,
-          backgroundColor: Colors.grey[300],
-          child: user?.photoURL != null
-              ? ClipOval(
-                  child: Image.network(
-                    user!.photoURL!,
-                    width: 64,
-                    height: 64,
-                    fit: BoxFit.cover,
-                  ),
-                )
-              : Icon(
-                  Icons.person,
-                  size: 36,
-                  color: Colors.grey[600],
-                ),
-        ),
-        const SizedBox(height: 12),
-        
-        // Nama
-        Text(
-          user?.displayName ?? 'User',
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        
-        // Email
-        Text(
-          user?.email ?? '',
-          style: TextStyle(
-            color: Colors.grey[600],
-            fontSize: 14,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildDrawerItem({
-  required IconData icon,
-  required String title,
-  required VoidCallback onTap,
-  bool isLogout = false,
-}) {
-  return ListTile(
-    leading: Icon(
-      icon,
-      color: isLogout ? AppTheme.error : Colors.grey[700],
-      size: 24,
-    ),
-    title: Text(
-      title,
-      style: TextStyle(
-        fontSize: 16,
-        color: isLogout ? AppTheme.error : Colors.grey[900],
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-    onTap: onTap,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-  );
-}
-
   // ==================== FILTER & SORT LOGIC ====================
 
   List<Report> _filterAndSortReports(List<Report> reports) {
     var filtered = reports.where((r) => !_deletedReports.contains(r)).toList();
 
-    // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
       filtered = filtered.where((r) {
@@ -243,17 +76,14 @@ Widget _buildDrawerItem({
       }).toList();
     }
 
-    // Filter by status
     if (_filterStatus != null) {
       filtered = filtered.where((r) => r.status == _filterStatus).toList();
     }
 
-    // Filter urgent only
     if (_showUrgentOnly) {
       filtered = filtered.where((r) => r.isUrgent).toList();
     }
 
-    // Sort
     switch (_sortBy) {
       case 'oldest':
         filtered.sort((a, b) => a.date.compareTo(b.date));
@@ -278,12 +108,10 @@ Widget _buildDrawerItem({
   // ==================== DELETE WITH UNDO ====================
 
   void _handleDelete(Report report) async {
-    // Add to deleted list (optimistic update)
     setState(() {
       _deletedReports.add(report);
     });
 
-    // Show snackbar with undo
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.hideCurrentSnackBar();
     
@@ -293,7 +121,6 @@ Widget _buildDrawerItem({
         action: SnackBarAction(
           label: AppStrings.undo,
           onPressed: () {
-            // Undo delete
             setState(() {
               _deletedReports.remove(report);
             });
@@ -303,16 +130,13 @@ Widget _buildDrawerItem({
       ),
     );
 
-    // Wait for snackbar to close
     final reason = await snackBar.closed;
     
-    // If not undone, actually delete from database
     if (reason != SnackBarClosedReason.action && mounted) {
       try {
         final actions = ref.read(employeeActionsProvider);
         await actions.deleteReport(report.id);
         
-        // Remove from deleted list after successful delete
         if (mounted) {
           setState(() {
             _deletedReports.remove(report);
@@ -320,7 +144,6 @@ Widget _buildDrawerItem({
         }
       } catch (e) {
         if (mounted) {
-          // Restore if delete failed
           setState(() {
             _deletedReports.remove(report);
           });
@@ -346,7 +169,7 @@ Widget _buildDrawerItem({
     }
 
     final reportsAsync = ref.watch(employeeReportsProvider);
-    final summaryAsync = ref.watch(employeeReportsSummaryProvider);
+    final summary = ref.watch(employeeReportsSummaryProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -355,7 +178,6 @@ Widget _buildDrawerItem({
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(employeeReportsProvider);
-          ref.invalidate(employeeReportsSummaryProvider);
         },
         child: CustomScrollView(
           slivers: [
@@ -363,7 +185,7 @@ Widget _buildDrawerItem({
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: _buildProgressCards(summaryAsync),
+                child: _buildProgressCards(summary),
               ),
             ),
 
@@ -407,64 +229,191 @@ Widget _buildDrawerItem({
     );
   }
 
-  // ==================== PROGRESS CARDS ====================
+  // ==================== DRAWER MENU ====================
 
-  Widget _buildProgressCards(AsyncValue<EmployeeReportsSummary> summaryAsync) {
-    return summaryAsync.when(
-      data: (summary) => Row(
-        children: [
-          ProgressCard(
-            label: AppStrings.progressSent,
-            value: summary.pending.toString(),
-            color: AppTheme.info,
-            icon: Icons.send_outlined,
-            onTap: () => setState(() {
-              _filterStatus = ReportStatus.pending;
-            }),
-          ),
-          const SizedBox(width: 12),
-          ProgressCard(
-            label: AppStrings.progressInProgress,
-            value: summary.inProgress.toString(),
-            color: AppTheme.warning,
-            icon: Icons.pending_actions_outlined,
-            onTap: () => setState(() {
-              _filterStatus = ReportStatus.inProgress;
-            }),
-          ),
-          const SizedBox(width: 12),
-          ProgressCard(
-            label: AppStrings.progressCompleted,
-            value: summary.completed.toString(),
-            color: AppTheme.success,
-            icon: Icons.check_circle_outline,
-            onTap: () => setState(() {
-              _filterStatus = ReportStatus.completed;
-            }),
-          ),
-        ],
+  Widget _buildDrawer(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    return Drawer(
+      child: Container(
+        color: Colors.white,
+        child: Column(
+          children: [
+            _buildDrawerHeader(user),
+            Expanded(
+              child: ListView(
+                padding: EdgeInsets.zero,
+                children: [
+                  _buildDrawerItem(
+                    icon: Icons.home_outlined,
+                    title: 'Beranda',
+                    onTap: () {
+                      Navigator.pop(context);
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.history,
+                    title: 'Riwayat Laporan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/request_history');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.cleaning_services_outlined,
+                    title: 'Minta Layanan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/create_request');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.person_outline,
+                    title: 'Profil',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/profile');
+                    },
+                  ),
+                  _buildDrawerItem(
+                    icon: Icons.settings_outlined,
+                    title: 'Pengaturan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Fitur belum tersedia')),
+                      );
+                    },
+                  ),
+                  const Divider(),
+                  _buildDrawerItem(
+                    icon: Icons.logout,
+                    title: 'Keluar',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _handleLogout(context);
+                    },
+                    isLogout: true,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-      loading: () => _buildProgressSkeleton(),
-      error: (error, stackTrace) => _buildProgressSkeleton(),
     );
   }
 
-  Widget _buildProgressSkeleton() {
-    return Row(
-      children: List.generate(3, (index) {
-        return Expanded(
-          child: Card(
-            child: Container(
-              height: 120,
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(16),
-              ),
+  Widget _buildDrawerHeader(User? user) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: Colors.grey[300],
+            child: user?.photoURL != null
+                ? ClipOval(
+                    child: Image.network(
+                      user!.photoURL!,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                    ),
+                  )
+                : Icon(
+                    Icons.person,
+                    size: 36,
+                    color: Colors.grey[600],
+                  ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            user?.displayName ?? 'User',
+            style: const TextStyle(
+              color: Colors.black,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-        );
-      }),
+          const SizedBox(height: 4),
+          Text(
+            user?.email ?? '',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawerItem({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isLogout = false,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isLogout ? AppTheme.error : Colors.grey[700],
+        size: 24,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          color: isLogout ? AppTheme.error : Colors.grey[900],
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+    );
+  }
+
+  // ==================== PROGRESS CARDS ====================
+
+  Widget _buildProgressCards(EmployeeReportsSummary summary) {
+    return Row(
+      children: [
+        ProgressCard(
+          label: AppStrings.progressSent,
+          value: summary.pending.toString(),
+          color: AppTheme.info,
+          icon: Icons.send_outlined,
+          onTap: () => setState(() {
+            _filterStatus = ReportStatus.pending;
+          }),
+        ),
+        const SizedBox(width: 12),
+        ProgressCard(
+          label: AppStrings.progressInProgress,
+          value: summary.inProgress.toString(),
+          color: AppTheme.warning,
+          icon: Icons.pending_actions_outlined,
+          onTap: () => setState(() {
+            _filterStatus = ReportStatus.inProgress;
+          }),
+        ),
+        const SizedBox(width: 12),
+        ProgressCard(
+          label: AppStrings.progressCompleted,
+          value: summary.completed.toString(),
+          color: AppTheme.success,
+          icon: Icons.check_circle_outline,
+          onTap: () => setState(() {
+            _filterStatus = ReportStatus.completed;
+          }),
+        ),
+      ],
     );
   }
 
@@ -511,7 +460,6 @@ Widget _buildDrawerItem({
   Widget _buildSearchAndFilter() {
     return Column(
       children: [
-        // Search Bar
         TextField(
           controller: _searchController,
           onChanged: (value) => setState(() => _searchQuery = value),
@@ -543,8 +491,6 @@ Widget _buildDrawerItem({
             ),
           ),
         ),
-        
-        // Active Filters
         if (_filterStatus != null || _showUrgentOnly) ...[
           const SizedBox(height: 8),
           Wrap(
@@ -903,7 +849,6 @@ Widget _buildDrawerItem({
 }
 
 // ==================== HELPER WIDGETS ====================
-// Note: Widgets ini di luar class _EmployeeHomeScreenState
 
 class QuickActionButton extends StatelessWidget {
   final IconData icon;

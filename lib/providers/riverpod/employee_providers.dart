@@ -46,71 +46,95 @@ class EmployeeReportsSummary {
   });
 }
 
-final employeeReportsSummaryProvider =
-    Provider<AsyncValue<EmployeeReportsSummary>>((ref) {
-      final reportsAsync = ref.watch(employeeReportsProvider);
+// FIXED: Ubah jadi Provider biasa tanpa AsyncValue
+final employeeReportsSummaryProvider = Provider<EmployeeReportsSummary>((ref) {
+  final reportsAsync = ref.watch(employeeReportsProvider);
 
-      return reportsAsync.whenData((reports) {
-        final pending = reports
-            .where((r) => r.status == ReportStatus.pending)
-            .length;
-        final inProgress = reports
-            .where(
-              (r) =>
-                  r.status == ReportStatus.assigned ||
-                  r.status == ReportStatus.inProgress,
-            )
-            .length;
-        final completed = reports
-            .where(
-              (r) =>
-                  r.status == ReportStatus.completed ||
-                  r.status == ReportStatus.verified,
-            )
-            .length;
+  // Kalau masih loading atau error, return summary kosong
+  return reportsAsync.when(
+    data: (reports) {
+      final pending = reports
+          .where((r) => r.status == ReportStatus.pending)
+          .length;
+      final inProgress = reports
+          .where(
+            (r) =>
+                r.status == ReportStatus.assigned ||
+                r.status == ReportStatus.inProgress,
+          )
+          .length;
+      final completed = reports
+          .where(
+            (r) =>
+                r.status == ReportStatus.completed ||
+                r.status == ReportStatus.verified,
+          )
+          .length;
 
-        return EmployeeReportsSummary(
-          pending: pending,
-          inProgress: inProgress,
-          completed: completed,
-          total: reports.length,
-        );
-      });
-    });
+      return EmployeeReportsSummary(
+        pending: pending,
+        inProgress: inProgress,
+        completed: completed,
+        total: reports.length,
+      );
+    },
+    loading: () => const EmployeeReportsSummary(
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      total: 0,
+    ),
+    error: (error, stackTrace) => const EmployeeReportsSummary(
+      pending: 0,
+      inProgress: 0,
+      completed: 0,
+      total: 0,
+    ),
+  );
+});
 
 /// Provider untuk laporan employee berdasarkan status
 final employeeReportsByStatusProvider =
-    Provider.family<AsyncValue<List<Report>>, ReportStatus>((ref, status) {
-      final reportsAsync = ref.watch(employeeReportsProvider);
-
-      return reportsAsync.whenData((reports) {
-        return reports.where((r) => r.status == status).toList();
-      });
-    });
-
-/// Provider untuk laporan urgent employee
-final employeeUrgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
+    Provider.family<List<Report>, ReportStatus>((ref, status) {
   final reportsAsync = ref.watch(employeeReportsProvider);
 
-  return reportsAsync.whenData((reports) {
-    // FIXED: Ganti r.isFinal dengan kondisi langsung
-    return reports.where((r) {
-      return r.isUrgent &&
-          r.status != ReportStatus.verified &&
-          r.status != ReportStatus.rejected;
-    }).toList();
-  });
+  return reportsAsync.when(
+    data: (reports) => reports.where((r) => r.status == status).toList(),
+    loading: () => [],
+    error: (error, stackTrace) => [],
+  );
+});
+
+/// Provider untuk laporan urgent employee
+final employeeUrgentReportsProvider = Provider<List<Report>>((ref) {
+  final reportsAsync = ref.watch(employeeReportsProvider);
+
+  return reportsAsync.when(
+    data: (reports) {
+      return reports.where((r) {
+        return r.isUrgent &&
+            r.status != ReportStatus.verified &&
+            r.status != ReportStatus.rejected;
+      }).toList();
+    },
+    loading: () => [],
+    error: (error, stackTrace) => [],
+  );
 });
 
 /// Provider untuk laporan terbaru employee (5 terakhir)
-final employeeRecentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
+final employeeRecentReportsProvider = Provider<List<Report>>((ref) {
   final reportsAsync = ref.watch(employeeReportsProvider);
 
-  return reportsAsync.whenData((reports) {
-    final sortedReports = List<Report>.from(reports)
-      ..sort((a, b) => b.date.compareTo(a.date));
-    return sortedReports.take(5).toList();
-  });
+  return reportsAsync.when(
+    data: (reports) {
+      final sortedReports = List<Report>.from(reports)
+        ..sort((a, b) => b.date.compareTo(a.date));
+      return sortedReports.take(5).toList();
+    },
+    loading: () => [],
+    error: (error, stackTrace) => [],
+  );
 });
 
 // ==================== EMPLOYEE ACTIONS ====================

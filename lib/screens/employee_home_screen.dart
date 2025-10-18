@@ -12,8 +12,7 @@ import 'package:aplikasi_cleanoffice/core/constants/app_strings.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/progress_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/report_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/shared/empty_state_widget.dart';
-import 'report_detail_screen.dart';
-
+import 'package:aplikasi_cleanoffice/screens/employee/report_detail_screen.dart';
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
 

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:aplikasi_cleanoffice/screens/report_detail_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/employee/report_detail_screen.dart';
 
 // Model class for notification data
 class _Notification {

@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import '../core/constants/app_constants.dart';
-import '../core/logging/app_logger.dart';
-import '../core/error/exceptions.dart';
-import '../models/user_profile.dart';
-import '../providers/riverpod/auth_providers.dart';
-import '../providers/riverpod/profile_providers.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import '../../models/user_profile.dart';
+import '../../providers/riverpod/auth_providers.dart';
+import '../../providers/riverpod/profile_providers.dart';
 
 final _logger = AppLogger('EditProfileScreen');
 

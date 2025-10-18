@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/theme/app_theme.dart';
-import '../widgets/custom_password_field.dart';
-import '../providers/riverpod/auth_providers.dart';
-
+import '../../core/theme/app_theme.dart';
+import '../../widgets/custom_password_field.dart';
+import '../../providers/riverpod/auth_providers.dart';
 
 /// Modern Change Password Screen
 class ChangePasswordScreen extends StatefulWidget {

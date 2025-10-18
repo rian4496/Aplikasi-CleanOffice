@@ -198,7 +198,7 @@ class EmptyStateWidget extends StatelessWidget {
       ),
     );
   }
-}
+} // <-- KURUNG KURAWAL PENUTUP CLASS YANG DITAMBAHKAN
 
 /// Loading Empty State - Untuk menampilkan loading skeleton
 class LoadingEmptyState extends StatelessWidget {

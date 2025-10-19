@@ -39,6 +39,7 @@ class AppConstants {
   static const String requestHistoryRoute = '/request_history';
   static const String editProfileRoute = '/edit_profile';
   static const String changePasswordRoute = '/change_password';
+  static const String resetPasswordRoute = '/reset_password';
 
   // ==================== LOCATIONS ====================
   static const List<String> predefinedLocations = [

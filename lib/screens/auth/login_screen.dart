@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_profile.dart';
+import '../../models/user_profile.dart';
 import 'sign_up_screen.dart';
-import 'reset_password_screen.dart';
+import '../shared/reset_password_screen.dart';
+import '../../core/constants/app_constants.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -101,14 +102,14 @@ class _LoginScreenState extends State<LoginScreen> {
       String route;
       switch (userRole) {
         case 'admin':
-          route = '/home_admin';
+          route = AppConstants.homeAdminRoute;
           break;
         case 'cleaner':
-          route = '/home_cleaner';
+          route = AppConstants.homeCleanerRoute;
           break;
         case 'employee':
         default:
-          route = '/home_employee';
+          route = AppConstants.homeEmployeeRoute;
           break;
       }
 
@@ -150,10 +151,7 @@ class _LoginScreenState extends State<LoginScreen> {
         actionCallback = () {
           if (!mounted) return;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const SignUpScreen()),
-          );
+          Navigator.pushNamed(context, AppConstants.registerRoute);
         };
         break;
 
@@ -163,12 +161,10 @@ class _LoginScreenState extends State<LoginScreen> {
         actionCallback = () {
           if (!mounted) return;
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          Navigator.push(
+          Navigator.pushNamed(
             context,
-            MaterialPageRoute(
-              builder: (context) =>
-                  ResetPasswordScreen(initialEmail: _emailController.text),
-            ),
+            AppConstants.resetPasswordRoute,
+            arguments: _emailController.text,
           );
         };
         break;
@@ -317,13 +313,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () => Navigator.push(
+                        onPressed: () => Navigator.pushNamed(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => ResetPasswordScreen(
-                              initialEmail: _emailController.text,
-                            ),
-                          ),
+                          AppConstants.resetPasswordRoute,
+                          arguments: _emailController.text,
                         ),
                         child: Text(
                           'Lupa Password?',
@@ -379,12 +372,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextStyle(color: Colors.grey[600]),
                       ),
                       TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignUpScreen(),
-                          ),
-                        ),
+                        onPressed: () => Navigator.pushNamed(context, AppConstants.registerRoute),
                         child: Text(
                           'Sign Up',
                           style: TextStyle(

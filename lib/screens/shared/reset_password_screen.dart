@@ -10,11 +10,7 @@ import 'package:logging/logging.dart';
 /// - See confirmation when the reset link is sent
 /// - Handle various error cases with clear feedback
 class ResetPasswordScreen extends StatefulWidget {
-  const ResetPasswordScreen({super.key, this.initialEmail});
-
-  /// Optional email address to pre-fill in the form.
-  /// Usually provided when navigating from the login screen.
-  final String? initialEmail;
+  const ResetPasswordScreen({super.key});
 
   @override
   State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
@@ -26,14 +22,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _logger = Logger('ResetPasswordScreen');
   bool _isLoading = false;
   bool _resetEmailSent = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.initialEmail != null) {
-      _emailController.text = widget.initialEmail!;
-    }
-  }
 
   @override
   void dispose() {
@@ -142,6 +130,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final initialEmail = ModalRoute.of(context)!.settings.arguments as String?;
+    if (initialEmail != null) {
+      _emailController.text = initialEmail;
+    }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reset Password'),

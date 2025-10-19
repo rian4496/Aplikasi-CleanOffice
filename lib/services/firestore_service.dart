@@ -4,8 +4,7 @@ library;
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
-import '../models/report_model.dart';
-import '../models/report_status_enum.dart';
+import '../models/report.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();

@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../models/report_model.dart';
-import '../../models/report_status_enum.dart';
+import '../../models/report.dart';
 import './report_providers.dart';
 
 // ==================== EMPLOYEE AUTH PROVIDERS ====================

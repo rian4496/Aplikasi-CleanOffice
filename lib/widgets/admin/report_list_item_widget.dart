@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../models/report_model.dart';
-import '../../models/report_status_enum.dart';
+import '../../models/report.dart';
 
 /// Widget untuk menampilkan item laporan dalam list
 /// Digunakan di admin dashboard dan verification screen

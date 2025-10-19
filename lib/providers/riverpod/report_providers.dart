@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/report_model.dart';
-import '../../models/report_status_enum.dart';
+import '../../models/report.dart';
 import '../../services/firestore_service.dart';
 
 // ==================== SERVICE PROVIDER ====================

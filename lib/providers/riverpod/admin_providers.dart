@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/report_model.dart';
-import '../../models/report_status_enum.dart';
+import '../../models/report.dart';
 import '../../models/user_profile.dart';
 import './report_providers.dart';
 

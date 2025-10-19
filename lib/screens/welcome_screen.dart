@@ -1,6 +1,6 @@
 import 'package:aplikasi_cleanoffice/screens/auth/sign_up_screen.dart';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'auth/login_screen.dart';
 
 /// Welcome Screen - Landing page sebelum login
 class WelcomeScreen extends StatefulWidget {

@@ -1,9 +1,9 @@
 // lib/providers/riverpod/settings_provider.dart
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../models/app_settings.dart';
-import '../../services/settings_service.dart';
-import '../../core/logging/app_logger.dart';
+import '../../../models/app_settings.dart';
+import '../../../services/settings_service.dart';
+import '../../../core/logging/app_logger.dart';
 
 final _logger = AppLogger('SettingsProvider');
 

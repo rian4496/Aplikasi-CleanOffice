@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../models/report_model.dart';
+import '../../models/report.dart';
 import '../../providers/riverpod/admin_providers.dart';
 
 /// Screen untuk verifikasi laporan yang sudah selesai dikerjakan

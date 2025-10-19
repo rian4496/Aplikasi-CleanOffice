@@ -1,7 +1,7 @@
-import 'package:aplikasi_cleanoffice/screens/sign_up_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/auth/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/login_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/auth/login_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_report_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/create_request_screen.dart';
@@ -9,7 +9,7 @@ import 'package:aplikasi_cleanoffice/screens/shared/profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/change_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/request_history_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/reset_password_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/shared/reset_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/bulk_receipt_screen.dart';

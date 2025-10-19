@@ -1,12 +1,13 @@
+// lib/screens/admin/admin_dashboard_screen.dart - UPDATED WITH DrawerMenuWidget
+
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../notification_screen.dart';
 import '../employee/create_report_screen.dart';
+import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../core/constants/app_constants.dart';
 
-// Refactored Admin Dashboard Screen
-// - Minimalist & Professional UI/UX
-// - Strategic Color Accents
-// - Clean, Data-Focused Layout
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -17,24 +18,16 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
     return Scaffold(
-      // backgroundColor is handled by theme
+      endDrawer: _buildDrawer(context),
       body: SafeArea(
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(),
           slivers: [
-            // --- 1. Refactored Header ---
-            // Uses AppBarTheme for styling
             SliverAppBar(
               pinned: true,
-              // backgroundColor, foregroundColor, elevation, etc. from theme
-              title: const Text(
-                'Dashboard',
-                // style is inherited from appBarTheme.titleTextStyle
-              ),
+              automaticallyImplyLeading: false,
+              title: const Text('Dashboard'),
               actions: [
                 IconButton(
                   onPressed: () {
@@ -45,45 +38,32 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       ),
                     );
                   },
-                  icon: const Icon(
-                    Icons.notifications_outlined,
-                    // color is inherited from appBarTheme.iconTheme
+                  icon: const Icon(Icons.notifications_outlined),
+                ),
+                Builder(
+                  builder: (context) => IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      Scaffold.of(context).openEndDrawer();
+                    },
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 16.0),
-                  child: CircleAvatar(
-                    backgroundColor: colorScheme.secondary,
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 22,
-                      color: colorScheme.onSecondary,
-                    ),
-                  ),
-                ),
+                const SizedBox(width: 8),
               ],
             ),
 
-            // --- Main Content ---
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Welcome Header
                     _buildWelcomeHeader(context),
                     const SizedBox(height: 24),
-
-                    // --- 2. Refactored Statistics Cards ---
                     _buildStatisticsGrid(context),
                     const SizedBox(height: 32),
-
-                    // Quick Actions
                     _buildQuickActions(context),
                     const SizedBox(height: 32),
-
-                    // Recent Activities
                     _buildRecentActivities(context),
                   ],
                 ),
@@ -92,8 +72,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ],
         ),
       ),
-      // --- 3. Refactored Floating Action Button ---
-      // Uses floatingActionButtonTheme for styling
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
@@ -101,13 +79,119 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             MaterialPageRoute(builder: (context) => const CreateReportScreen()),
           );
         },
-        // backgroundColor and foregroundColor from theme
         icon: const Icon(Icons.add),
         label: const Text('Buat Laporan'),
-        // style is inherited from theme
       ),
     );
   }
+
+  // ==================== DRAWER MENU ====================
+
+  Widget _buildDrawer(BuildContext context) {
+    return Drawer(
+      child: DrawerMenuWidget(
+        menuItems: [
+          DrawerMenuItem(
+            icon: Icons.dashboard_outlined,
+            title: 'Dashboard',
+            onTap: () => Navigator.pop(context),
+          ),
+          DrawerMenuItem(
+            icon: Icons.verified_user_outlined,
+            title: 'Verifikasi Laporan',
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fitur segera hadir')),
+              );
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.assessment_outlined,
+            title: 'Laporan',
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fitur segera hadir')),
+              );
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.people_outline,
+            title: 'Kelola Petugas',
+            onTap: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Fitur segera hadir')),
+              );
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.person_outline,
+            title: 'Profil',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.settings_outlined,
+            title: 'Pengaturan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ],
+        onLogout: () => _handleLogout(context),
+        roleTitle: 'Administrator',
+      ),
+    );
+  }
+
+  // ==================== LOGOUT ====================
+
+  Future<void> _handleLogout(BuildContext context) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi Logout'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('BATAL'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
+            ),
+            child: const Text('KELUAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal logout: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // ==================== REST OF THE CODE (UNCHANGED) ====================
 
   Widget _buildWelcomeHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
@@ -165,7 +249,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           title: 'Total Aktif',
           value: '36',
           icon: Icons.trending_up,
-          accentColor: AppTheme.primary, // Using primary color
+          accentColor: AppTheme.primary,
         ),
       ],
     );

@@ -1,3 +1,5 @@
+// lib/screens/cleaner/cleaner_home_screen.dart - UPDATED WITH CONSISTENT DrawerMenuWidget
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,20 +10,14 @@ import '../../core/utils/date_formatter.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
 
-// ✅ FIXED: Import semua widget yang diperlukan
 import '../../widgets/cleaner/stats_card_widget.dart';
 import '../../widgets/cleaner/request_card_widget.dart';
-import '../../widgets/cleaner/drawer_menu_widget.dart';
+import '../../widgets/shared/drawer_menu_widget.dart'; // ✅ CONSISTENT IMPORT
 import '../../widgets/shared/empty_state_widget.dart';
 
 import 'request_detail_screen.dart';
 import 'create_cleaning_report_screen.dart';
 
-/// Cleaner Home Screen - POLISHED VERSION
-/// ✅ All imports fixed
-/// ✅ Using reusable widgets
-/// ✅ Enhanced animations
-/// ✅ Better UX
 class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
 
@@ -40,7 +36,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     
-    // ✅ ENHANCED: FAB animation
     _fabAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -63,8 +58,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      // ✅ FIXED: Pakai DrawerMenuWidget
-      endDrawer: _buildDrawerWithWidget(context),
+      endDrawer: _buildDrawer(context), // ✅ UPDATED
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
@@ -100,10 +94,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== DRAWER MENU (FIXED!) ====================
+  // ==================== DRAWER MENU (✅ UPDATED!) ====================
 
-  /// ✅ FIXED: Sekarang pakai DrawerMenuWidget dari widget terpisah
-  Widget _buildDrawerWithWidget(BuildContext context) {
+  Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: DrawerMenuWidget(
         menuItems: [
@@ -143,14 +136,12 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             title: 'Pengaturan',
             onTap: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur segera hadir')),
-              );
+              Navigator.pushNamed(context, '/settings'); // ✅ UPDATED
             },
           ),
         ],
         onLogout: () => _handleLogout(context),
-        roleTitle: 'Petugas Kebersihan',
+        roleTitle: 'Petugas Kebersihan', // ✅ ROLE TITLE
       ),
     );
   }
@@ -183,7 +174,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // ✅ ENHANCED: Fade animation untuk text
                   TweenAnimationBuilder<double>(
                     tween: Tween(begin: 0.0, end: 1.0),
                     duration: const Duration(milliseconds: 600),
@@ -254,7 +244,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== STATS CARDS (POLISHED!) ====================
+  // ==================== STATS CARDS ====================
 
   Widget _buildStatsCards() {
     final cleanerStats = ref.watch(cleanerStatsProvider);
@@ -263,7 +253,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // ✅ ENHANCED: Stagger animation delay untuk each card
           _buildStatsCardWithDelay(
             index: 0,
             icon: Icons.assignment_outlined,
@@ -292,7 +281,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  /// ✅ ENHANCED: Stats card dengan stagger animation
   Widget _buildStatsCardWithDelay({
     required int index,
     required IconData icon,
@@ -324,7 +312,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== TAB BAR WITH BADGE COUNT ====================
+  // ==================== TAB BAR ====================
 
   Widget _buildTabBar() {
     final availableRequests = ref.watch(availableRequestsProvider);
@@ -375,30 +363,21 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                 const Text('Permintaan Baru'),
                 if (availableCount > 0) ...[
                   const SizedBox(width: 6),
-                  // ✅ ENHANCED: Pulse animation untuk badge
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.95, end: 1.05),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeInOut,
-                    builder: (context, scale, child) {
-                      return Transform.scale(scale: scale, child: child);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Text(
-                        availableCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      availableCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
@@ -448,7 +427,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     return availableRequests.when(
       data: (requests) {
         if (requests.isEmpty) {
-          // ✅ FIXED: Pakai EmptyStateWidget dari shared
           return EmptyStateWidget.noRequests();
         }
 
@@ -475,8 +453,17 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           },
         );
       },
-      loading: () => _buildShimmerLoadingState(),
-      error: (error, stack) => _buildErrorState(context, error),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: $error'),
+          ],
+        ),
+      ),
     );
   }
 
@@ -486,7 +473,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     return assignedRequests.when(
       data: (requests) {
         if (requests.isEmpty) {
-          // ✅ FIXED: Pakai EmptyStateWidget dari shared
           return EmptyStateWidget.noTasks();
         }
 
@@ -513,114 +499,21 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           },
         );
       },
-      loading: () => _buildShimmerLoadingState(),
-      error: (error, stack) => _buildErrorState(context, error),
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Error: $error'),
+          ],
+        ),
+      ),
     );
   }
 
-  // ==================== STATES (POLISHED!) ====================
-
-  /// ✅ ENHANCED: Shimmer loading animation
-  Widget _buildShimmerLoadingState() {
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: 4,
-      itemBuilder: (context, index) {
-        return TweenAnimationBuilder<double>(
-          tween: Tween(begin: 0.0, end: 1.0),
-          duration: Duration(milliseconds: 300 + (index * 100)),
-          builder: (context, value, child) {
-            return Opacity(
-              opacity: value,
-              child: Transform.translate(
-                offset: Offset(0, 20 * (1 - value)),
-                child: child,
-              ),
-            );
-          },
-          child: Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: Container(
-              height: 100,
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                children: [
-                  // Shimmer effect untuk icon
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.3, end: 1.0),
-                    duration: const Duration(milliseconds: 1000),
-                    curve: Curves.easeInOut,
-                    builder: (context, shimmerValue, child) {
-                      return Opacity(
-                        opacity: shimmerValue,
-                        child: child,
-                      );
-                    },
-                    child: Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Container(
-                          height: 16,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 14,
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          height: 12,
-                          width: 100,
-                          decoration: BoxDecoration(
-                            color: Colors.grey[200],
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildErrorState(BuildContext context, Object error) {
-    return ErrorEmptyState(
-      title: 'Terjadi kesalahan',
-      subtitle: error.toString(),
-      onRetry: () {
-        ref.invalidate(availableRequestsProvider);
-        ref.invalidate(cleanerAssignedRequestsProvider);
-      },
-    );
-  }
-
-  // ==================== FAB (POLISHED!) ====================
+  // ==================== FAB ====================
 
   Widget _buildFAB(BuildContext context) {
     return ScaleTransition(

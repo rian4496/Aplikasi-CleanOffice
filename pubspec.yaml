@@ -21,6 +21,12 @@ dependencies:
   cloud_firestore: ^6.0.2
   firebase_storage: ^13.0.2
   cloud_functions: 6.0.2
+
+  # Settings
+  shared_preferences: ^2.2.2  # Untuk menyimpan settings
+  package_info_plus: 9.0.0   # Untuk mendapatkan versi app
+  url_launcher: ^6.3.0        # Untuk membuka link (Terms of Service)
+
   
   # State Management - FULL RIVERPOD NOW
   flutter_riverpod: ^3.0.2
@@ -41,7 +47,6 @@ dependencies:
 
   # Feature: Bulk Receipt
   file_picker: ^8.0.3
-  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

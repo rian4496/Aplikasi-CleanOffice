@@ -1,4 +1,4 @@
-// lib/screens/employee_home_screen.dart - FINAL CLEAN VERSION
+// lib/screens/employee/employee_home_screen.dart - UPDATED WITH DrawerMenuWidget
 
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +12,7 @@ import 'package:aplikasi_cleanoffice/core/constants/app_strings.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/progress_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/report_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/shared/empty_state_widget.dart';
+import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart'; // ✅ IMPORT
 import 'report_detail_screen.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
@@ -174,38 +175,31 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: _buildAppBar(context),
-      endDrawer: _buildDrawer(context),
+      endDrawer: _buildDrawer(context), // ✅ UPDATED
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(employeeReportsProvider);
         },
         child: CustomScrollView(
           slivers: [
-            // Progress Cards
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: _buildProgressCards(summary),
               ),
             ),
-
-            // Quick Actions
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: _buildQuickActions(context),
               ),
             ),
-
-            // Search & Filter Bar
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 child: _buildSearchAndFilter(),
               ),
             ),
-
-            // Reports List
             reportsAsync.when(
               data: (reports) => _buildReportsList(reports),
               loading: () => _buildLoadingState(),
@@ -229,153 +223,53 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== DRAWER MENU ====================
+  // ==================== DRAWER MENU (✅ UPDATED!) ====================
 
   Widget _buildDrawer(BuildContext context) {
-    final user = FirebaseAuth.instance.currentUser;
-
     return Drawer(
-      child: Container(
-        color: Colors.white,
-        child: Column(
-          children: [
-            _buildDrawerHeader(user),
-            Expanded(
-              child: ListView(
-                padding: EdgeInsets.zero,
-                children: [
-                  _buildDrawerItem(
-                    icon: Icons.home_outlined,
-                    title: 'Beranda',
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.history,
-                    title: 'Riwayat Laporan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/request_history');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.cleaning_services_outlined,
-                    title: 'Minta Layanan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/create_request');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.person_outline,
-                    title: 'Profil',
-                    onTap: () {
-                      Navigator.pop(context);
-                      Navigator.pushNamed(context, '/profile');
-                    },
-                  ),
-                  _buildDrawerItem(
-                    icon: Icons.settings_outlined,
-                    title: 'Pengaturan',
-                    onTap: () {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Fitur belum tersedia')),
-                      );
-                    },
-                  ),
-                  const Divider(),
-                  _buildDrawerItem(
-                    icon: Icons.logout,
-                    title: 'Keluar',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _handleLogout(context);
-                    },
-                    isLogout: true,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDrawerHeader(User? user) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 32,
-            backgroundColor: Colors.grey[300],
-            child: user?.photoURL != null
-                ? ClipOval(
-                    child: Image.network(
-                      user!.photoURL!,
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Icon(
-                    Icons.person,
-                    size: 36,
-                    color: Colors.grey[600],
-                  ),
+      child: DrawerMenuWidget(
+        menuItems: [
+          DrawerMenuItem(
+            icon: Icons.home_outlined,
+            title: 'Beranda',
+            onTap: () => Navigator.pop(context),
           ),
-          const SizedBox(height: 12),
-          Text(
-            user?.displayName ?? 'User',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          DrawerMenuItem(
+            icon: Icons.history,
+            title: 'Riwayat Laporan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/request_history');
+            },
           ),
-          const SizedBox(height: 4),
-          Text(
-            user?.email ?? '',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 14,
-            ),
+          DrawerMenuItem(
+            icon: Icons.cleaning_services_outlined,
+            title: 'Minta Layanan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/create_request');
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.person_outline,
+            title: 'Profil',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.settings_outlined,
+            title: 'Pengaturan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/settings'); // ✅ UPDATED
+            },
           ),
         ],
+        onLogout: () => _handleLogout(context),
+        roleTitle: 'Karyawan', // ✅ ROLE TITLE
       ),
-    );
-  }
-
-  Widget _buildDrawerItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    bool isLogout = false,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isLogout ? AppTheme.error : Colors.grey[700],
-        size: 24,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          color: isLogout ? AppTheme.error : Colors.grey[900],
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
     );
   }
 

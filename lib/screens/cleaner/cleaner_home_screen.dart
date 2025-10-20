@@ -1,4 +1,4 @@
-// lib/screens/cleaner/cleaner_home_screen.dart - WITH NOTIFICATION ICON
+// lib/screens/cleaner/cleaner_home_screen.dart - WITH END DRAWER, BUILDER, and MODIFIED LOGOUT DIALOG
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,12 +31,14 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   late TabController _tabController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
+  // GlobalKey TIDAK diperlukan jika menggunakan Builder
+  // final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    
+
     _fabAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -58,8 +60,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      // key: _scaffoldKey, // <-- TIDAK DIPERLUKAN LAGI
       backgroundColor: AppTheme.background,
-      endDrawer: _buildDrawer(context),
+      endDrawer: _buildDrawer(context), // Drawer tetap di endDrawer
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
@@ -68,7 +71,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         },
         child: CustomScrollView(
           slivers: [
-            _buildSliverHeader(),
+            _buildSliverHeader(), // AppBar ada di sini, sudah diubah
             SliverToBoxAdapter(
               child: Column(
                 children: [
@@ -96,7 +99,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   }
 
   // ==================== DRAWER MENU ====================
-
+  // (Kode _buildDrawer tetap sama)
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: DrawerMenuWidget(
@@ -147,7 +150,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== SLIVER HEADER (✅ WITH NOTIFICATION ICON) ====================
+  // ==================== SLIVER HEADER (MODIFIED WITH BUILDER) ====================
 
   Widget _buildSliverHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
@@ -157,11 +160,11 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       expandedHeight: 200,
       floating: false,
       pinned: true,
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: false, // <-- Tetap false
       backgroundColor: AppTheme.primary,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
-        // Notification icon with badge
+        // Notification icon with badge (tetap sama)
         Stack(
           children: [
             IconButton(
@@ -197,6 +200,16 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                 ),
               ),
           ],
+        ),
+        // Gunakan Builder untuk IconButton
+        Builder(
+          builder: (buttonContext) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(buttonContext).openEndDrawer();
+            },
+            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+          ),
         ),
         const SizedBox(width: 8),
       ],
@@ -235,7 +248,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                         Text(
                           'Selamat Datang,',
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
+                            color: Colors.white.withAlpha(230),
                             fontSize: 16,
                           ),
                         ),
@@ -253,7 +266,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                             height: 24,
                             width: 150,
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.3),
+                              color: Colors.white.withAlpha(77),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           ),
@@ -270,7 +283,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                         Text(
                           DateFormatter.fullDate(DateTime.now()),
                           style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.8),
+                            color: Colors.white.withAlpha(204),
                             fontSize: 14,
                           ),
                         ),
@@ -287,7 +300,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   }
 
   // ==================== STATS CARDS ====================
-
+  // (Kode _buildStatsCards dan helpernya tetap sama)
   Widget _buildStatsCards() {
     final cleanerStats = ref.watch(cleanerStatsProvider);
 
@@ -355,7 +368,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   }
 
   // ==================== TAB BAR ====================
-
+  // (Kode _buildTabBar tetap sama)
   Widget _buildTabBar() {
     final availableRequests = ref.watch(availableRequestsProvider);
     final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
@@ -377,7 +390,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: Colors.black.withAlpha(13), // Adjusted alpha
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -461,9 +474,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== TAB VIEWS ====================
 
-  Widget _buildAvailableRequestsTab() {
+  // ==================== TAB VIEWS ====================
+  // (Kode _buildAvailableRequestsTab dan _buildMyTasksTab tetap sama)
+   Widget _buildAvailableRequestsTab() {
     final availableRequests = ref.watch(availableRequestsProvider);
 
     return availableRequests.when(
@@ -555,8 +569,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== FAB ====================
 
+  // ==================== FAB ====================
+  // (Kode _buildFAB tetap sama)
   Widget _buildFAB(BuildContext context) {
     return ScaleTransition(
       scale: _fabScaleAnimation,
@@ -572,11 +587,12 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         icon: const Icon(Icons.add),
         label: const Text('Buat Laporan'),
         backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
       ),
     );
   }
 
-  // ==================== LOGOUT ====================
+  // ==================== LOGOUT (MODIFIED DIALOG BUTTON) ====================
 
   Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
@@ -589,13 +605,15 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             onPressed: () => Navigator.pop(context, false),
             child: const Text('BATAL'),
           ),
-          ElevatedButton(
+          // VVV MODIFIKASI: Ubah ElevatedButton menjadi TextButton VVV
+          TextButton( // <-- Ubah dari ElevatedButton
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.error,
+            style: TextButton.styleFrom( // <-- Gunakan style TextButton
+              foregroundColor: AppTheme.error, // <-- Atur warna teks jadi merah
             ),
             child: const Text('KELUAR'),
           ),
+          // ^^^ MODIFIKASI ^^^
         ],
       ),
     );
@@ -617,4 +635,5 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       }
     }
   }
-}
+
+} // Penutup class state

@@ -1,4 +1,4 @@
-// lib/screens/employee/employee_home_screen.dart - FULL CODE WITH UPDATED NAVIGATION
+// lib/screens/employee/employee_home_screen.dart - WITH END DRAWER and BUILDER
 
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +11,8 @@ import 'package:aplikasi_cleanoffice/core/constants/app_strings.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/progress_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/report_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/shared/empty_state_widget.dart';
-import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart';
+import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart'; // <-- Pastikan ini diimpor
+import '../../core/constants/app_constants.dart'; // <-- Tambahkan ini jika belum ada
 import 'report_detail_screen.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
@@ -64,8 +65,8 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
   }
 
   // ==================== FILTER & SORT LOGIC ====================
-
-  List<Report> _filterAndSortReports(List<Report> reports) {
+  // (Kode _filterAndSortReports tetap sama)
+   List<Report> _filterAndSortReports(List<Report> reports) {
     var filtered = reports.where((r) => !_deletedReports.contains(r)).toList();
 
     if (_searchQuery.isNotEmpty) {
@@ -106,7 +107,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
   }
 
   // ==================== DELETE WITH UNDO ====================
-
+  // (Kode _handleDelete tetap sama)
   void _handleDelete(Report report) async {
     setState(() {
       _deletedReports.add(report);
@@ -114,7 +115,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
 
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     scaffoldMessenger.hideCurrentSnackBar();
-    
+
     final snackBar = scaffoldMessenger.showSnackBar(
       SnackBar(
         content: Text(AppStrings.reportDeleted),
@@ -131,12 +132,12 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
 
     final reason = await snackBar.closed;
-    
+
     if (reason != SnackBarClosedReason.action && mounted) {
       try {
         final actions = ref.read(employeeActionsProvider);
         await actions.deleteReport(report.id);
-        
+
         if (mounted) {
           setState(() {
             _deletedReports.remove(report);
@@ -147,7 +148,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
           setState(() {
             _deletedReports.remove(report);
           });
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('${AppStrings.errorDeleteFailed}: $e'),
@@ -159,13 +160,17 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('Silakan login terlebih dahulu')),
-      );
+      // Seharusnya tidak terjadi jika navigasi sudah benar,
+      // tapi sebagai fallback
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+         if (context.mounted) Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+      });
+       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     final reportsAsync = ref.watch(employeeReportsProvider);
@@ -173,11 +178,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: _buildAppBar(context),
-      endDrawer: _buildDrawer(context),
+      appBar: _buildAppBar(context), // AppBar akan dimodifikasi
+      // VVV MODIFIKASI: Gunakan endDrawer VVV
+      endDrawer: _buildDrawer(context), // Tambahkan endDrawer
+      // ^^^ MODIFIKASI ^^^
       body: RefreshIndicator(
         onRefresh: () async {
+          // Invalidate provider untuk refresh data
           ref.invalidate(employeeReportsProvider);
+          ref.invalidate(employeeReportsSummaryProvider); // Refresh summary juga
         },
         child: CustomScrollView(
           slivers: [
@@ -211,19 +220,41 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== APP BAR ====================
+  // ==================== APP BAR (MODIFIED) ====================
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
       backgroundColor: AppTheme.primaryDark,
       elevation: 0,
-      automaticallyImplyLeading: false,
+      automaticallyImplyLeading: false, // Sembunyikan tombol back default
       iconTheme: const IconThemeData(color: Colors.white),
+      actions: [
+        // Tambahkan tombol notifikasi jika perlu
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined),
+          onPressed: () {
+             Navigator.pushNamed(context, '/notifications');
+          },
+          tooltip: 'Notifikasi',
+        ),
+        // VVV MODIFIKASI: Tambahkan Builder dan IconButton menu VVV
+        Builder(
+          builder: (buttonContext) => IconButton(
+            icon: const Icon(Icons.menu),
+            onPressed: () {
+              Scaffold.of(buttonContext).openEndDrawer(); // Buka endDrawer
+            },
+            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+          ),
+        ),
+        // ^^^ MODIFIKASI ^^^
+        const SizedBox(width: 8), // Padding kanan
+      ],
     );
   }
 
   // ==================== DRAWER MENU ====================
-
+  // (Kode _buildDrawer tetap sama, menggunakan DrawerMenuWidget)
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: DrawerMenuWidget(
@@ -254,7 +285,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
             title: 'Profil',
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/profile');
+              Navigator.pushNamed(context, AppConstants.profileRoute);
             },
           ),
           DrawerMenuItem(
@@ -267,14 +298,14 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
           ),
         ],
         onLogout: () => _handleLogout(context),
-        roleTitle: 'Karyawan',
+        roleTitle: 'Karyawan', // Sesuaikan role title jika perlu
       ),
     );
   }
 
   // ==================== PROGRESS CARDS ====================
-
-  Widget _buildProgressCards(EmployeeReportsSummary summary) {
+  // (Kode _buildProgressCards tetap sama)
+   Widget _buildProgressCards(EmployeeReportsSummary summary) {
     return Row(
       children: [
         ProgressCard(
@@ -310,8 +341,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== QUICK ACTIONS ====================
 
+  // ==================== QUICK ACTIONS ====================
+  // (Kode _buildQuickActions tetap sama)
   Widget _buildQuickActions(BuildContext context) {
     return Row(
       children: [
@@ -349,7 +381,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
   }
 
   // ==================== SEARCH & FILTER ====================
-
+  // (Kode _buildSearchAndFilter tetap sama)
   Widget _buildSearchAndFilter() {
     return Column(
       children: [
@@ -412,9 +444,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== REPORTS LIST ====================
 
-  Widget _buildReportsList(List<Report> reports) {
+  // ==================== REPORTS LIST ====================
+  // (Kode _buildReportsList tetap sama)
+   Widget _buildReportsList(List<Report> reports) {
     final filteredReports = _filterAndSortReports(reports);
 
     if (filteredReports.isEmpty) {
@@ -434,7 +467,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
         delegate: SliverChildBuilderDelegate(
           (context, index) {
             final report = filteredReports[index];
-            
+
             return TweenAnimationBuilder<double>(
               key: ValueKey(report.id),
               tween: Tween(begin: 0.0, end: 1.0),
@@ -490,8 +523,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== LOADING & ERROR STATES ====================
 
+  // ==================== LOADING & ERROR STATES ====================
+  // (Kode _buildLoadingState dan _buildErrorState tetap sama)
   Widget _buildLoadingState() {
     return SliverPadding(
       padding: const EdgeInsets.all(16),
@@ -599,8 +633,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== FAB ====================
 
+  // ==================== FAB ====================
+  // (Kode _buildFAB tetap sama)
   Widget _buildFAB(BuildContext context) {
     return ScaleTransition(
       scale: _fabAnimation,
@@ -609,12 +644,13 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
         icon: const Icon(Icons.add),
         label: const Text('Buat Laporan'),
         backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white, // Pastikan warna icon/teks putih
       ),
     );
   }
 
   // ==================== DIALOGS ====================
-
+  // (Kode _showSortDialog, _confirmDelete, _showDeleteDialog tetap sama)
   void _showSortDialog() {
     showModalBottomSheet(
       context: context,
@@ -698,9 +734,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     }
   }
 
-  // ==================== NAVIGATION (✅ UPDATED!) ====================
-
-  void _navigateToDetail(Report report) {
+  // ==================== NAVIGATION ====================
+  // (Kode _navigateToDetail dan _handleLogout tetap sama)
+   void _navigateToDetail(Report report) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -734,13 +770,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     if (shouldLogout == true && mounted) {
       await FirebaseAuth.instance.signOut();
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/login');
+      // Gunakan pushReplacementNamed agar user tidak bisa kembali ke home setelah logout
+      Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
     }
   }
-}
+
+} // Penutup class state
 
 // ==================== HELPER WIDGETS ====================
-
+// (Kode QuickActionButton dan SortOption tetap sama)
 class QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -783,6 +821,9 @@ class QuickActionButton extends StatelessWidget {
                 fontWeight: isActive ? FontWeight.bold : FontWeight.w500,
                 color: color,
               ),
+              textAlign: TextAlign.center, // Tambahkan ini jika perlu
+              maxLines: 1, // Pastikan tidak wrap jika label panjang
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

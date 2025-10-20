@@ -1,4 +1,4 @@
-// lib/screens/cleaner/cleaner_home_screen.dart - UPDATED WITH CONSISTENT DrawerMenuWidget
+// lib/screens/cleaner/cleaner_home_screen.dart - WITH NOTIFICATION ICON
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,10 +9,11 @@ import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
+import '../../providers/riverpod/notification_providers.dart';
 
 import '../../widgets/cleaner/stats_card_widget.dart';
 import '../../widgets/cleaner/request_card_widget.dart';
-import '../../widgets/shared/drawer_menu_widget.dart'; // ✅ CONSISTENT IMPORT
+import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 import 'request_detail_screen.dart';
@@ -58,7 +59,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      endDrawer: _buildDrawer(context), // ✅ UPDATED
+      endDrawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(availableRequestsProvider);
@@ -94,7 +95,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== DRAWER MENU (✅ UPDATED!) ====================
+  // ==================== DRAWER MENU ====================
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -136,20 +137,21 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             title: 'Pengaturan',
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings'); // ✅ UPDATED
+              Navigator.pushNamed(context, '/settings');
             },
           ),
         ],
         onLogout: () => _handleLogout(context),
-        roleTitle: 'Petugas Kebersihan', // ✅ ROLE TITLE
+        roleTitle: 'Petugas Kebersihan',
       ),
     );
   }
 
-  // ==================== SLIVER HEADER ====================
+  // ==================== SLIVER HEADER (✅ WITH NOTIFICATION ICON) ====================
 
   Widget _buildSliverHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
+    final unreadCount = ref.watch(unreadNotificationCountProvider);
 
     return SliverAppBar(
       expandedHeight: 200,
@@ -158,6 +160,46 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       automaticallyImplyLeading: false,
       backgroundColor: AppTheme.primary,
       iconTheme: const IconThemeData(color: Colors.white),
+      actions: [
+        // Notification icon with badge
+        Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              onPressed: () {
+                Navigator.pushNamed(context, '/notifications');
+              },
+              tooltip: 'Notifikasi',
+            ),
+            if (unreadCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.error,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+        const SizedBox(width: 8),
+      ],
       flexibleSpace: FlexibleSpaceBar(
         background: Container(
           decoration: BoxDecoration(

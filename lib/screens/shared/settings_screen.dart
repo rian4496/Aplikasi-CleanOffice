@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../providers/riverpod/settings_provider.dart';
-import '../../models/app_settings.dart'; // ✅ ADDED: Import AppSettings model
+import '../../models/app_settings.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Settings Screen dengan multi-bahasa (ID/EN)

@@ -1,4 +1,4 @@
-// lib/screens/employee/employee_home_screen.dart - UPDATED WITH DrawerMenuWidget
+// lib/screens/employee/employee_home_screen.dart - FULL CODE WITH UPDATED NAVIGATION
 
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
@@ -11,7 +11,7 @@ import 'package:aplikasi_cleanoffice/core/constants/app_strings.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/progress_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/employee/report_card_widget.dart';
 import 'package:aplikasi_cleanoffice/widgets/shared/empty_state_widget.dart';
-import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart'; // ✅ IMPORT
+import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart';
 import 'report_detail_screen.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
@@ -174,7 +174,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: _buildAppBar(context),
-      endDrawer: _buildDrawer(context), // ✅ UPDATED
+      endDrawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(employeeReportsProvider);
@@ -222,7 +222,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     );
   }
 
-  // ==================== DRAWER MENU (✅ UPDATED!) ====================
+  // ==================== DRAWER MENU ====================
 
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
@@ -262,12 +262,12 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
             title: 'Pengaturan',
             onTap: () {
               Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings'); // ✅ UPDATED
+              Navigator.pushNamed(context, '/settings');
             },
           ),
         ],
         onLogout: () => _handleLogout(context),
-        roleTitle: 'Karyawan', // ✅ ROLE TITLE
+        roleTitle: 'Karyawan',
       ),
     );
   }
@@ -698,16 +698,14 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen>
     }
   }
 
-  // ==================== NAVIGATION ====================
+  // ==================== NAVIGATION (✅ UPDATED!) ====================
 
   void _navigateToDetail(Report report) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ReportDetailScreen(
-          title: report.location,
-          date: report.date.toString(),
-          status: report.status.displayName,
+          report: report,  // ✅ Pass Report object lengkap, bukan string!
         ),
       ),
     );

@@ -1,1 +1,47 @@
-{"firestore":{"rules":"firestore.rules","indexes":"firestore.indexes.json"},"functions":{"source":"functions"},"flutter":{"platforms":{"android":{"default":{"projectId":"cleanoffice-app","appId":"1:110305390615:android:b6d58a61d15f3cb98aec52","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"cleanoffice-app","configurations":{"android":"1:110305390615:android:b6d58a61d15f3cb98aec52","web":"1:110305390615:web:bd17087d3332c6718aec52"}}}}}}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "cleanoffice-app",
+          "appId": "1:110305390615:android:b6d58a61d15f3cb98aec52",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "cleanoffice-app",
+          "configurations": {
+            "android": "1:110305390615:android:b6d58a61d15f3cb98aec52",
+            "web": "1:110305390615:web:bd17087d3332c6718aec52"
+          }
+        }
+      }
+    }
+  },
+  "emulators": {
+    "auth": {
+      "port": 9099
+    },
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "storage": {
+      "port": 9199
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

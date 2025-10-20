@@ -36,13 +36,15 @@ dependencies:
   intl: ^0.20.2
   logging: ^1.3.0
   equatable: ^2.0.5  # NEW: For value comparison in Failures
-  
+  path: ^1.9.0
+
   # Image Handling
   image_picker: ^1.2.0
   image_cropper: ^11.0.0
   cached_network_image: ^3.4.1
-  
-  # QR Scanner
+  flutter_image_compress: ^2.3.0
+ 
+ # QR Scanner
   mobile_scanner: ^7.1.2
 
   # Feature: Bulk Receipt

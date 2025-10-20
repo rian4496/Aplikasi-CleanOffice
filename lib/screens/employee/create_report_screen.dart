@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,6 +9,7 @@ import '../../core/error/exceptions.dart';
 import '../../core/logging/app_logger.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/employee_providers.dart';
+import '../../services/storage_service.dart'; // 👈 Storage service
 
 final _logger = AppLogger('CreateReportScreen');
 
@@ -25,7 +25,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   
-  // ✅ FIXED: Hanya gunakan Uint8List (in-memory)
+  // ✅ Use Uint8List for Web compatibility
   Uint8List? _imageBytes;
   
   bool _isUrgent = false;
@@ -35,7 +35,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   void dispose() {
     _locationController.dispose();
     _descriptionController.dispose();
-    // ✅ No file cleanup needed - bytes will be garbage collected
     super.dispose();
   }
 
@@ -43,14 +42,14 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     try {
       final imagePicker = ImagePicker();
       final pickedImage = await imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: ImageSource.gallery, // Web doesn't support camera
         maxWidth: AppConstants.maxImageWidth.toDouble(),
         imageQuality: AppConstants.imageQuality,
       );
 
       if (pickedImage == null) return;
 
-      // ✅ FIXED: Read image as bytes immediately (no file system involved)
+      // ✅ Read as bytes (works on both Web & Mobile)
       final bytes = await pickedImage.readAsBytes();
       
       _logger.info('Image captured: ${bytes.length} bytes');
@@ -82,9 +81,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     }
   }
 
+  // ✅ REFACTORED: Use storage service with bytes
   Future<String?> _uploadImage() async {
-    // ✅ FIXED: Validasi bytes exist
-    if (_imageBytes == null || _imageBytes!.isEmpty) {
+    if (_imageBytes == null) {
       throw const StorageException(message: 'File foto tidak ditemukan');
     }
 
@@ -95,35 +94,25 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       }
 
       _logger.info('Uploading report image for user: ${user.uid}');
-      _logger.info('Image size: ${_imageBytes!.length} bytes');
 
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'report_$timestamp.jpg';
-      final storageRef = FirebaseStorage.instance.ref().child(
-        '${AppConstants.reportImagesPath}/${user.uid}/$fileName',
+      // ✅ Use storage service with bytes (Web-compatible!)
+      final storageService = ref.read(storageServiceProvider);
+      final result = await storageService.uploadImage(
+        bytes: _imageBytes!, // Use bytes instead of file
+        folder: 'reports',
+        userId: user.uid,
       );
 
-      // ✅ FIXED: Upload directly from bytes (no file involved!)
-      final metadata = SettableMetadata(
-        contentType: 'image/jpeg',
-        customMetadata: {
-          'uploadedBy': user.uid,
-          'uploadedAt': DateTime.now().toIso8601String(),
-        },
-      );
-
-      // Use putData instead of putFile
-      final uploadTask = await storageRef.putData(_imageBytes!, metadata);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      _logger.info('Image uploaded successfully: $downloadUrl');
-
-      return downloadUrl;
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Upload image error', e, stackTrace);
-      throw StorageException.fromFirebase(e);
+      // Handle result
+      if (result.isSuccess) {
+        _logger.info('Image uploaded successfully: ${result.data}');
+        return result.data;
+      } else {
+        _logger.error('Upload failed: ${result.error}');
+        throw StorageException(message: result.error ?? 'Upload failed');
+      }
     } catch (e, stackTrace) {
-      _logger.error('Unexpected upload error', e, stackTrace);
+      _logger.error('Upload error', e, stackTrace);
       rethrow;
     }
   }
@@ -131,7 +120,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   Future<void> _submitReport() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // ✅ FIXED: Validasi foto WAJIB
+    // ✅ Validasi foto WAJIB
     if (_imageBytes == null) {
       _showError('Mohon ambil foto terlebih dahulu');
       return;
@@ -374,7 +363,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 SizedBox(width: 8),
-                // ✅ Badge wajib
                 Chip(
                   label: Text('Wajib', style: TextStyle(fontSize: 10)),
                   backgroundColor: Colors.red,
@@ -396,7 +384,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                     AppConstants.defaultRadius,
                   ),
                   border: Border.all(
-                    // ✅ Red border jika belum ada foto
                     color: _imageBytes == null 
                         ? Colors.red.shade400 
                         : Colors.grey.shade400,
@@ -406,7 +393,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                 child: _imageBytes != null
                     ? Stack(
                         children: [
-                          // ✅ FIXED: Display image dari bytes
+                          // ✅ Display image from bytes (Web & Mobile compatible)
                           ClipRRect(
                             borderRadius: BorderRadius.circular(
                               AppConstants.defaultRadius - 2,

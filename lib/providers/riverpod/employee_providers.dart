@@ -1,6 +1,10 @@
+// lib/providers/riverpod/employee_providers.dart - UPDATED WITH NOTIFICATION
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report.dart';
+import '../../services/notification_helper.dart';
 import './report_providers.dart';
 
 // ==================== EMPLOYEE AUTH PROVIDERS ====================
@@ -45,11 +49,9 @@ class EmployeeReportsSummary {
   });
 }
 
-// FIXED: Ubah jadi Provider biasa tanpa AsyncValue
 final employeeReportsSummaryProvider = Provider<EmployeeReportsSummary>((ref) {
   final reportsAsync = ref.watch(employeeReportsProvider);
 
-  // Kalau masih loading atau error, return summary kosong
   return reportsAsync.when(
     data: (reports) {
       final pending = reports
@@ -148,7 +150,7 @@ class EmployeeActions {
 
   EmployeeActions(this.ref);
 
-  /// Create new report
+  /// Create new report with notification
   Future<void> createReport({
     required String location,
     required String description,
@@ -162,7 +164,7 @@ class EmployeeActions {
 
     final report = Report(
       id: '', // Will be set by Firestore
-      title: location, // Using location as title
+      title: location,
       location: location,
       date: DateTime.now(),
       status: ReportStatus.pending,
@@ -174,7 +176,36 @@ class EmployeeActions {
       isUrgent: isUrgent,
     );
 
+    // Create report
     await service.createReport(report);
+
+    // Get the created report ID
+    final createdReports = await service.getReportsByUser(user.uid).first;
+    final createdReport = createdReports.firstWhere(
+      (r) => r.location == location && r.description == description,
+    );
+
+    // Send notifications to admins
+    try {
+      final adminIds = await NotificationHelper.getAdminIds();
+      
+      if (isUrgent) {
+        // Send urgent notification
+        await NotificationHelper.notifyUrgentReport(
+          report: createdReport,
+          adminIds: adminIds,
+        );
+      } else {
+        // Send regular notification
+        await NotificationHelper.notifyReportCreated(
+          report: createdReport,
+          adminIds: adminIds,
+        );
+      }
+    } catch (e) {
+      // Log error but don't fail the report creation
+      debugPrint('Failed to send notification: $e');
+    }
   }
 
   /// Delete report

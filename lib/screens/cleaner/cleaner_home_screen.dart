@@ -1,4 +1,4 @@
-// lib/screens/cleaner/cleaner_home_screen.dart - WITH END DRAWER, BUILDER, and MODIFIED LOGOUT DIALOG
+// lib/screens/cleaner/cleaner_home_screen.dart - WITH 3 TAB SYSTEM (FIXED)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
+import '../../models/report.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
 import '../../providers/riverpod/notification_providers.dart';
@@ -17,6 +18,7 @@ import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 import 'request_detail_screen.dart';
+import 'cleaner_report_detail_screen.dart';
 import 'create_cleaning_report_screen.dart';
 
 class CleanerHomeScreen extends ConsumerStatefulWidget {
@@ -31,13 +33,11 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   late TabController _tabController;
   late AnimationController _fabAnimationController;
   late Animation<double> _fabScaleAnimation;
-  // GlobalKey TIDAK diperlukan jika menggunakan Builder
-  // final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // 3 TABS!
 
     _fabAnimationController = AnimationController(
       vsync: this,
@@ -60,18 +60,19 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // key: _scaffoldKey, // <-- TIDAK DIPERLUKAN LAGI
       backgroundColor: AppTheme.background,
-      endDrawer: _buildDrawer(context), // Drawer tetap di endDrawer
+      endDrawer: _buildDrawer(context),
       body: RefreshIndicator(
         onRefresh: () async {
+          ref.invalidate(pendingReportsProvider);
           ref.invalidate(availableRequestsProvider);
+          ref.invalidate(cleanerActiveReportsProvider);
           ref.invalidate(cleanerAssignedRequestsProvider);
           ref.invalidate(cleanerStatsProvider);
         },
         child: CustomScrollView(
           slivers: [
-            _buildSliverHeader(), // AppBar ada di sini, sudah diubah
+            _buildSliverHeader(),
             SliverToBoxAdapter(
               child: Column(
                 children: [
@@ -86,8 +87,9 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildAvailableRequestsTab(),
-                  _buildMyTasksTab(),
+                  _buildPendingReportsTab(), // TAB 1: Laporan Masuk
+                  _buildAvailableRequestsTab(), // TAB 2: Permintaan Layanan
+                  _buildMyTasksTab(), // TAB 3: Tugas Saya
                 ],
               ),
             ),
@@ -99,7 +101,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   }
 
   // ==================== DRAWER MENU ====================
-  // (Kode _buildDrawer tetap sama)
+
   Widget _buildDrawer(BuildContext context) {
     return Drawer(
       child: DrawerMenuWidget(
@@ -114,7 +116,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             title: 'Tugas Saya',
             onTap: () {
               Navigator.pop(context);
-              _tabController.animateTo(1);
+              _tabController.animateTo(2);
             },
           ),
           DrawerMenuItem(
@@ -150,7 +152,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== SLIVER HEADER (MODIFIED WITH BUILDER) ====================
+  // ==================== SLIVER HEADER ====================
 
   Widget _buildSliverHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
@@ -160,11 +162,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       expandedHeight: 200,
       floating: false,
       pinned: true,
-      automaticallyImplyLeading: false, // <-- Tetap false
+      automaticallyImplyLeading: false,
       backgroundColor: AppTheme.primary,
       iconTheme: const IconThemeData(color: Colors.white),
       actions: [
-        // Notification icon with badge (tetap sama)
         Stack(
           children: [
             IconButton(
@@ -201,7 +202,6 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
               ),
           ],
         ),
-        // Gunakan Builder untuk IconButton
         Builder(
           builder: (buttonContext) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
@@ -300,7 +300,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
   }
 
   // ==================== STATS CARDS ====================
-  // (Kode _buildStatsCards dan helpernya tetap sama)
+
   Widget _buildStatsCards() {
     final cleanerStats = ref.watch(cleanerStatsProvider);
 
@@ -367,21 +367,35 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== TAB BAR ====================
-  // (Kode _buildTabBar tetap sama)
+  // ==================== TAB BAR (3 TABS!) ====================
+
   Widget _buildTabBar() {
+    final pendingReports = ref.watch(pendingReportsProvider);
     final availableRequests = ref.watch(availableRequestsProvider);
+    final activeReports = ref.watch(cleanerActiveReportsProvider);
     final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
 
-    final availableCount = availableRequests.maybeWhen(
+    final pendingCount = pendingReports.maybeWhen(
+      data: (reports) => reports.length,
+      orElse: () => 0,
+    );
+
+    final requestsCount = availableRequests.maybeWhen(
       data: (requests) => requests.length,
       orElse: () => 0,
     );
 
-    final assignedCount = assignedRequests.maybeWhen(
+    final activeReportsCount = activeReports.maybeWhen(
+      data: (reports) => reports.length,
+      orElse: () => 0,
+    );
+
+    final assignedRequestsCount = assignedRequests.maybeWhen(
       data: (requests) => requests.length,
       orElse: () => 0,
     );
+
+    final myTasksCount = activeReportsCount + assignedRequestsCount;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -390,7 +404,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13), // Adjusted alpha
+            color: Colors.black.withAlpha(13),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -403,81 +417,95 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         indicatorColor: AppTheme.primary,
         indicatorWeight: 3,
         labelStyle: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.bold,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 14,
+          fontSize: 13,
           fontWeight: FontWeight.normal,
         ),
         tabs: [
           Tab(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Permintaan Baru'),
-                if (availableCount > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      availableCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            child: _buildTabWithBadge('Laporan Masuk', pendingCount, AppTheme.error),
           ),
           Tab(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Text('Tugas Saya'),
-                if (assignedCount > 0) ...[
-                  const SizedBox(width: 6),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.warning,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      assignedCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            child: _buildTabWithBadge('Permintaan', requestsCount, AppTheme.info),
+          ),
+          Tab(
+            child: _buildTabWithBadge('Tugas Saya', myTasksCount, AppTheme.warning),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildTabWithBadge(String label, int count, Color badgeColor) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (count > 0) ...[
+          const SizedBox(width: 6),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: badgeColor,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              count.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
 
-  // ==================== TAB VIEWS ====================
-  // (Kode _buildAvailableRequestsTab dan _buildMyTasksTab tetap sama)
-   Widget _buildAvailableRequestsTab() {
+  // ==================== TAB 1: PENDING REPORTS ====================
+
+  Widget _buildPendingReportsTab() {
+    final pendingReports = ref.watch(pendingReportsProvider);
+
+    return pendingReports.when(
+      data: (reports) {
+        if (reports.isEmpty) {
+          // ✅ FIX: Gunakan EmptyStateWidget.custom
+          return EmptyStateWidget.custom(
+            icon: Icons.inbox_outlined,
+            title: 'Belum ada laporan masuk',
+            subtitle: 'Laporan dari karyawan akan muncul di sini',
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: reports.length,
+          itemBuilder: (context, index) {
+            final report = reports[index];
+            return _buildReportCard(report, index);
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => _buildErrorState(error),
+    );
+  }
+
+  // ==================== TAB 2: AVAILABLE REQUESTS ====================
+
+  Widget _buildAvailableRequestsTab() {
     final availableRequests = ref.watch(availableRequestsProvider);
 
     return availableRequests.when(
@@ -510,68 +538,274 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: $error'),
-          ],
-        ),
-      ),
+      error: (error, stack) => _buildErrorState(error),
     );
   }
 
+  // ==================== TAB 3: MY TASKS ====================
+
   Widget _buildMyTasksTab() {
+    final activeReports = ref.watch(cleanerActiveReportsProvider);
     final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
 
-    return assignedRequests.when(
-      data: (requests) {
-        if (requests.isEmpty) {
-          return EmptyStateWidget.noTasks();
-        }
+    return activeReports.when(
+      data: (reports) {
+        return assignedRequests.when(
+          data: (requests) {
+            if (reports.isEmpty && requests.isEmpty) {
+              return EmptyStateWidget.noTasks();
+            }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: requests.length,
-          itemBuilder: (context, index) {
-            final request = requests[index];
-            return RequestCard(
-              location: request['location'] as String? ?? 'Lokasi tidak diketahui',
-              description: request['description'] as String? ?? '',
-              isUrgent: request['isUrgent'] as bool? ?? false,
-              animationIndex: index,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        RequestDetailScreen(requestId: request['id'] as String),
-                  ),
-                );
-              },
+            // Combine reports and requests
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                if (reports.isNotEmpty) ...[
+                  _buildSectionHeader('Laporan (${reports.length})'),
+                  const SizedBox(height: 8),
+                  ...reports.asMap().entries.map((entry) {
+                    return _buildReportCard(entry.value, entry.key);
+                  }),
+                  const SizedBox(height: 16),
+                ],
+                if (requests.isNotEmpty) ...[
+                  _buildSectionHeader('Permintaan Layanan (${requests.length})'),
+                  const SizedBox(height: 8),
+                  ...requests.asMap().entries.map((entry) {
+                    final request = entry.value;
+                    return RequestCard(
+                      location: request['location'] as String? ??
+                          'Lokasi tidak diketahui',
+                      description: request['description'] as String? ?? '',
+                      isUrgent: request['isUrgent'] as bool? ?? false,
+                      animationIndex: entry.key,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RequestDetailScreen(
+                              requestId: request['id'] as String,
+                            ),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ],
+              ],
             );
           },
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => _buildErrorState(error),
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text('Error: $error'),
-          ],
+      error: (error, stack) => _buildErrorState(error),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.textPrimary,
         ),
       ),
     );
   }
 
+  // ==================== HELPER: REPORT CARD ====================
+
+  Widget _buildReportCard(Report report, int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: Duration(milliseconds: 300 + (index * 50)),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(0, 20 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: report.isUrgent
+              ? const BorderSide(color: AppTheme.error, width: 2)
+              : BorderSide.none,
+        ),
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    CleanerReportDetailScreen(reportId: report.id),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // Image thumbnail
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: report.imageUrl != null
+                      ? Image.network(
+                          report.imageUrl!,
+                          width: 70,
+                          height: 70,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 70,
+                              height: 70,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image),
+                            );
+                          },
+                        )
+                      : Container(
+                          width: 70,
+                          height: 70,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image, color: Colors.grey),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                // Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              report.location,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (report.isUrgent)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.error,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'URGENT',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        report.description ?? '',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textSecondary,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: report.status.color.withAlpha(50),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              report.status.displayName,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: report.status.color,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          Icon(
+                            Icons.access_time,
+                            size: 12,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            DateFormatter.relativeTime(report.date),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== ERROR STATE ====================
+
+  Widget _buildErrorState(Object error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+          const SizedBox(height: 16),
+          Text('Error: $error'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              ref.invalidate(pendingReportsProvider);
+              ref.invalidate(availableRequestsProvider);
+            },
+            child: const Text('Coba Lagi'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // ==================== FAB ====================
-  // (Kode _buildFAB tetap sama)
+
   Widget _buildFAB(BuildContext context) {
     return ScaleTransition(
       scale: _fabScaleAnimation,
@@ -592,7 +826,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
     );
   }
 
-  // ==================== LOGOUT (MODIFIED DIALOG BUTTON) ====================
+  // ==================== LOGOUT ====================
 
   Future<void> _handleLogout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
@@ -605,15 +839,13 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
             onPressed: () => Navigator.pop(context, false),
             child: const Text('BATAL'),
           ),
-          // VVV MODIFIKASI: Ubah ElevatedButton menjadi TextButton VVV
-          TextButton( // <-- Ubah dari ElevatedButton
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom( // <-- Gunakan style TextButton
-              foregroundColor: AppTheme.error, // <-- Atur warna teks jadi merah
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.error,
             ),
             child: const Text('KELUAR'),
           ),
-          // ^^^ MODIFIKASI ^^^
         ],
       ),
     );
@@ -635,5 +867,4 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
       }
     }
   }
-
-} // Penutup class state
+}

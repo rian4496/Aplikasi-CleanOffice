@@ -30,4 +30,40 @@ class DateFormatter {
   static String timeOnly(DateTime date) {
     return DateFormat('HH:mm', 'id_ID').format(date);
   }
+
+  // ==================== TAMBAHAN UNTUK CLEANER REPORTS ====================
+
+  /// Format tanggal dengan waktu lengkap.
+  /// Contoh: 20 Okt 2025, 14:30
+  static String fullDateTime(DateTime date) {
+    return DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(date);
+  }
+
+  /// Format waktu relatif (relative time).
+  /// Contoh: "2 menit lalu", "3 jam lalu", "Kemarin"
+  static String relativeTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inSeconds < 60) {
+      return 'Baru saja';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} menit lalu';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} jam lalu';
+    } else if (difference.inDays == 1) {
+      return 'Kemarin';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays} hari lalu';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '$weeks minggu lalu';
+    } else if (difference.inDays < 365) {
+      final months = (difference.inDays / 30).floor();
+      return '$months bulan lalu';
+    } else {
+      final years = (difference.inDays / 365).floor();
+      return '$years tahun lalu';
+    }
+  }
 }

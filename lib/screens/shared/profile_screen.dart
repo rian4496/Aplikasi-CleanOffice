@@ -1,120 +1,101 @@
-// lib/screens/shared/profile_screen.dart - FINAL VERSION
+// lib/screens/shared/profile_screen.dart - MODIFIED LAYOUT & REACTIVE DATA
 
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:cached_network_image/cached_network_image.dart'; // Import CachedNetworkImage
+import 'package:intl/intl.dart'; // Untuk format tanggal
 
-import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_constants.dart';
+// Import provider dan layar lain
 import '../../providers/riverpod/auth_providers.dart';
+import '../../models/user_profile.dart'; // Import UserProfile model
+import '../../models/user_role.dart'; // Import UserRole
+import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart'; // Untuk AppConstants
+import 'edit_profile_screen.dart'; // Layar Edit
+import 'change_password_screen.dart'; // Layar Ubah Password
 
-class ProfileScreen extends ConsumerWidget {
+class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
   const ProfileScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final user = FirebaseAuth.instance.currentUser;
-    
-    if (user == null) {
-      return const Scaffold(
-        body: Center(child: Text('User not logged in')),
-      );
-    }
+  Widget build(BuildContext context, WidgetRef ref) { // Tambah WidgetRef ref
+    // Tonton provider untuk data profil yang reaktif
+    final profileAsyncValue = ref.watch(currentUserProfileProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: CustomScrollView(
-        slivers: [
-          _buildSliverAppBar(context, user),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  _buildProfileHeader(user),
-                  const SizedBox(height: 32),
-                  
-                  // Fetch user data from Firestore
-                  _buildUserInfoFromFirestore(user.uid),
-                  
-                  const SizedBox(height: 24),
-                  _buildMenuItems(context, ref),
-                ],
-              ),
+      appBar: AppBar( // Gunakan AppBar standar
+        title: const Text('Profil'),
+        backgroundColor: AppTheme.primaryDark, // Atau AppTheme.primary
+        foregroundColor: Colors.white,
+        iconTheme: const IconThemeData(color: Colors.white), // Tombol back putih
+        titleTextStyle: const TextStyle( // Pastikan title putih
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w600,
             ),
-          ),
-        ],
+      ),
+      body: profileAsyncValue.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => _buildErrorState(context, ref, error), // Helper error state
+        data: (userProfile) {
+          if (userProfile == null) {
+            // Handle jika user tidak ditemukan/logout
+             WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (context.mounted) Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+             });
+             return const Center(child: CircularProgressIndicator()); // Tampilkan loading sementara redirect
+          }
+
+          // Tampilkan konten utama jika data ada
+          return RefreshIndicator(
+             onRefresh: () async => ref.invalidate(currentUserProfileProvider), // Pull-to-refresh
+             child: ListView( // Ganti CustomScrollView jadi ListView
+               padding: const EdgeInsets.all(16.0),
+               children: [
+                 const SizedBox(height: 20),
+                 _buildProfileHeader(userProfile), // Kirim UserProfile
+                 const SizedBox(height: 32),
+                 _buildUserInfoSection(userProfile), // Kirim UserProfile
+                 const SizedBox(height: 24),
+                 _buildActionCard(context), // Card untuk tombol aksi
+               ],
+             ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSliverAppBar(BuildContext context, User user) {
-    return SliverAppBar(
-      expandedHeight: 120,
-      floating: false,
-      pinned: true,
-      backgroundColor: AppTheme.primary,
-      leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
-        onPressed: () => Navigator.pop(context),
-      ),
-      flexibleSpace: FlexibleSpaceBar(
-        title: const Text(
-          'Profil',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppTheme.primary, AppTheme.primaryDark],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProfileHeader(User user) {
-    // Get first letter of name for avatar
-    final firstLetter = (user.displayName?.isNotEmpty ?? false)
-        ? user.displayName![0].toUpperCase()
-        : 'U';
+  // Widget Header (Avatar, Nama, Email, Role Chip) - Menggunakan UserProfile
+  Widget _buildProfileHeader(UserProfile userProfile) {
+    final firstLetter = (userProfile.displayName.isNotEmpty)
+        ? userProfile.displayName[0].toUpperCase()
+        : '?';
+    final photoURL = userProfile.photoURL;
 
     return Column(
       children: [
-        // Avatar
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppTheme.primary.withAlpha(50),
-            border: Border.all(color: AppTheme.primary, width: 3),
-          ),
-          child: Center(
-            child: Text(
-              firstLetter,
-              style: const TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.primary,
-              ),
-            ),
-          ),
+        CircleAvatar(
+          radius: 50, // Ukuran avatar
+          backgroundColor: AppTheme.primaryLight,
+          backgroundImage: (photoURL != null && photoURL.isNotEmpty)
+              ? CachedNetworkImageProvider(photoURL)
+              : null,
+          child: (photoURL == null || photoURL.isEmpty)
+              ? Text(
+                  firstLetter,
+                  style: const TextStyle(
+                    fontSize: 40,
+                    color: AppTheme.primaryDark,
+                    fontWeight: FontWeight.bold,
+                  ),
+                )
+              : null,
         ),
         const SizedBox(height: 16),
-        
-        // Name
         Text(
-          user.displayName ?? 'User',
+          userProfile.displayName,
           style: const TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
@@ -122,10 +103,8 @@ class ProfileScreen extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 4),
-        
-        // Email
         Text(
-          user.email ?? '',
+          userProfile.email,
           style: const TextStyle(
             fontSize: 14,
             color: AppTheme.textSecondary,
@@ -135,77 +114,13 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  // ✅ FETCH USER DATA FROM FIRESTORE
-  Widget _buildUserInfoFromFirestore(String userId) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('users')
-          .doc(userId)
-          .snapshots(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+  // Widget untuk Info Tambahan (Jabatan, Bergabung Sejak) - Menggunakan UserProfile
+  Widget _buildUserInfoSection(UserProfile userProfile) {
+     final joinDateFormatted = DateFormat('MMMM yyyy', 'id_ID').format(userProfile.joinDate);
+     final jobTitle = UserRole.getRoleDisplayName(userProfile.role);
 
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return _buildUserInfoCard(
-            jobTitle: 'User',
-            joinDate: 'Unknown',
-          );
-        }
-
-        final userData = snapshot.data!.data() as Map<String, dynamic>;
-        
-        // ✅ MAP ROLE TO JOB TITLE
-        final role = userData['role'] as String? ?? 'user';
-        final jobTitle = _getJobTitle(role);
-        
-        // ✅ FORMAT JOIN DATE - Support both 'joinDate' and 'createdAt'
-        final joinDateTimestamp = userData['joinDate'] as Timestamp? ?? 
-                                  userData['createdAt'] as Timestamp?;
-        final joinDate = _formatJoinDate(joinDateTimestamp);
-
-        return _buildUserInfoCard(
-          jobTitle: jobTitle,
-          joinDate: joinDate,
-        );
-      },
-    );
-  }
-
-  // ✅ MAP ROLE TO JOB TITLE IN INDONESIAN
-  String _getJobTitle(String role) {
-    switch (role.toLowerCase()) {
-      case 'employee':
-        return 'Karyawan';
-      case 'cleaner':
-        return 'Petugas Kebersihan';
-      case 'admin':
-        return 'Administrator';
-      default:
-        return 'User';
-    }
-  }
-
-  // ✅ FORMAT JOIN DATE
-  String _formatJoinDate(Timestamp? timestamp) {
-    if (timestamp == null) return 'Unknown';
-    
-    try {
-      final date = timestamp.toDate();
-      return DateFormat('MMMM yyyy', 'id_ID').format(date);
-    } catch (e) {
-      return 'Unknown';
-    }
-  }
-
-  Widget _buildUserInfoCard({
-    required String jobTitle,
-    required String joinDate,
-  }) {
     return Column(
       children: [
-        // Jabatan
         _buildInfoItem(
           icon: Icons.work_outline,
           label: 'Jabatan',
@@ -213,18 +128,27 @@ class ProfileScreen extends ConsumerWidget {
           iconColor: AppTheme.primary,
         ),
         const SizedBox(height: 16),
-        
-        // Bergabung Sejak
         _buildInfoItem(
-          icon: Icons.calendar_today,
+          icon: Icons.calendar_today_outlined,
           label: 'Bergabung Sejak',
-          value: joinDate,
+          value: joinDateFormatted,
           iconColor: AppTheme.secondary,
         ),
+         // Tambahkan lokasi jika ada dan tidak kosong
+         if (userProfile.location != null && userProfile.location!.isNotEmpty) ...[
+           const SizedBox(height: 16),
+           _buildInfoItem(
+             icon: Icons.location_on_outlined,
+             label: 'Lokasi Kerja',
+             value: userProfile.location!,
+             iconColor: AppTheme.success, // Atau warna lain
+           ),
+         ]
       ],
     );
   }
 
+  // Helper widget untuk item info (Jabatan, Tanggal)
   Widget _buildInfoItem({
     required IconData icon,
     required String label,
@@ -232,29 +156,29 @@ class ProfileScreen extends ConsumerWidget {
     required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), // Kurangi padding vertikal
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withAlpha(10), // Shadow lebih halus
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8), // Padding icon
             decoration: BoxDecoration(
-              color: iconColor.withAlpha(25),
-              borderRadius: BorderRadius.circular(10),
+              color: iconColor.withAlpha(20), // Background icon lebih transparan
+              borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: iconColor, size: 24),
+            child: Icon(icon, color: iconColor, size: 20), // Ukuran icon
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -264,14 +188,13 @@ class ProfileScreen extends ConsumerWidget {
                   style: const TextStyle(
                     fontSize: 12,
                     color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 4),
+                // SizedBox(height: 2), // Kurangi jarak
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 15, // Ukuran font value
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary,
                   ),
@@ -284,122 +207,67 @@ class ProfileScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildMenuItems(BuildContext context, WidgetRef ref) {
-    return Column(
-      children: [
-        _buildMenuItem(
-          icon: Icons.person_outline,
-          title: 'Edit Profil',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Fitur edit profil segera hadir')),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildMenuItem(
-          icon: Icons.lock_outline,
-          title: 'Ubah Password',
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Fitur ubah password segera hadir')),
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-        _buildMenuItem(
-          icon: Icons.logout,
-          title: 'Logout',
-          titleColor: AppTheme.error,
-          iconColor: AppTheme.error,
-          onTap: () => _handleLogout(context, ref),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMenuItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-    Color? titleColor,
-    Color? iconColor,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(13),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: iconColor ?? AppTheme.primary),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: titleColor ?? AppTheme.textPrimary,
-                ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right,
-              color: Colors.grey[400],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('BATAL'),
+  // Widget Card untuk Tombol Aksi (Edit Profil, Ubah Password)
+  Widget _buildActionCard(BuildContext context) {
+    return Card(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      clipBehavior: Clip.antiAlias, // Agar Divider tidak keluar batas Card
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.edit_outlined, color: AppTheme.primary),
+            title: const Text('Edit Profil'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () {
+              // Navigasi ke EditProfileScreen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const EditProfileScreen()),
+              );
+              // Tidak perlu menunggu hasil atau invalidate, provider akan handle
+            },
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text('KELUAR'),
+          const Divider(height: 1, indent: 16, endIndent: 16), // Divider di dalam Card
+          ListTile(
+            leading: const Icon(Icons.lock_outline, color: AppTheme.primary),
+            title: const Text('Ubah Password'),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+            onTap: () {
+              // Navigasi ke ChangePasswordScreen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+              );
+            },
           ),
         ],
       ),
     );
-
-    if (shouldLogout == true && context.mounted) {
-      try {
-        await FirebaseAuth.instance.signOut();
-        if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal logout: $e'),
-              backgroundColor: AppTheme.error,
-            ),
-          );
-        }
-      }
-    }
   }
+
+   // Helper widget untuk menampilkan state error
+   Widget _buildErrorState(BuildContext context, WidgetRef ref, Object error) {
+     return Center(
+       child: Padding(
+         padding: const EdgeInsets.all(16.0),
+         child: Column(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             const Icon(Icons.error_outline, color: AppTheme.error, size: 50),
+             const SizedBox(height: 16),
+             const Text('Gagal memuat profil', style: TextStyle(fontSize: 18)),
+             const SizedBox(height: 8),
+             Text(error.toString(), textAlign: TextAlign.center, style: const TextStyle(color: AppTheme.textSecondary)),
+             const SizedBox(height: 16),
+             ElevatedButton.icon(
+               icon: const Icon(Icons.refresh),
+               label: const Text('Coba Lagi'),
+               onPressed: () => ref.invalidate(currentUserProfileProvider),
+             ),
+           ],
+         ),
+       ),
+     );
+   }
 }

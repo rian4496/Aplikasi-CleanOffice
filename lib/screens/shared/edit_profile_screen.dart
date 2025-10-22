@@ -75,7 +75,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         maxWidth: AppConstants.maxImageWidth.toDouble(),
         maxHeight: AppConstants.maxImageHeight.toDouble(),
         imageQuality: AppConstants.imageQuality,
-      );
+      ); 
 
       if (pickedFile != null) {
         final file = File(pickedFile.path);

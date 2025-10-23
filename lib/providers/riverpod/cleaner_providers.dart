@@ -267,7 +267,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     }
   }
 
-  /// Complete a report (in_progress → completed)
+  /// Complete a report (in_progress → completed) - TANPA FOTO
   Future<void> completeReport(String reportId) async {
     state = const AsyncValue.loading();
 
@@ -283,6 +283,37 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Complete report error', e, stackTrace);
+      final exception = FirestoreException.fromFirebase(e);
+      state = AsyncValue.error(exception, stackTrace);
+      rethrow;
+    } catch (e, stackTrace) {
+      _logger.error('Unexpected complete report error', e, stackTrace);
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Complete a report WITH PROOF PHOTO (in_progress → completed)
+  /// 🆕 BATCH 2: Method baru untuk complete dengan foto bukti
+  Future<void> completeReportWithProof(
+    String reportId,
+    String completionImageUrl,
+  ) async {
+    state = const AsyncValue.loading();
+
+    try {
+      _logger.info('Completing report with proof: $reportId');
+
+      await _firestore.collection('reports').doc(reportId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'completionImageUrl': completionImageUrl, // ← Foto bukti
+      });
+
+      _logger.info('Report completed with proof successfully');
+      state = const AsyncValue.data(null);
+    } on FirebaseException catch (e, stackTrace) {
+      _logger.error('Complete report with proof error', e, stackTrace);
       final exception = FirestoreException.fromFirebase(e);
       state = AsyncValue.error(exception, stackTrace);
       rethrow;
@@ -359,7 +390,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     }
   }
 
-  /// Complete a request
+  /// Complete a request - TANPA FOTO
   Future<void> completeRequest(String requestId) async {
     state = const AsyncValue.loading();
 
@@ -375,6 +406,37 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
       state = const AsyncValue.data(null);
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Complete request error', e, stackTrace);
+      final exception = FirestoreException.fromFirebase(e);
+      state = AsyncValue.error(exception, stackTrace);
+      rethrow;
+    } catch (e, stackTrace) {
+      _logger.error('Unexpected complete request error', e, stackTrace);
+      state = AsyncValue.error(e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Complete a request WITH PROOF PHOTO (in_progress → completed)
+  /// 🆕 BATCH 2: Method baru untuk complete dengan foto bukti
+  Future<void> completeRequestWithProof(
+    String requestId,
+    String completionImageUrl,
+  ) async {
+    state = const AsyncValue.loading();
+
+    try {
+      _logger.info('Completing request with proof: $requestId');
+
+      await _firestore.collection('requests').doc(requestId).update({
+        'status': 'completed',
+        'completedAt': FieldValue.serverTimestamp(),
+        'completionImageUrl': completionImageUrl, // ← Foto bukti
+      });
+
+      _logger.info('Request completed with proof successfully');
+      state = const AsyncValue.data(null);
+    } on FirebaseException catch (e, stackTrace) {
+      _logger.error('Complete request with proof error', e, stackTrace);
       final exception = FirestoreException.fromFirebase(e);
       state = AsyncValue.error(exception, stackTrace);
       rethrow;

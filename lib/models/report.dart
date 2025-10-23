@@ -163,7 +163,8 @@ class Report {
   final String? verificationNotes;
 
   // Detail Laporan
-  final String? imageUrl;
+  final String? imageUrl;              // ← Foto laporan awal (dari employee)
+  final String? completionImageUrl;    // ← Foto bukti selesai (dari cleaner) 🆕
   final String? description;
   final bool isUrgent;
 
@@ -191,6 +192,7 @@ class Report {
     this.verifiedAt,
     this.verificationNotes,
     this.imageUrl,
+    this.completionImageUrl,          // 🆕 TAMBAH INI
     this.description,
     this.isUrgent = false,
     this.assignedAt,
@@ -219,6 +221,7 @@ class Report {
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
+      completionImageUrl: data['completionImageUrl'] as String?,  // 🆕 TAMBAH INI
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
       assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
@@ -246,6 +249,7 @@ class Report {
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
+      completionImageUrl: data['completionImageUrl'] as String?,  // 🆕 TAMBAH INI
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
       assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
@@ -272,6 +276,7 @@ class Report {
       'verifiedAt': verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
       'verificationNotes': verificationNotes,
       'imageUrl': imageUrl,
+      'completionImageUrl': completionImageUrl,  // 🆕 TAMBAH INI
       'description': description,
       'isUrgent': isUrgent,
       'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
@@ -300,6 +305,7 @@ class Report {
     DateTime? verifiedAt,
     String? verificationNotes,
     String? imageUrl,
+    String? completionImageUrl,        // 🆕 TAMBAH INI
     String? description,
     bool? isUrgent,
     DateTime? assignedAt,
@@ -323,6 +329,7 @@ class Report {
       verifiedAt: verifiedAt ?? this.verifiedAt,
       verificationNotes: verificationNotes ?? this.verificationNotes,
       imageUrl: imageUrl ?? this.imageUrl,
+      completionImageUrl: completionImageUrl ?? this.completionImageUrl,  // 🆕 TAMBAH INI
       description: description ?? this.description,
       isUrgent: isUrgent ?? this.isUrgent,
       assignedAt: assignedAt ?? this.assignedAt,

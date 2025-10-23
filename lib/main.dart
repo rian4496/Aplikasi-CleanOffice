@@ -1,4 +1,4 @@
-// lib/main.dart - FIXED
+// lib/main.dart - UPDATED: Production Firebase Mode
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -43,7 +43,23 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // 🔥 EMULATOR CONFIGURATION (Auto-detect Debug Mode)
+  // ==================== FIREBASE EMULATOR CONFIG ====================
+  // 
+  // OPTION A: Use PRODUCTION Firebase (Current Setting)
+  // - For testing with real Firebase project
+  // - Upload foto will work
+  // - Data saved to production Firestore
+  //
+  // OPTION B: Use LOCAL Emulator (Uncomment code below)
+  // - For local development
+  // - Need to run: firebase emulators:start
+  // - Data saved to local emulator only
+  //
+  // ==================================================================
+
+  // 🔥 EMULATOR MODE: DISABLED (Using Production Firebase)
+ // debugPrint('📱 Using PRODUCTION Firebase');
+  
   if (kDebugMode) {
     try {
       // Detect platform - Android emulator uses 10.0.2.2
@@ -62,6 +78,7 @@ void main() async {
       debugPrint('⚠️ Failed to connect to emulators: $e');
     }
   }
+
 
   // Initialize date formatting for Indonesian locale
   await initializeDateFormatting('id_ID', null);
@@ -101,7 +118,6 @@ class MyApp extends StatelessWidget {
         
         // ==================== EMPLOYEE ROUTES ====================
         '/create_report': (context) => const CreateReportScreen(),
-        // ❌ REMOVED: '/report_detail' route (now pass Report object directly via Navigator.push)
         '/request_history': (context) => const Scaffold(
           body: Center(child: Text('Request History - Coming Soon')),
         ),

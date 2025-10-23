@@ -1,3 +1,8 @@
+// BATCH 2 - FILE 4: REQUEST DETAIL SCREEN (COMPLETE WITH PHOTO)
+// ==========================================
+// REPLACE: lib/screens/cleaner/request_detail_screen.dart
+// ==========================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -7,6 +12,8 @@ import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
+import '../../services/storage_service.dart'; // ← IMPORT STORAGE
+import '../../widgets/completion_photo_dialog.dart'; // ← IMPORT DIALOG
 
 final _logger = AppLogger('RequestDetailScreen');
 
@@ -607,7 +614,22 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     }
   }
 
+  // ==================== ✅ UPDATED: Complete Request WITH PHOTO ====================
   Future<void> _completeRequest() async {
+    // Step 1: Show photo dialog
+    final photoFile = await CompletionPhotoDialog.show(
+      context,
+      title: 'Upload Foto Bukti',
+      description: 'Upload foto sebagai bukti bahwa pekerjaan sudah selesai',
+    );
+
+    // User cancelled
+    if (photoFile == null) {
+      _logger.info('User cancelled photo upload');
+      return;
+    }
+
+    // Step 2: Confirm completion
     final confirmed = await _showConfirmDialog(
       'Tandai Selesai',
       'Apakah Anda yakin pekerjaan sudah selesai?',
@@ -617,23 +639,80 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
 
     if (!confirmed) return;
 
+    // Step 3: Upload photo & Complete
     setState(() => _isProcessing = true);
 
     try {
+      final userId = ref.read(currentUserIdProvider);
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Show uploading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Mengupload foto...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      // Upload photo to Firebase Storage
+      final storageService = ref.read(storageServiceProvider);
+      final imageBytes = await photoFile.readAsBytes();
+
+      final uploadResult = await storageService.uploadImage(
+        bytes: imageBytes,
+        folder: 'request_completions',
+        userId: userId,
+      );
+
+      // Clear uploading snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      // Check upload result
+      if (!uploadResult.isSuccess || uploadResult.data == null) {
+        throw Exception(uploadResult.error ?? 'Upload gagal');
+      }
+
+      final photoUrl = uploadResult.data!;
+      _logger.info('Photo uploaded: $photoUrl');
+
+      // Complete request with photo URL
       final actions = ref.read(cleanerActionsProvider.notifier);
-      await actions.completeRequest(widget.requestId);
+      await actions.completeRequestWithProof(widget.requestId, photoUrl);
 
       if (!mounted) return;
-      _showSuccessSnackbar('Pekerjaan berhasil diselesaikan!');
+      _showSuccessSnackbar('Pekerjaan berhasil diselesaikan dengan foto bukti!');
 
       // Go back after completion
       Navigator.pop(context);
     } on FirestoreException catch (e) {
       _logger.error('Complete request error', e);
-      _showErrorSnackbar(e.message);
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showErrorSnackbar(e.message);
+      }
     } catch (e) {
       _logger.error('Unexpected error', e);
-      _showErrorSnackbar(AppConstants.genericErrorMessage);
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showErrorSnackbar('Gagal: ${e.toString()}');
+      }
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);

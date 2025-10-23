@@ -17,9 +17,6 @@ class FirestoreService {
   // Collection references
   CollectionReference get _reportsCollection =>
       _firestore.collection('reports');
-  // ❌ REMOVED: Unused collections to fix warnings
-  // CollectionReference get _usersCollection => _firestore.collection('users');
-  // CollectionReference get _requestsCollection => _firestore.collection('requests');
 
   // ==================== REPORT QUERIES ====================
 
@@ -312,6 +309,26 @@ class FirestoreService {
       _logger.info('Report $reportId assigned to $cleanerName');
     } catch (e) {
       _logger.severe('Error assigning report to cleaner: $e');
+      rethrow;
+    }
+  }
+
+  // 🆕 NEW METHOD: Complete report with proof photo
+  /// Complete report with proof photo (untuk cleaner)
+  /// Digunakan saat cleaner menandai laporan selesai dengan upload foto bukti
+  Future<void> completeReportWithProof(
+    String reportId,
+    String completionImageUrl,
+  ) async {
+    try {
+      await updateReport(reportId, {
+        'status': ReportStatus.completed.toFirestore(),
+        'completedAt': FieldValue.serverTimestamp(),
+        'completionImageUrl': completionImageUrl,
+      });
+      _logger.info('Report $reportId completed with proof image');
+    } catch (e) {
+      _logger.severe('Error completing report with proof: $e');
       rethrow;
     }
   }

@@ -1,4 +1,8 @@
-// lib/screens/cleaner/cleaner_report_detail_screen.dart
+// BATCH 2 - FILE 3: CLEANER REPORT DETAIL SCREEN (COMPLETE WITH PHOTO)
+// ==========================================
+// REPLACE: lib/screens/cleaner/cleaner_report_detail_screen.dart
+// ==========================================
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +14,8 @@ import '../../core/error/exceptions.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
+import '../../services/storage_service.dart'; // ← IMPORT STORAGE
+import '../../widgets/completion_photo_dialog.dart';
 
 final _logger = AppLogger('CleanerReportDetailScreen');
 
@@ -69,8 +75,7 @@ class _CleanerReportDetailScreenState
                 if (report.imageUrl != null && report.imageUrl!.isNotEmpty)
                   _buildImage(report.imageUrl!),
 
-                if (report.imageUrl != null)
-                  const SizedBox(height: 16),
+                if (report.imageUrl != null) const SizedBox(height: 16),
 
                 // Info sections
                 _buildInfoSection(
@@ -105,8 +110,7 @@ class _CleanerReportDetailScreenState
                     AppTheme.textSecondary,
                   ),
 
-                if (report.userEmail != null)
-                  const SizedBox(height: 16),
+                if (report.userEmail != null) const SizedBox(height: 16),
 
                 _buildInfoSection(
                   'Tanggal Laporan',
@@ -267,7 +271,7 @@ class _CleanerReportDetailScreenState
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
+                shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 24),
             ),
@@ -278,18 +282,18 @@ class _CleanerReportDetailScreenState
                 children: [
                   Text(
                     label,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[600],
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     value,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -304,7 +308,9 @@ class _CleanerReportDetailScreenState
   Widget _buildTimeline(Report report) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -314,18 +320,18 @@ class _CleanerReportDetailScreenState
               'Timeline',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             _buildTimelineItem(
-              'Dibuat',
+              'Dilaporkan',
               report.date,
               Icons.add_circle_outline,
               AppTheme.info,
             ),
             if (report.assignedAt != null)
               _buildTimelineItem(
-                'Ditugaskan',
+                'Diterima Petugas',
                 report.assignedAt!,
-                Icons.assignment_ind,
+                Icons.check_circle_outline,
                 AppTheme.success,
               ),
             if (report.startedAt != null)
@@ -339,7 +345,7 @@ class _CleanerReportDetailScreenState
               _buildTimelineItem(
                 'Selesai',
                 report.completedAt!,
-                Icons.check_circle,
+                Icons.done_all,
                 Colors.purple,
                 isLast: true,
               ),
@@ -351,7 +357,7 @@ class _CleanerReportDetailScreenState
 
   Widget _buildTimelineItem(
     String label,
-    DateTime timestamp,
+    DateTime dateTime,
     IconData icon,
     Color color, {
     bool isLast = false,
@@ -367,7 +373,7 @@ class _CleanerReportDetailScreenState
                 color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, size: 18, color: color),
+              child: Icon(icon, size: 16, color: color),
             ),
             if (!isLast)
               Container(
@@ -393,7 +399,7 @@ class _CleanerReportDetailScreenState
                   ),
                 ),
                 Text(
-                  DateFormatter.fullDateTime(timestamp),
+                  _formatDateTime(dateTime),
                   style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                 ),
               ],
@@ -405,7 +411,7 @@ class _CleanerReportDetailScreenState
   }
 
   Widget _buildActionButtons(Report report, String? currentUserId) {
-    // If completed/verified, no actions
+    // If completed, no actions
     if (report.status == ReportStatus.completed ||
         report.status == ReportStatus.verified) {
       return _buildInfoCard(
@@ -598,7 +604,22 @@ class _CleanerReportDetailScreenState
     }
   }
 
+  // ==================== ✅ UPDATED: Complete Report WITH PHOTO ====================
   Future<void> _completeReport() async {
+    // Step 1: Show photo dialog
+    final photoFile = await CompletionPhotoDialog.show(
+      context,
+      title: 'Upload Foto Bukti',
+      description: 'Upload foto sebagai bukti bahwa laporan sudah diselesaikan',
+    );
+
+    // User cancelled
+    if (photoFile == null) {
+      _logger.info('User cancelled photo upload');
+      return;
+    }
+
+    // Step 2: Confirm completion
     final confirmed = await _showConfirmDialog(
       'Tandai Selesai',
       'Apakah Anda yakin pekerjaan sudah selesai?',
@@ -608,23 +629,80 @@ class _CleanerReportDetailScreenState
 
     if (!confirmed) return;
 
+    // Step 3: Upload photo & Complete
     setState(() => _isProcessing = true);
 
     try {
+      final userId = ref.read(currentUserIdProvider);
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
+
+      // Show uploading indicator
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('Mengupload foto...'),
+            ],
+          ),
+          duration: Duration(seconds: 30),
+        ),
+      );
+
+      // Upload photo to Firebase Storage
+      final storageService = ref.read(storageServiceProvider);
+      final imageBytes = await photoFile.readAsBytes();
+
+      final uploadResult = await storageService.uploadImage(
+        bytes: imageBytes,
+        folder: 'report_completions',
+        userId: userId,
+      );
+
+      // Clear uploading snackbar
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).clearSnackBars();
+
+      // Check upload result
+      if (!uploadResult.isSuccess || uploadResult.data == null) {
+        throw Exception(uploadResult.error ?? 'Upload gagal');
+      }
+
+      final photoUrl = uploadResult.data!;
+      _logger.info('Photo uploaded: $photoUrl');
+
+      // Complete report with photo URL
       final actions = ref.read(cleanerActionsProvider.notifier);
-      await actions.completeReport(widget.reportId);
+      await actions.completeReportWithProof(widget.reportId, photoUrl);
 
       if (!mounted) return;
-      _showSuccessSnackbar('Laporan berhasil diselesaikan!');
+      _showSuccessSnackbar('Laporan berhasil diselesaikan dengan foto bukti!');
 
       // Go back after completion
       Navigator.pop(context);
     } on FirestoreException catch (e) {
       _logger.error('Complete report error', e);
-      _showErrorSnackbar(e.message);
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showErrorSnackbar(e.message);
+      }
     } catch (e) {
       _logger.error('Unexpected error', e);
-      _showErrorSnackbar(AppConstants.genericErrorMessage);
+      if (mounted) {
+        ScaffoldMessenger.of(context).clearSnackBars();
+        _showErrorSnackbar('Gagal: ${e.toString()}');
+      }
     } finally {
       if (mounted) {
         setState(() => _isProcessing = false);
@@ -668,7 +746,7 @@ class _CleanerReportDetailScreenState
           children: [
             const Icon(Icons.check_circle, color: Colors.white),
             const SizedBox(width: 8),
-            Text(message),
+            Expanded(child: Text(message)),
           ],
         ),
         backgroundColor: AppTheme.success,

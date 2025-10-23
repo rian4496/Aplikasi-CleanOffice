@@ -1,10 +1,12 @@
-// lib/providers/riverpod/employee_providers.dart - UPDATED WITH NOTIFICATION
+// lib/providers/riverpod/employee_providers.dart - USING EXISTING STORAGE SERVICE
 
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report.dart';
 import '../../services/notification_helper.dart';
+import '../../services/storage_service.dart';
 import './report_providers.dart';
 
 // ==================== EMPLOYEE AUTH PROVIDERS ====================
@@ -140,7 +142,7 @@ final employeeRecentReportsProvider = Provider<List<Report>>((ref) {
 
 // ==================== EMPLOYEE ACTIONS ====================
 
-/// Provider untuk employee actions (create, delete report)
+/// Provider untuk employee actions (create, update, delete report)
 final employeeActionsProvider = Provider<EmployeeActions>((ref) {
   return EmployeeActions(ref);
 });
@@ -206,6 +208,96 @@ class EmployeeActions {
       // Log error but don't fail the report creation
       debugPrint('Failed to send notification: $e');
     }
+  }
+
+  /// Update existing report
+  Future<void> updateReport({
+    required String reportId,
+    String? title,
+    String? location,
+    String? description,
+    bool? isUrgent,
+    dynamic imageFile, // File dari image_picker
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('User not logged in');
+
+    final firestoreService = ref.read(firestoreServiceProvider);
+
+    // Get existing report
+    final existingReport = await firestoreService.getReportById(reportId);
+    if (existingReport == null) {
+      throw Exception('Report not found');
+    }
+
+    // Check if user owns this report
+    if (existingReport.userId != user.uid) {
+      throw Exception('Unauthorized: You can only edit your own reports');
+    }
+
+    // Check if report can be edited (only Pending)
+    if (existingReport.status != ReportStatus.pending) {
+      throw Exception('Cannot edit report with status: ${existingReport.status.displayName}');
+    }
+
+    // Handle image upload if new file provided
+    String? newImageUrl = existingReport.imageUrl;
+    if (imageFile != null && imageFile is File) {
+      try {
+        // Read file bytes
+        final bytes = await imageFile.readAsBytes();
+        
+        // Upload using existing StorageService
+        final storageService = ref.read(storageServiceProvider);
+        final result = await storageService.uploadImage(
+          bytes: bytes,
+          folder: 'reports',
+          userId: user.uid,
+        );
+
+        if (result.isSuccess && result.data != null) {
+          newImageUrl = result.data;
+          debugPrint('✅ New image uploaded: $newImageUrl');
+        } else {
+          debugPrint('❌ Failed to upload image: ${result.error}');
+          // Continue with old image URL
+        }
+      } catch (e) {
+        debugPrint('❌ Image upload error: $e');
+        // Continue with old image URL
+      }
+    }
+
+    // Create updated report
+    final updatedReport = Report(
+      id: reportId,
+      title: title ?? existingReport.title,
+      location: location ?? existingReport.location,
+      date: existingReport.date,
+      status: existingReport.status,
+      userId: existingReport.userId,
+      userName: existingReport.userName,
+      userEmail: existingReport.userEmail,
+      cleanerId: existingReport.cleanerId,
+      cleanerName: existingReport.cleanerName,
+      verifiedBy: existingReport.verifiedBy,
+      verifiedByName: existingReport.verifiedByName,
+      verifiedAt: existingReport.verifiedAt,
+      verificationNotes: existingReport.verificationNotes,
+      description: description ?? existingReport.description,
+      imageUrl: newImageUrl,
+      isUrgent: isUrgent ?? existingReport.isUrgent,
+      assignedAt: existingReport.assignedAt,
+      startedAt: existingReport.startedAt,
+      completedAt: existingReport.completedAt,
+      departmentId: existingReport.departmentId,
+    );
+
+    // Update in Firestore
+    await firestoreService.updateReport(
+      reportId,
+      updatedReport.toFirestore(),
+    );
   }
 
   /// Delete report

@@ -1,4 +1,4 @@
-// lib/screens/employee/report_detail_screen.dart - FULL REAL DATA VERSION
+// lib/screens/employee/report_detail_screen.dart - WITH EDIT FUNCTIONALITY
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
+import 'edit_report_screen.dart';
 
 class ReportDetailScreen extends ConsumerWidget {
   final Report report;
@@ -78,9 +79,19 @@ class ReportDetailScreen extends ConsumerWidget {
           icon: const Icon(Icons.more_vert, color: Colors.white),
           onSelected: (value) {
             if (value == 'edit') {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur edit segera hadir')),
-              );
+              final canEdit = report.status == ReportStatus.pending;
+              if (canEdit) {
+                _navigateToEdit(context, ref);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Laporan dengan status ${report.status.displayName} tidak dapat diedit'
+                    ),
+                    backgroundColor: AppTheme.warning,
+                  ),
+                );
+              }
             } else if (value == 'delete') {
               _showDeleteDialog(context, ref);
             }
@@ -586,6 +597,9 @@ class ReportDetailScreen extends ConsumerWidget {
   // ==================== ACTION BUTTONS ====================
 
   Widget _buildActionButtons(BuildContext context, WidgetRef ref) {
+    // Check if report can be edited (only Pending status)
+    final canEdit = report.status == ReportStatus.pending;
+
     return Row(
       children: [
         Expanded(
@@ -606,11 +620,7 @@ class ReportDetailScreen extends ConsumerWidget {
         const SizedBox(width: 12),
         Expanded(
           child: ElevatedButton.icon(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur edit segera hadir')),
-              );
-            },
+            onPressed: canEdit ? () => _navigateToEdit(context, ref) : null,
             icon: const Icon(Icons.edit),
             label: const Text('Edit'),
             style: ElevatedButton.styleFrom(
@@ -625,6 +635,29 @@ class ReportDetailScreen extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  // ==================== NAVIGATION TO EDIT ====================
+
+  void _navigateToEdit(BuildContext context, WidgetRef ref) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => EditReportScreen(report: report),
+      ),
+    );
+
+    // If report was updated, show success message and pop back
+    if (result == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('✅ Laporan berhasil diperbarui'),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+      // Pop back to refresh the list
+      Navigator.pop(context);
+    }
   }
 
   // ==================== DELETE DIALOG ====================

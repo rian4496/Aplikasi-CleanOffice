@@ -1,182 +1,225 @@
-// lib/screens/admin/admin_dashboard_screen.dart - RESPONSIVE LAYOUT
+// lib/screens/admin/admin_dashboard_screen.dart
 
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
+import 'package:aplikasi_cleanoffice/core/constants/app_constants.dart';
+import 'package:aplikasi_cleanoffice/models/report.dart';
+import 'package:aplikasi_cleanoffice/providers/riverpod/auth_providers.dart';
+import 'package:aplikasi_cleanoffice/screens/admin/verification_screen.dart';
+import 'package:aplikasi_cleanoffice/widgets/shared/drawer_menu_widget.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // Import Riverpod
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../notification_screen.dart';
-import '../employee/create_report_screen.dart';
-import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../core/constants/app_constants.dart';
 
-// Ubah menjadi ConsumerWidget agar bisa pakai ref nantinya
 class AdminDashboardScreen extends ConsumerWidget {
   const AdminDashboardScreen({super.key});
 
-  // Definisikan breakpoint untuk layout
   static const double desktopBreakpoint = 768.0;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) { // Tambahkan WidgetRef ref
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bool isDesktop = MediaQuery.of(context).size.width >= desktopBreakpoint;
+
     return Scaffold(
-      // Drawer hanya untuk layar kecil, dikontrol oleh AppBar
-      endDrawer: MediaQuery.of(context).size.width < desktopBreakpoint
-          ? _buildDrawerContent(context, ref) // Gunakan method konten drawer
-          : null,
+      endDrawer: !isDesktop ? _buildDrawerContent(context, ref) : null,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          // Cek lebar layar
-          if (constraints.maxWidth >= desktopBreakpoint) {
-            // --- DESKTOP LAYOUT ---
+          if (isDesktop) {
             return Row(
               children: [
-                // Sidebar Permanen
                 Container(
-                  width: 250, // Lebar sidebar
+                  width: 250,
                   decoration: BoxDecoration(
-                    color: Colors.white, // Warna background sidebar
+                    color: Colors.white,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(1, 0),
                       )
-                    ]
+                    ],
                   ),
-                  child: _buildDrawerContent(context, ref), // Isi dengan menu drawer
+                  child: _buildDrawerContent(context, ref),
                 ),
-                // Konten Utama
                 Expanded(
-                  child: _buildMainContent(context, ref, isDesktop: true), // Kirim flag isDesktop
+                  child: Builder(
+                    builder: (innerContext) => _buildMainContent(innerContext, ref, isDesktop: true),
+                  ),
                 ),
               ],
             );
           } else {
-            // --- MOBILE/TABLET LAYOUT ---
-            return _buildMainContent(context, ref, isDesktop: false); // Kirim flag isDesktop
+            return Builder(
+              builder: (innerContext) => _buildMainContent(innerContext, ref, isDesktop: false),
+            );
           }
         },
       ),
-      // FAB hanya muncul di layar kecil? Atau tetap?
-      floatingActionButton: MediaQuery.of(context).size.width < desktopBreakpoint
-          ? _buildFloatingActionButton(context)
-          : null,
+      floatingActionButton: !isDesktop ? _buildFloatingActionButton(context) : null,
     );
   }
 
-  // Method untuk membuat konten drawer/sidebar (reusable)
   Widget _buildDrawerContent(BuildContext context, WidgetRef ref) {
-     return DrawerMenuWidget(
-        menuItems: [
-          DrawerMenuItem(
-            icon: Icons.dashboard_outlined,
-            title: 'Dashboard',
-            onTap: () => Navigator.pop(context), // Tutup drawer jika di mobile
-          ),
-          DrawerMenuItem(
-            icon: Icons.verified_user_outlined,
-            title: 'Verifikasi Laporan',
-            onTap: () {
-              Navigator.pop(context); // Tutup drawer jika di mobile
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigasi: Verifikasi Laporan (Segera)')),
-              );
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.assessment_outlined,
-            title: 'Laporan',
-            onTap: () {
-              Navigator.pop(context); // Tutup drawer jika di mobile
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigasi: Laporan (Segera)')),
-              );
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.people_outline,
-            title: 'Kelola Petugas',
-            onTap: () {
-              Navigator.pop(context); // Tutup drawer jika di mobile
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Navigasi: Kelola Petugas (Segera)')),
-              );
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.person_outline,
-            title: 'Profil',
-            onTap: () {
-              Navigator.pop(context); // Tutup drawer jika di mobile
-              Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.settings_outlined,
-            title: 'Pengaturan',
-            onTap: () {
-              Navigator.pop(context); // Tutup drawer jika di mobile
-              Navigator.pushNamed(context, '/settings');
-            },
-          ),
-        ],
-        onLogout: () => _handleLogout(context, ref), // Kirim ref ke logout
-        roleTitle: 'Administrator',
-      );
+    final bool isDesktop = MediaQuery.of(context).size.width >= desktopBreakpoint;
+    return Material(
+      color: Colors.white,
+      child: Padding(
+        padding: EdgeInsets.only(top: isDesktop ? MediaQuery.of(context).padding.top + 10 : 0),
+        child: DrawerMenuWidget(
+          menuItems: [
+            DrawerMenuItem(
+              icon: Icons.dashboard_outlined,
+              title: 'Dashboard',
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+              },
+            ),
+            DrawerMenuItem(
+              icon: Icons.verified_user_outlined,
+              title: 'Verifikasi Akun', // ✅ DIUBAH DARI "Laporan" KE "Akun"
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+                // TODO: Navigasi ke verifikasi akun
+                _navigateToAccountVerification(context);
+              },
+            ),
+            DrawerMenuItem(
+              icon: Icons.assignment_outlined,
+              title: 'Laporan',
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+                // TODO: Navigasi ke laporan
+              },
+            ),
+            DrawerMenuItem(
+              icon: Icons.people_outline,
+              title: 'Kelola Petugas',
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+                // TODO: Navigasi ke kelola petugas
+              },
+            ),
+            
+            DrawerMenuItem(
+              icon: Icons.person_outline,
+              title: 'Profil',
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+                Navigator.pushNamed(context, '/profile');
+              },
+            ),
+            DrawerMenuItem(
+              icon: Icons.settings_outlined,
+              title: 'Pengaturan',
+              onTap: () {
+                if (!isDesktop) Navigator.pop(context);
+                Navigator.pushNamed(context, '/settings');
+              },
+            ),
+          ],
+          onLogout: () => _handleLogout(context, ref),
+          roleTitle: 'Administrator',
+        ),
+      ),
+    );
   }
 
-  // Method untuk membangun konten utama (AppBar + Body)
+  void _navigateToAccountVerification(BuildContext context) {
+    // Dummy data untuk demo
+    final dummyReport = Report(
+      id: 'rep_123',
+      title: 'AC Tidak Dingin',
+      location: 'Ruang Meeting 1',
+      date: DateTime.now().subtract(const Duration(hours: 3)),
+      status: ReportStatus.completed,
+      userId: 'user123',
+      userName: 'Budi Santoso',
+      userEmail: 'budi@example.com',
+      description: 'AC tidak dingin setelah acara',
+      completedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      imageUrl: 'https://via.placeholder.com/600x400?text=Foto+Laporan',
+      isUrgent: false,
+      cleanerId: 'cleaner456',
+      cleanerName: 'Ahmad Supriyadi',
+      assignedAt: DateTime.now().subtract(const Duration(hours: 2, minutes: 30)),
+      startedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      departmentId: 'dept_it',
+    );
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => VerificationScreen(report: dummyReport),
+      ),
+    );
+  }
+
   Widget _buildMainContent(BuildContext context, WidgetRef ref, {required bool isDesktop}) {
-    return SafeArea( // SafeArea mungkin tidak perlu jika AppBar sudah handle
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
+
+    return SafeArea(
+      top: !isDesktop,
+      bottom: !isDesktop,
+      left: !isDesktop,
+      right: !isDesktop,
       child: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
           SliverAppBar(
             pinned: true,
-            automaticallyImplyLeading: false, // Tidak perlu back button
-            title: const Text('Dashboard'),
-            backgroundColor: isDesktop ? AppTheme.background : AppTheme.primary, // Warna beda?
-            foregroundColor: isDesktop ? AppTheme.textPrimary : Colors.white,
-            elevation: isDesktop ? 0 : 1, // Beri shadow di mobile
+            floating: false,
+            snap: false,
+            automaticallyImplyLeading: false,
+            backgroundColor: AppTheme.primary,
+            foregroundColor: Colors.white,
+            elevation: 1,
+            titleSpacing: isDesktop ? 24 : NavigationToolbar.kMiddleSpacing,
+            title: const Text(
+              'Dashboard',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             actions: [
               IconButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const NotificationScreen(),
-                    ),
+                  // TODO: Navigasi notifikasi
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Notifikasi belum tersedia')),
                   );
                 },
-                icon: Icon(Icons.notifications_outlined, color: isDesktop ? AppTheme.textPrimary : Colors.white),
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white), // ✅ WARNA PUTIH
+                tooltip: 'Notifikasi',
               ),
-              // Hanya tampilkan tombol menu jika BUKAN desktop
               if (!isDesktop)
                 Builder(
-                  builder: (context) => IconButton(
+                  builder: (buttonContext) => IconButton(
                     icon: const Icon(Icons.menu),
                     onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
+                      Scaffold.of(buttonContext).openEndDrawer();
                     },
-                     tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
+                    tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
                   ),
                 ),
               const SizedBox(width: 8),
             ],
           ),
-
-          // Konten Sliver
-          SliverPadding( // Gunakan SliverPadding
+          SliverPadding(
             padding: const EdgeInsets.all(24.0),
-            sliver: SliverList( // Gunakan SliverList untuk children
+            sliver: SliverList(
               delegate: SliverChildListDelegate([
-                 _buildWelcomeHeader(context),
-                 const SizedBox(height: 24),
-                 // Gunakan _buildStatisticsGrid dengan context yang benar
-                 LayoutBuilder(builder: (ctx, constraints) => _buildStatisticsGrid(ctx)),
-                 const SizedBox(height: 32),
-                 _buildQuickActions(context),
-                 const SizedBox(height: 32),
-                 _buildRecentActivities(context),
+                // Welcome Header
+                switch (userProfileAsync) {
+                  AsyncData(:final value) => _buildWelcomeHeader(context, value?.displayName ?? 'Admin'),
+                  AsyncLoading() => const Center(child: CircularProgressIndicator()),
+                  AsyncError(:final error) => Text('Error: ${error.toString()}'),
+                },
+                const SizedBox(height: 24),
+                _buildStatisticsGrid(context, isDesktop: isDesktop),
+                const SizedBox(height: 32),
+                _buildQuickActions(context, isDesktop: isDesktop),
+                const SizedBox(height: 32),
+                _buildRecentActivities(context),
               ]),
             ),
           ),
@@ -185,146 +228,75 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-  // Floating Action Button (dipisah agar bisa dikontrol tampilannya)
-  Widget _buildFloatingActionButton(BuildContext context) {
-      return FloatingActionButton.extended(
-        onPressed: () {
-          // Pertimbangkan navigasi yang lebih relevan untuk Admin?
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreateReportScreen()),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Buat Laporan'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-      );
-  }
-
-
-  // ==================== LOGOUT ====================
-  // (Fungsi logout perlu WidgetRef ref)
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('BATAL'),
-          ),
-          // Gunakan TextButton agar konsisten
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-             style: TextButton.styleFrom(
-              foregroundColor: AppTheme.error,
-            ),
-            child: const Text('KELUAR'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && context.mounted) {
-      try {
-        await FirebaseAuth.instance.signOut(); // Atau gunakan provider jika ada: ref.read(authActionsProvider.notifier).logout();
-        if (!context.mounted) return;
-        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal logout: $e'),
-              backgroundColor: AppTheme.error,
-            ),
-          );
-        }
-      }
-    }
-  }
-
-  // ==================== WIDGET BUILDERS LAINNYA (TETAP SAMA) ====================
-  // (_buildWelcomeHeader, _buildStatisticsGrid, _buildStatCard,
-  //  _buildQuickActions, _buildActionButton, _buildRecentActivities,
-  //  _buildActivityItem)
-  // Anda bisa salin dari kode admin_dashboard_screen.dart sebelumnya.
-  // Pastikan _buildStatisticsGrid menggunakan context yang tepat.
-
-  Widget _buildWelcomeHeader(BuildContext context) {
+  Widget _buildWelcomeHeader(BuildContext context, String displayName) {
     final textTheme = Theme.of(context).textTheme;
-    // Ambil nama user dari provider jika sudah diimplementasikan
-    // final userProfile = ref.watch(currentUserProfileProvider);
-    // final displayName = userProfile.whenData((profile) => profile?.displayName ?? 'Admin').value;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Selamat Datang Kembali! 👋', // Ganti dengan nama jika ada: 'Selamat Datang, $displayName! 👋'
-          style: textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
-          ),
+          'Halo, $displayName!',
+          style: textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
         Text(
-          'Kelola kebersihan kantor dengan mudah.',
-          style: textTheme.titleMedium?.copyWith(color: AppTheme.textSecondary),
+          'Selamat datang di dashboard admin.',
+          style: textTheme.bodyMedium,
         ),
       ],
     );
   }
 
-  Widget _buildStatisticsGrid(BuildContext context) {
-    // TODO: Ganti value dengan data dari provider (misal: ref.watch(dashboardSummaryProvider))
-    final summaryData = { // Data dummy sementara
-        'pending': 8,
-        'needsVerification': 5,
-        'completedToday': 23, // Asumsi 'Selesai' di sini adalah selesai hari ini
-        'totalActive': 36
-    };
+  Widget _buildStatisticsGrid(BuildContext context, {required bool isDesktop}) {
+    final crossAxisCount = isDesktop ? 4 : 2;
+    final aspectRatio = isDesktop ? 1.4 : 1.1;
 
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: MediaQuery.of(context).size.width >= desktopBreakpoint ? 4 : 2, // 4 kolom di desktop, 2 di mobile
-      crossAxisSpacing: 16,
-      mainAxisSpacing: 16,
-      childAspectRatio: MediaQuery.of(context).size.width >= desktopBreakpoint ? 1.2 : 1.0, // Sesuaikan rasio aspek
+      crossAxisCount: crossAxisCount,
+      crossAxisSpacing: 24, // ✅ DARI 16 → 24
+      mainAxisSpacing: 24,  // ✅ DARI 16 → 24
+      childAspectRatio: aspectRatio,
       children: [
         _buildStatCard(
           context: context,
-          title: 'Menunggu',
-          value: summaryData['pending'].toString(), // Ambil data asli
-          icon: Icons.pending_actions_outlined,
-          accentColor: AppTheme.warning,
-          onTap: () { /* Navigasi ke list laporan pending */ }
+          title: 'Total Laporan',
+          value: '124',
+          icon: Icons.assignment,
+          accentColor: AppTheme.primary, // ✅ Biru
+          onTap: () {
+            // TODO: Navigasi ke daftar laporan
+          },
         ),
         _buildStatCard(
           context: context,
-          title: 'Verifikasi',
-          value: summaryData['needsVerification'].toString(), // Ambil data asli
-          icon: Icons.verified_user_outlined,
-          accentColor: AppTheme.info,
-          onTap: () { /* Navigasi ke list laporan perlu verifikasi */ }
+          title: 'Belum Diverifikasi',
+          value: '18',
+          icon: Icons.warning_amber,
+          accentColor: Colors.orange, // ✅ Oranye
+          onTap: () {
+            _navigateToAccountVerification(context);
+          },
         ),
         _buildStatCard(
           context: context,
-          title: 'Selesai Hari Ini', // Ubah label agar lebih jelas
-          value: summaryData['completedToday'].toString(), // Ambil data asli
-          icon: Icons.check_circle_outline,
-          accentColor: AppTheme.success,
-          onTap: () { /* Navigasi ke list laporan selesai */ }
+          title: 'Selesai',
+          value: '96',
+          icon: Icons.check_circle,
+          accentColor: Colors.green, // ✅ Hijau
+          onTap: () {
+            // TODO: Navigasi ke laporan selesai
+          },
         ),
         _buildStatCard(
           context: context,
-          title: 'Total Aktif',
-          value: summaryData['totalActive'].toString(), // Ambil data asli
-          icon: Icons.task_alt, // Ganti icon jika perlu
-          accentColor: AppTheme.primary,
-          onTap: () { /* Navigasi ke list semua laporan aktif */ }
+          title: 'Petugas Aktif',
+          value: '12',
+          icon: Icons.people,
+          accentColor: Colors.purple, // ✅ Ungu
+          onTap: () {
+            // TODO: Navigasi ke kelola petugas
+          },
         ),
       ],
     );
@@ -336,16 +308,15 @@ class AdminDashboardScreen extends ConsumerWidget {
     required String value,
     required IconData icon,
     required Color accentColor,
-    VoidCallback? onTap, // Tambah onTap
+    VoidCallback? onTap,
   }) {
-    final cardTheme = Theme.of(context).cardTheme;
-    return InkWell( // Bungkus dengan InkWell
+    return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20), // ✅ DARI 16 → 20
         decoration: BoxDecoration(
-          color: cardTheme.color ?? Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -355,42 +326,28 @@ class AdminDashboardScreen extends ConsumerWidget {
               offset: const Offset(0, 4),
             ),
           ],
-          border: Border.all(
-            color: AppTheme.divider,
-            width: 1,
-          ),
+          border: Border.all(color: AppTheme.divider, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Icon(icon, color: accentColor, size: 32),
-            const Spacer(), // Dorong konten ke bawah
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
               children: [
+                Icon(icon, color: accentColor, size: 24), // ✅ Ikon warna sesuai accentColor
+                const SizedBox(width: 8),
                 Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: 32, // Ukuran bisa disesuaikan
+                  title,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: accentColor,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 1, // Batasi 1 baris
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
             ),
           ],
         ),
@@ -398,52 +355,52 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
-
-  Widget _buildQuickActions(BuildContext context) {
+  Widget _buildQuickActions(BuildContext context, {required bool isDesktop}) {
     final textTheme = Theme.of(context).textTheme;
+    final List<Widget> actionButtons = [
+      _buildActionButton(
+        context,
+        'Buat Laporan',
+        Icons.add,
+        AppTheme.primary, // ✅ Biru
+        () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Fitur segera hadir')),
+          );
+        },
+      ),
+      _buildActionButton(
+        context,
+        'Verifikasi', // ✅ Sesuai desain: "Verifikasi"
+        Icons.verified_user_outlined,
+        Colors.orange, // ✅ Oranye
+        () {
+          _navigateToAccountVerification(context);
+        },
+      ),
+      _buildActionButton(
+        context,
+        'Lihat Semua',
+        Icons.list_alt_outlined,
+        Colors.grey[600]!, // ✅ Abu-abu
+        () {
+          // TODO: Navigasi ke daftar laporan
+        },
+      ),
+    ];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Aksi Cepat',
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: AppTheme.textPrimary,
-          ),
+          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 16),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                context,
-                'Verifikasi',
-                Icons.verified_outlined,
-                AppTheme.info,
-                () { /* Navigasi ke layar verifikasi */ },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                context,
-                'Semua Laporan', // Ganti label?
-                Icons.assessment_outlined,
-                AppTheme.success,
-                () { /* Navigasi ke layar semua laporan */ },
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                context,
-                'Petugas',
-                Icons.people_outline,
-                AppTheme.warning,
-                () { /* Navigasi ke layar kelola petugas */ },
-              ),
-            ),
-          ],
+        Wrap(
+          spacing: 16,
+          runSpacing: 16,
+          children: isDesktop ? actionButtons : actionButtons.take(2).toList(),
         ),
       ],
     );
@@ -456,52 +413,53 @@ class AdminDashboardScreen extends ConsumerWidget {
     Color color,
     VoidCallback onTap,
   ) {
-    final cardTheme = Theme.of(context).cardTheme;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 20),
-        decoration: BoxDecoration(
-          color: cardTheme.color ?? Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.divider, width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center, // Pusatkan konten
-          children: [
-            Icon(icon, color: color, size: 28),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontWeight: FontWeight.w600,
-                fontSize: 13,
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 28), // ✅ Ikon warna sesuai tombol
+              const SizedBox(height: 8),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: color,
+                    ),
               ),
-              textAlign: TextAlign.center, // Center text
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-   Widget _buildRecentActivities(BuildContext context) {
-    final textTheme = Theme.of(context).textTheme;
-    // TODO: Ganti dengan data dari provider (misal: ref.watch(recentReportsProvider))
-    final recentActivities = [ // Data dummy
-        {'icon': Icons.cleaning_services_outlined, 'title': 'Toilet Lt. 2', 'time': '10 menit lalu', 'status': 'Selesai', 'statusColor': AppTheme.success},
-        {'icon': Icons.hourglass_top_rounded, 'title': 'Ruang Rapat A', 'time': '25 menit lalu', 'status': 'Dikerjakan', 'statusColor': AppTheme.info},
-        {'icon': Icons.notifications_active_outlined, 'title': 'Area Pantry', 'time': '1 jam lalu', 'status': 'Menunggu', 'statusColor': AppTheme.warning},
+  Widget _buildRecentActivities(BuildContext context) {
+    final recentActivities = [
+      {
+        'icon': Icons.assignment_turned_in,
+        'title': 'Laporan Pembersihan Ruang Meeting 1',
+        'time': '10 menit lalu',
+        'status': 'Selesai',
+        'statusColor': Colors.green,
+      },
+      {
+        'icon': Icons.warning_amber,
+        'title': 'Laporan Kerusakan AC Kantor Utama',
+        'time': '2 jam lalu',
+        'status': 'Diproses',
+        'statusColor': Colors.orange,
+      },
     ];
 
     return Column(
@@ -512,44 +470,44 @@ class AdminDashboardScreen extends ConsumerWidget {
           children: [
             Text(
               'Aktivitas Terbaru',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
             ),
             TextButton(
-              onPressed: () { /* Navigasi ke list semua aktivitas/laporan */ },
-              style: TextButton.styleFrom(foregroundColor: AppTheme.info),
+              onPressed: () {
+                // TODO: Lihat semua aktivitas
+              },
               child: const Text('Lihat Semua'),
             ),
           ],
         ),
         const SizedBox(height: 8),
         if (recentActivities.isEmpty)
-           Padding(
-             padding: const EdgeInsets.symmetric(vertical: 32.0),
-             child: Center(
-                child: Text('Belum ada aktivitas terbaru', style: TextStyle(color: AppTheme.textSecondary))
-             ),
-           )
-        else
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(), // Karena sudah di dalam CustomScrollView
-              itemCount: recentActivities.length > 5 ? 5 : recentActivities.length, // Batasi item
-              itemBuilder: (context, index){
-                final activity = recentActivities[index];
-                return _buildActivityItem(
-                  context: context,
-                  icon: activity['icon'] as IconData,
-                  title: activity['title'] as String,
-                  time: activity['time'] as String,
-                  status: activity['status'] as String,
-                  statusColor: activity['statusColor'] as Color,
-                  onTap: () { /* Navigasi ke detail aktivitas/laporan */ },
-                );
-              },
+          Center(
+            child: Text(
+              'Tidak ada aktivitas terbaru.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
             ),
+          )
+        else
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: recentActivities.length > 5 ? 5 : recentActivities.length,
+            itemBuilder: (ctx, index) {
+              final activity = recentActivities[index];
+              return _buildActivityItem(
+                context: ctx,
+                icon: activity['icon'] as IconData,
+                title: activity['title'] as String,
+                time: activity['time'] as String,
+                status: activity['status'] as String,
+                statusColor: activity['statusColor'] as Color,
+                onTap: () {
+                  // TODO: Detail aktivitas
+                },
+              );
+            },
+          ),
       ],
     );
   }
@@ -561,17 +519,16 @@ class AdminDashboardScreen extends ConsumerWidget {
     required String time,
     required String status,
     required Color statusColor,
-    VoidCallback? onTap, // Tambah onTap
+    VoidCallback? onTap,
   }) {
-    final cardTheme = Theme.of(context).cardTheme;
-    return InkWell( // Bungkus dengan InkWell
+    return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: cardTheme.color ?? Colors.white,
+          color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: AppTheme.divider, width: 1),
         ),
@@ -583,7 +540,7 @@ class AdminDashboardScreen extends ConsumerWidget {
                 color: statusColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: statusColor),
+              child: Icon(icon, color: statusColor), // ✅ Ikon warna sesuai status
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -592,18 +549,14 @@ class AdminDashboardScreen extends ConsumerWidget {
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
-                      color: AppTheme.textPrimary,
-                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     time,
-                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
                   ),
                 ],
               ),
@@ -616,11 +569,10 @@ class AdminDashboardScreen extends ConsumerWidget {
               ),
               child: Text(
                 status,
-                style: TextStyle(
-                  color: statusColor,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
               ),
             ),
           ],
@@ -629,4 +581,57 @@ class AdminDashboardScreen extends ConsumerWidget {
     );
   }
 
+  Widget _buildFloatingActionButton(BuildContext context) {
+    return FloatingActionButton.extended(
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitur tambah laporan segera hadir')),
+        );
+      },
+      icon: const Icon(Icons.add),
+      label: const Text('Tambah'),
+      backgroundColor: AppTheme.primary,
+      foregroundColor: Colors.white,
+    );
+  }
+
+  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Konfirmasi Logout'),
+        content: const Text('Apakah Anda yakin ingin keluar?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('BATAL'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.error,
+            ),
+            child: const Text('KELUAR'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && context.mounted) {
+      try {
+        await FirebaseAuth.instance.signOut();
+        if (!context.mounted) return;
+        Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal logout: ${e.toString()}'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
 }

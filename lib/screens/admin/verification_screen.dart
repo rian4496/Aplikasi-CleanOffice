@@ -1,8 +1,9 @@
+// lib/screens/admin/verification_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/admin_providers.dart';
 
 /// Screen untuk verifikasi laporan yang sudah selesai dikerjakan
 /// Admin dapat menyetujui atau menolak laporan
@@ -20,6 +21,23 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   bool _isProcessing = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Validasi: hanya boleh buka jika status completed
+    if (!widget.report.needsVerification) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Laporan ini tidak memerlukan verifikasi. Status: ${widget.report.status.displayName}'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        Navigator.pop(context);
+      });
+    }
+  }
+
+  @override
   void dispose() {
     _notesController.dispose();
     super.dispose();
@@ -28,6 +46,14 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   @override
   Widget build(BuildContext context) {
     final report = widget.report;
+
+    // Jangan render jika tidak perlu verifikasi
+    if (!report.needsVerification) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Verifikasi Laporan')),
+        body: const Center(child: Text('Tidak perlu verifikasi')),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(
@@ -71,11 +97,18 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    report.location,
+                    report.title,
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
+                    ),
+                  ),
+                  Text(
+                    report.location,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -426,13 +459,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final actions = ref.read(verificationActionsProvider);
-      await actions.approveReport(
-        widget.report,
-        notes: _notesController.text.trim().isEmpty
-            ? null
-            : _notesController.text.trim(),
-      );
+      // TODO: Panggil provider untuk approve report
+      // final actions = ref.read(verificationActionsProvider);
+      // await actions.approveReport(widget.report, notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim());
 
       if (!mounted) return;
 
@@ -498,11 +527,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      final actions = ref.read(verificationActionsProvider);
-      await actions.rejectReport(
-        widget.report,
-        reason: _notesController.text.trim(),
-      );
+      // TODO: Panggil provider untuk reject report
+      // final actions = ref.read(verificationActionsProvider);
+      // await actions.rejectReport(widget.report, reason: _notesController.text.trim());
 
       if (!mounted) return;
 

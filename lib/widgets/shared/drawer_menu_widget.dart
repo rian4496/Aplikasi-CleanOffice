@@ -165,7 +165,7 @@ class DrawerMenuWidget extends StatelessWidget {
               ),
             )
           : null,
-      onTap: item.onTap,
+      onTap: item.onTap, 
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
       enabled: item.enabled,
     );
@@ -176,7 +176,7 @@ class DrawerMenuWidget extends StatelessWidget {
 class DrawerMenuItem {
   final IconData icon;
   final String title;
-  final VoidCallback onTap;
+  final VoidCallback? onTap; // ✅ Nullable
   final bool isDestructive;
   final bool enabled;
   final int? badge;
@@ -184,7 +184,7 @@ class DrawerMenuItem {
   const DrawerMenuItem({
     required this.icon,
     required this.title,
-    required this.onTap,
+    this.onTap, // ✅ Opsional
     this.isDestructive = false,
     this.enabled = true,
     this.badge,

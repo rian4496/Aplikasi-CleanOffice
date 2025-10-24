@@ -1,14 +1,17 @@
-// lib/screens/employee/employee_home_screen.dart
-// ✅ COMPLETE Employee Home Screen dengan Riverpod
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+
+// ✅ FIXED: Import paths sesuai struktur lib/core/
+import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_strings.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/utils/date_formatter.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
 import '../../providers/riverpod/auth_providers.dart';
-import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_strings.dart';
+import '../shared/report_detail_screen.dart';
+import 'create_report_screen.dart';
+import 'report_history_screen.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
@@ -25,7 +28,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   bool _showUrgentOnly = false;
   String _sortBy = 'newest'; // newest, oldest, urgent, location
   
-  // Undo functionality
+  // 🆕 Undo functionality
   Report? _lastDeletedReport; // Simpan report yang dihapus untuk undo
 
   @override
@@ -34,32 +37,140 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     super.dispose();
   }
 
-  // ==================== FILTERED & SORTED REPORTS ====================
+  // ==================== GREETING BASED ON TIME ====================
 
-  List<Report> _getFilteredAndSortedReports(List<Report> reports) {
-    var filtered = reports;
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }
 
-    // Apply search filter
-    if (_searchQuery.isNotEmpty) {
-      filtered = filtered.where((report) {
+  // ==================== STATISTICS ====================
+
+  Map<String, int> _getStatistics(List<Report> reports) {
+    return {
+      'total': reports.length,
+      'pending': reports.where((r) => r.status == ReportStatus.pending).length,
+      'in_progress': reports.where((r) => r.status == ReportStatus.inProgress).length,
+      'completed': reports.where((r) => r.status == ReportStatus.completed).length,
+      'verified': reports.where((r) => r.status == ReportStatus.verified).length,
+      'urgent': reports.where((r) => r.isUrgent).length,
+    };
+  }
+
+  Widget _buildStatsCard({
+    required String title,
+    required int count,
+    required IconData icon,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Icon(icon, color: color, size: 28),
+                  Text(
+                    count.toString(),
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== QUICK ACTIONS ====================
+
+  Widget _buildQuickAction({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 32),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== SEARCH & FILTER ====================
+
+  List<Report> _filterAndSortReports(List<Report> reports) {
+    var filtered = reports.where((report) {
+      // Search filter
+      if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
-        return report.location.toLowerCase().contains(query) ||
-            report.title.toLowerCase().contains(query) ||
-            (report.description?.toLowerCase().contains(query) ?? false);
-      }).toList();
-    }
+        final matchesLocation = report.location.toLowerCase().contains(query);
+        final matchesDescription = report.description?.toLowerCase().contains(query) ?? false;
+        if (!matchesLocation && !matchesDescription) return false;
+      }
 
-    // Apply status filter
-    if (_selectedStatusFilter != null) {
-      filtered = filtered.where((r) => r.status == _selectedStatusFilter).toList();
-    }
+      // Status filter
+      if (_selectedStatusFilter != null && report.status != _selectedStatusFilter) {
+        return false;
+      }
 
-    // Apply urgent filter
-    if (_showUrgentOnly) {
-      filtered = filtered.where((r) => r.isUrgent).toList();
-    }
+      // Urgent filter
+      if (_showUrgentOnly && !report.isUrgent) {
+        return false;
+      }
 
-    // Apply sorting
+      return true;
+    }).toList();
+
+    // Sort - ✅ FIXED: Pakai report.date
     switch (_sortBy) {
       case 'oldest':
         filtered.sort((a, b) => a.date.compareTo(b.date));
@@ -77,498 +188,18 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       case 'newest':
       default:
         filtered.sort((a, b) => b.date.compareTo(a.date));
-        break;
     }
 
     return filtered;
   }
 
-  // ==================== BUILD METHOD ====================
-
-  @override
-  Widget build(BuildContext context) {
-    final userProfileAsync = ref.watch(currentUserProfileProvider);
-    final reportsAsync = ref.watch(employeeReportsProvider);
-    final summary = ref.watch(employeeReportsSummaryProvider);
-
-    return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: _buildAppBar(context, userProfileAsync),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(employeeReportsProvider);
-          ref.invalidate(currentUserProfileProvider);
-        },
-        child: CustomScrollView(
-          slivers: [
-            // Header dengan nama user
-            SliverToBoxAdapter(
-              child: _buildHeader(userProfileAsync),
-            ),
-
-            // Stats Cards
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: _buildStatsCards(summary),
-              ),
-            ),
-
-            // Quick Actions
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: _buildQuickActions(),
-              ),
-            ),
-
-            // Search & Filter
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: _buildSearchAndFilter(),
-              ),
-            ),
-
-            // Active Filters Chips
-            if (_selectedStatusFilter != null || _showUrgentOnly)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: _buildActiveFilters(),
-                ),
-              ),
-
-            // Reports List
-            reportsAsync.when(
-              data: (reports) {
-                final filteredReports = _getFilteredAndSortedReports(reports);
-                return _buildReportsList(filteredReports);
-              },
-              loading: () => _buildLoadingState(),
-              error: (error, stack) => _buildErrorState(error),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: _buildFAB(),
-    );
-  }
-
-  // ==================== APP BAR ====================
-
-  PreferredSizeWidget _buildAppBar(BuildContext context, AsyncValue userProfileAsync) {
-    return AppBar(
-      title: const Text(AppStrings.employeeHomeTitle),
-      backgroundColor: AppTheme.primary,
-      foregroundColor: Colors.white,
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          onPressed: () => Navigator.pushNamed(context, '/notifications'),
-        ),
-        IconButton(
-          icon: const Icon(Icons.person_outline),
-          onPressed: () => Navigator.pushNamed(context, '/profile'),
-        ),
-        const SizedBox(width: 8),
-      ],
-    );
-  }
-
-  // ==================== HEADER ====================
-
-  Widget _buildHeader(AsyncValue userProfileAsync) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: const BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
-        ),
-      ),
-      child: userProfileAsync.when(
-        data: (profile) {
-          final name = profile?.displayName ?? 'User';
-          final greeting = _getGreeting();
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                greeting,
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                name,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          );
-        },
-        loading: () => const SizedBox(height: 60),
-        error: (_, _) => const SizedBox(height: 60),
-      ),
-    );
-  }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Selamat Pagi';
-    if (hour < 15) return 'Selamat Siang';
-    if (hour < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
-  }
-
-  // ==================== STATS CARDS ====================
-
-  Widget _buildStatsCards(EmployeeReportsSummary summary) {
-    return Row(
-      children: [
-        Expanded(
-          child: _StatsCard(
-            title: AppStrings.progressSent,
-            count: summary.pending,
-            color: AppTheme.warning,
-            icon: Icons.schedule,
-            onTap: () {
-              setState(() {
-                _selectedStatusFilter = ReportStatus.pending;
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatsCard(
-            title: AppStrings.progressInProgress,
-            count: summary.inProgress,
-            color: AppTheme.info,
-            icon: Icons.pending_actions,
-            onTap: () {
-              setState(() {
-                _selectedStatusFilter = ReportStatus.inProgress;
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatsCard(
-            title: AppStrings.progressCompleted,
-            count: summary.completed,
-            color: AppTheme.success,
-            icon: Icons.check_circle,
-            onTap: () {
-              setState(() {
-                _selectedStatusFilter = ReportStatus.completed;
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==================== QUICK ACTIONS ====================
-
-  Widget _buildQuickActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.add_circle_outline,
-            label: 'Buat Laporan',
-            color: AppTheme.primary,
-            onTap: () => Navigator.pushNamed(context, '/create_report'),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.priority_high,
-            label: AppStrings.quickActionUrgent,
-            color: AppTheme.error,
-            onTap: () {
-              setState(() {
-                _showUrgentOnly = !_showUrgentOnly;
-              });
-            },
-            isActive: _showUrgentOnly,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.sort,
-            label: 'Urutkan',
-            color: AppTheme.secondary,
-            onTap: _showSortDialog,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==================== SEARCH & FILTER ====================
-
-  Widget _buildSearchAndFilter() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            onChanged: (value) => setState(() => _searchQuery = value),
-            decoration: InputDecoration(
-              hintText: AppStrings.searchReports,
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        _searchController.clear();
-                        setState(() => _searchQuery = '');
-                      },
-                    )
-                  : null,
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Material(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: _showFilterDialog,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _selectedStatusFilter != null
-                      ? AppTheme.primary
-                      : Colors.grey.shade300,
-                  width: _selectedStatusFilter != null ? 2 : 1,
-                ),
-              ),
-              child: Icon(
-                Icons.filter_list,
-                color: _selectedStatusFilter != null
-                    ? AppTheme.primary
-                    : Colors.grey.shade600,
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ==================== ACTIVE FILTERS ====================
-
-  Widget _buildActiveFilters() {
-    return Wrap(
-      spacing: 8,
-      children: [
-        if (_selectedStatusFilter != null)
-          Chip(
-            label: Text(_selectedStatusFilter!.displayName),
-            deleteIcon: const Icon(Icons.close, size: 18),
-            onDeleted: () {
-              setState(() {
-                _selectedStatusFilter = null;
-              });
-            },
-            backgroundColor: _selectedStatusFilter!.color.withValues(alpha: 0.1),
-            labelStyle: TextStyle(color: _selectedStatusFilter!.color),
-          ),
-        if (_showUrgentOnly)
-          Chip(
-            label: const Text('Urgen'),
-            deleteIcon: const Icon(Icons.close, size: 18),
-            onDeleted: () {
-              setState(() {
-                _showUrgentOnly = false;
-              });
-            },
-            backgroundColor: AppTheme.error.withValues(alpha: 0.1),
-            labelStyle: const TextStyle(color: AppTheme.error),
-          ),
-      ],
-    );
-  }
-
-  // ==================== REPORTS LIST ====================
-
-  Widget _buildReportsList(List<Report> reports) {
-    if (reports.isEmpty) {
-      return SliverFillRemaining(
-        child: _buildEmptyState(),
-      );
-    }
-
-    return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final report = reports[index];
-            return _ReportCard(
-              report: report,
-              onTap: () => _showReportDetail(report),
-              onDelete: () => _deleteReport(report),
-            );
-          },
-          childCount: reports.length,
-        ),
-      ),
-    );
-  }
-
-  // ==================== EMPTY STATE ====================
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.description_outlined,
-              size: 80,
-              color: Colors.grey.shade400,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? AppStrings.emptySearchTitle
-                  : AppStrings.emptyStateTitle,
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              _searchQuery.isNotEmpty
-                  ? AppStrings.emptySearchSubtitle
-                  : AppStrings.emptyStateSubtitle,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
-              ),
-            ),
-            if (_searchQuery.isEmpty) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () => Navigator.pushNamed(context, '/create_report'),
-                icon: const Icon(Icons.add),
-                label: const Text(AppStrings.createFirstReportButton),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==================== LOADING STATE ====================
-
-  Widget _buildLoadingState() {
-    return const SliverFillRemaining(
-      child: Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
-
-  // ==================== ERROR STATE ====================
-
-  Widget _buildErrorState(Object error) {
-    return SliverFillRemaining(
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 80,
-                color: AppTheme.error,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                AppStrings.errorGeneric,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                error.toString(),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey.shade600,
-                ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
-                onPressed: () {
-                  ref.invalidate(employeeReportsProvider);
-                },
-                icon: const Icon(Icons.refresh),
-                label: const Text(AppStrings.tryAgain),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==================== FAB ====================
-
-  Widget _buildFAB() {
-    return FloatingActionButton.extended(
-      onPressed: () => Navigator.pushNamed(context, '/create_report'),
-      icon: const Icon(Icons.add),
-      label: const Text('Buat Laporan'),
-      backgroundColor: AppTheme.primary,
-    );
-  }
-
-  // ==================== DIALOGS ====================
-
-  void _showSortDialog() {
+  void _showSortOptions() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (context) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -576,61 +207,45 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           children: [
             const Text(
               'Urutkan Berdasarkan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _SortOption(
-              title: AppStrings.sortByNewest,
-              icon: Icons.schedule,
-              isSelected: _sortBy == 'newest',
-              onTap: () {
-                setState(() => _sortBy = 'newest');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByOldest,
-              icon: Icons.history,
-              isSelected: _sortBy == 'oldest',
-              onTap: () {
-                setState(() => _sortBy = 'oldest');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByUrgent,
-              icon: Icons.priority_high,
-              isSelected: _sortBy == 'urgent',
-              onTap: () {
-                setState(() => _sortBy = 'urgent');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByLocation,
-              icon: Icons.location_on,
-              isSelected: _sortBy == 'location',
-              onTap: () {
-                setState(() => _sortBy = 'location');
-                Navigator.pop(context);
-              },
-            ),
+            _buildSortOption('Terbaru', 'newest', Icons.access_time),
+            _buildSortOption('Terlama', 'oldest', Icons.history),
+            _buildSortOption('Urgent', 'urgent', Icons.priority_high),
+            _buildSortOption('Lokasi', 'location', Icons.location_on),
           ],
         ),
       ),
     );
   }
 
-  void _showFilterDialog() {
+  Widget _buildSortOption(String label, String value, IconData icon) {
+    final isSelected = _sortBy == value;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? AppTheme.primary : Colors.grey),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? AppTheme.primary : Colors.black87,
+        ),
+      ),
+      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.primary) : null,
+      onTap: () {
+        setState(() => _sortBy = value);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  void _showFilterOptions() {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (context) => Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -638,49 +253,22 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           children: [
             const Text(
               'Filter Status',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _FilterOption(
-              title: AppStrings.filterAll,
-              icon: Icons.all_inclusive,
-              color: AppTheme.primary,
-              isSelected: _selectedStatusFilter == null,
-              onTap: () {
-                setState(() => _selectedStatusFilter = null);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterPending,
-              icon: ReportStatus.pending.icon,
-              color: ReportStatus.pending.color,
-              isSelected: _selectedStatusFilter == ReportStatus.pending,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.pending);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterInProgress,
-              icon: ReportStatus.inProgress.icon,
-              color: ReportStatus.inProgress.color,
-              isSelected: _selectedStatusFilter == ReportStatus.inProgress,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.inProgress);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterCompleted,
-              icon: ReportStatus.completed.icon,
-              color: ReportStatus.completed.color,
-              isSelected: _selectedStatusFilter == ReportStatus.completed,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.completed);
+            _buildStatusFilter('Semua', null, Icons.list),
+            _buildStatusFilter('Pending', ReportStatus.pending, Icons.schedule),
+            _buildStatusFilter('Dikerjakan', ReportStatus.inProgress, Icons.construction),
+            _buildStatusFilter('Selesai', ReportStatus.completed, Icons.check_circle),
+            _buildStatusFilter('Terverifikasi', ReportStatus.verified, Icons.verified),
+            const Divider(height: 32),
+            SwitchListTile(
+              title: const Text('Hanya Urgent'),
+              secondary: const Icon(Icons.priority_high, color: AppTheme.error),
+              value: _showUrgentOnly,
+              activeColor: AppTheme.error,
+              onChanged: (value) {
+                setState(() => _showUrgentOnly = value);
                 Navigator.pop(context);
               },
             ),
@@ -690,71 +278,111 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     );
   }
 
-  void _showReportDetail(Report report) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        expand: false,
-        builder: (context, scrollController) => _ReportDetailSheet(
-          report: report,
-          scrollController: scrollController,
-          onDelete: () {
-            Navigator.pop(context);
-            _deleteReport(report);
-          },
+  Widget _buildStatusFilter(String label, ReportStatus? status, IconData icon) {
+    final isSelected = _selectedStatusFilter == status;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? AppTheme.primary : Colors.grey),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? AppTheme.primary : Colors.black87,
         ),
+      ),
+      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.primary) : null,
+      onTap: () {
+        setState(() => _selectedStatusFilter = status);
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  Widget _buildActiveFilters() {
+    final hasFilters = _selectedStatusFilter != null || _showUrgentOnly || _searchQuery.isNotEmpty;
+    
+    if (!hasFilters) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          if (_searchQuery.isNotEmpty)
+            _buildFilterChip(
+              label: 'Pencarian: "$_searchQuery"',
+              onRemove: () => setState(() {
+                _searchQuery = '';
+                _searchController.clear();
+              }),
+            ),
+          if (_selectedStatusFilter != null)
+            _buildFilterChip(
+              label: _getStatusLabel(_selectedStatusFilter!),
+              onRemove: () => setState(() => _selectedStatusFilter = null),
+            ),
+          if (_showUrgentOnly)
+            _buildFilterChip(
+              label: 'Urgent',
+              color: AppTheme.error,
+              onRemove: () => setState(() => _showUrgentOnly = false),
+            ),
+        ],
       ),
     );
   }
 
-  // ==================== DELETE REPORT ====================
+  Widget _buildFilterChip({
+    required String label,
+    required VoidCallback onRemove,
+    Color? color,
+  }) {
+    return Chip(
+      label: Text(label, style: const TextStyle(fontSize: 12)),
+      deleteIcon: const Icon(Icons.close, size: 18),
+      onDeleted: onRemove,
+      backgroundColor: (color ?? AppTheme.primary).withValues(alpha: 0.1),
+      deleteIconColor: color ?? AppTheme.primary,
+      labelStyle: TextStyle(color: color ?? AppTheme.primary),
+    );
+  }
+
+  String _getStatusLabel(ReportStatus status) {
+    switch (status) {
+      case ReportStatus.pending:
+        return 'Pending';
+      case ReportStatus.assigned:
+        return 'Ditugaskan';
+      case ReportStatus.inProgress:
+        return 'Dikerjakan';
+      case ReportStatus.completed:
+        return 'Selesai';
+      case ReportStatus.verified:
+        return 'Terverifikasi';
+      case ReportStatus.rejected:
+        return 'Ditolak';
+    }
+  }
+
+  // ==================== DELETE REPORT WITH UNDO ====================
 
   Future<void> _deleteReport(Report report) async {
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text(AppStrings.deleteReport),
-        content: const Text(AppStrings.deleteReportConfirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text(AppStrings.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text(AppStrings.delete),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
     try {
       final actions = ref.read(employeeActionsProvider);
       await actions.deleteReport(report.id);
 
       if (!mounted) return;
 
-      // Save deleted report for undo
+      // 🆕 Save deleted report for undo
       setState(() {
         _lastDeletedReport = report;
       });
 
-      // Show success snackbar with undo option
+      // 🆕 Show success snackbar with UNDO option
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(AppStrings.reportDeleted),
-          duration: const Duration(seconds: 5), // Kasih waktu 5 detik untuk undo
+          duration: const Duration(seconds: 5), // ⏱️ Kasih waktu 5 detik untuk undo
           action: SnackBarAction(
             label: AppStrings.undo,
             onPressed: () {
@@ -766,7 +394,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
         ),
       ).closed.then((reason) {
-        // Auto-clear setelah SnackBar hilang (jika tidak di-undo)
+        // 🗑️ Auto-clear setelah SnackBar hilang (jika tidak di-undo)
         if (reason != SnackBarClosedReason.action && mounted) {
           setState(() {
             _lastDeletedReport = null;
@@ -775,9 +403,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${AppStrings.errorDeleteFailed}: $e'),
+          content: Text('Gagal menghapus laporan: $e'),
           backgroundColor: AppTheme.error,
         ),
       );
@@ -790,7 +419,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     try {
       final actions = ref.read(employeeActionsProvider);
       
-      // Recreate the report with same data
+      // ✅ Recreate the report with same data (dengan ID baru)
       await actions.createReport(
         location: report.location,
         description: report.description ?? '',
@@ -800,7 +429,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
       if (!mounted) return;
 
-      // Show success message
+      // ✅ Show success message
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('✅ Laporan berhasil dipulihkan'),
@@ -809,7 +438,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         ),
       );
 
-      // Clear the saved report
+      // 🗑️ Clear the saved report
       setState(() {
         _lastDeletedReport = null;
       });
@@ -824,540 +453,622 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       );
     }
   }
-}
 
-// ==================== CUSTOM WIDGETS ====================
+  // ==================== REPORT LIST ====================
 
-class _StatsCard extends StatelessWidget {
-  final String title;
-  final int count;
-  final Color color;
-  final IconData icon;
-  final VoidCallback onTap;
+  Widget _buildReportCard(Report report) {
+    final statusColor = _getStatusColor(report.status);
+    final statusLabel = _getStatusLabel(report.status);
 
-  const _StatsCard({
-    required this.title,
-    required this.count,
-    required this.color,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: color.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 28),
-              const SizedBox(height: 8),
-              Text(
-                '$count',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuickActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  final bool isActive;
-
-  const _QuickActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-    this.isActive = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: isActive ? color.withValues(alpha: 0.1) : Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isActive ? color : Colors.grey.shade300,
-              width: isActive ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color, size: 24),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: color,
-                  fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _ReportCard extends StatelessWidget {
-  final Report report;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
-
-  const _ReportCard({
-    required this.report,
-    required this.onTap,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
-        onTap: onTap,
+        onTap: () => _showReportDetail(report),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header: Location & Status
+              // Header: Status Badge + Urgent Badge
               Row(
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          report.location,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(report.date),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppTheme.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: report.status.color.withValues(alpha: 0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          report.status.icon,
-                          size: 16,
-                          color: report.status.color,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          report.status.displayName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: report.status.color,
-                          ),
-                        ),
-                      ],
+                    child: Text(
+                      statusLabel,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
-                ],
-              ),
-
-              // Description
-              if (report.description != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  report.description!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-
-              // Footer: Urgent badge & Actions
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  if (report.isUrgent)
+                  if (report.isUrgent) ...[
+                    const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppTheme.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(6),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
+                        children: const [
                           Icon(Icons.priority_high, size: 14, color: AppTheme.error),
                           SizedBox(width: 4),
                           Text(
-                            'URGEN',
+                            'URGENT',
                             style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
                               color: AppTheme.error,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
                             ),
                           ),
                         ],
                       ),
                     ),
+                  ],
                   const Spacer(),
-                  if (report.status == ReportStatus.pending)
-                    IconButton(
-                      icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-                      onPressed: onDelete,
-                      tooltip: AppStrings.deleteReport,
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: AppTheme.error),
+                    onPressed: () => _confirmDelete(report),
+                    tooltip: 'Hapus Laporan',
+                  ),
                 ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SortOption extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SortOption({
-    required this.title,
-    required this.icon,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: isSelected ? AppTheme.primary : Colors.grey,
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
-        ),
-      ),
-      trailing: isSelected
-          ? const Icon(Icons.check, color: AppTheme.primary)
-          : null,
-      onTap: onTap,
-    );
-  }
-}
-
-class _FilterOption extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _FilterOption({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return ListTile(
-      leading: Icon(icon, color: color),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? color : AppTheme.textPrimary,
-        ),
-      ),
-      trailing: isSelected ? Icon(Icons.check, color: color) : null,
-      onTap: onTap,
-    );
-  }
-}
-
-class _ReportDetailSheet extends StatelessWidget {
-  final Report report;
-  final ScrollController scrollController;
-  final VoidCallback onDelete;
-
-  const _ReportDetailSheet({
-    required this.report,
-    required this.scrollController,
-    required this.onDelete,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: ListView(
-        controller: scrollController,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Status Badge
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                color: report.status.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
+              const SizedBox(height: 12),
+              
+              // Location
+              Row(
                 children: [
-                  Icon(report.status.icon, size: 20, color: report.status.color),
+                  const Icon(Icons.location_on, size: 20, color: AppTheme.primary),
                   const SizedBox(width: 8),
-                  Text(
-                    report.status.displayName,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: report.status.color,
+                  Expanded(
+                    child: Text(
+                      report.location,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Location
-          Text(
-            report.location,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          // Date
-          Row(
-            children: [
-              const Icon(Icons.calendar_today, size: 16, color: AppTheme.textSecondary),
-              const SizedBox(width: 8),
-              Text(
-                DateFormat('dd MMMM yyyy, HH:mm', 'id_ID').format(report.date),
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AppTheme.textSecondary,
+              
+              // Description
+              if (report.description != null && report.description!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  report.description!,
+                  style: const TextStyle(color: Colors.grey),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              ],
+              
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              
+              // Footer: Date + Image indicator - ✅ FIXED: Pakai report.date
+              Row(
+                children: [
+                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                  const SizedBox(width: 4),
+                  Text(
+                    DateFormatter.fullDateTime(report.date),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const Spacer(),
+                  if (report.imageUrl != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Icon(Icons.image, size: 14, color: Colors.blue),
+                          SizedBox(width: 4),
+                          Text(
+                            'Ada Foto',
+                            style: TextStyle(fontSize: 11, color: Colors.blue),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
 
-          if (report.isUrgent) ...[
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.error.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
-              ),
-              child: const Row(
-                children: [
-                  Icon(Icons.priority_high, color: AppTheme.error),
-                  SizedBox(width: 8),
-                  Text(
-                    'Laporan URGEN - Perlu ditangani segera',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.error,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+  Color _getStatusColor(ReportStatus status) {
+    switch (status) {
+      case ReportStatus.pending:
+      case ReportStatus.assigned:
+        return AppTheme.warning;
+      case ReportStatus.inProgress:
+        return Colors.blue;
+      case ReportStatus.completed:
+      case ReportStatus.verified:
+        return AppTheme.success;
+      case ReportStatus.rejected:
+        return AppTheme.error;
+    }
+  }
 
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 20),
+  void _showReportDetail(Report report) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        // TODO: [WEEK-1] Create shared ReportDetailScreen
+        // For now, navigate to employee-specific screen
+        builder: (context) => const Placeholder(), // Replace with actual screen
+      ),
+    );
+  }
 
-          // Description
-          if (report.description != null) ...[
-            const Text(
-              'Deskripsi',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+  void _confirmDelete(Report report) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Laporan'),
+        content: const Text(
+          'Apakah Anda yakin ingin menghapus laporan ini? Anda bisa membatalkan dalam 5 detik.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _deleteReport(report);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.error,
             ),
-            const SizedBox(height: 8),
-            Text(
-              report.description!,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppTheme.textSecondary,
-                height: 1.5,
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+  }
 
-          // Image
-          if (report.imageUrl != null) ...[
-            const Text(
-              'Foto Laporan',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
-              ),
+  // ==================== BUILD UI ====================
+
+  @override
+  Widget build(BuildContext context) {
+    final reportsAsync = ref.watch(employeeReportsProvider);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text(AppConstants.appName),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ReportHistoryScreen(),
+                ),
+              );
+            },
+            tooltip: 'Riwayat Laporan',
+          ),
+        ],
+      ),
+      drawer: _buildDrawer(),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(employeeReportsProvider);
+        },
+        child: reportsAsync.when(
+          data: (reports) => _buildContent(reports),
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (error, stack) => Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
+                const SizedBox(height: 16),
+                Text(
+                  'Error: $error',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppTheme.error),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => ref.invalidate(employeeReportsProvider),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Coba Lagi'),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Image.network(
-                report.imageUrl!,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => Container(
-                  height: 200,
-                  color: Colors.grey.shade200,
-                  child: const Center(
-                    child: Icon(Icons.image_not_supported, size: 48),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const Placeholder(), // TODO: Replace with CreateReportScreen
+            ),
+          );
+        },
+        icon: const Icon(Icons.add),
+        label: const Text('Buat Laporan'),
+      ),
+    );
+  }
+
+  Widget _buildContent(List<Report> allReports) {
+    final stats = _getStatistics(allReports);
+    final filteredReports = _filterAndSortReports(allReports);
+
+    return CustomScrollView(
+      slivers: [
+        // Greeting
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getGreeting(),
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
+                const SizedBox(height: 4),
+                Text(
+                  'Selamat datang di ${AppConstants.appName}',
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-          ],
+          ),
+        ),
 
-          // Cleaner Info
-          if (report.cleanerName != null) ...[
-            const Text(
-              'Petugas',
-              style: TextStyle(
+        // Statistics Cards
+        SliverToBoxAdapter(
+          child: SizedBox(
+            height: 120,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              children: [
+                SizedBox(
+                  width: 140,
+                  child: _buildStatsCard(
+                    title: 'Total Laporan',
+                    count: stats['total']!,
+                    icon: Icons.description,
+                    color: AppTheme.primary,
+                    onTap: () => setState(() {
+                      _selectedStatusFilter = null;
+                      _showUrgentOnly = false;
+                    }),
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: _buildStatsCard(
+                    title: 'Pending',
+                    count: stats['pending']!,
+                    icon: Icons.schedule,
+                    color: AppTheme.warning,
+                    onTap: () => setState(() {
+                      _selectedStatusFilter = ReportStatus.pending;
+                      _showUrgentOnly = false;
+                    }),
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: _buildStatsCard(
+                    title: 'Dikerjakan',
+                    count: stats['in_progress']!,
+                    icon: Icons.construction,
+                    color: Colors.blue,
+                    onTap: () => setState(() {
+                      _selectedStatusFilter = ReportStatus.inProgress;
+                      _showUrgentOnly = false;
+                    }),
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: _buildStatsCard(
+                    title: 'Selesai',
+                    count: stats['completed']!,
+                    icon: Icons.check_circle,
+                    color: AppTheme.success,
+                    onTap: () => setState(() {
+                      _selectedStatusFilter = ReportStatus.completed;
+                      _showUrgentOnly = false;
+                    }),
+                  ),
+                ),
+                SizedBox(
+                  width: 140,
+                  child: _buildStatsCard(
+                    title: 'Urgent',
+                    count: stats['urgent']!,
+                    icon: Icons.priority_high,
+                    color: AppTheme.error,
+                    onTap: () => setState(() {
+                      _showUrgentOnly = true;
+                      _selectedStatusFilter = null;
+                    }),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+        // Quick Actions
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildQuickAction(
+                    label: 'Buat Laporan',
+                    icon: Icons.add_circle_outline,
+                    color: AppTheme.primary,
+                    onTap: () {
+                      // TODO: Navigate to CreateReportScreen
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildQuickAction(
+                    label: 'Filter Urgent',
+                    icon: Icons.priority_high,
+                    color: AppTheme.error,
+                    onTap: () => setState(() => _showUrgentOnly = !_showUrgentOnly),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+        // Search Bar
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    decoration: InputDecoration(
+                      hintText: 'Cari lokasi atau deskripsi...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: _searchQuery.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear),
+                              onPressed: () {
+                                setState(() {
+                                  _searchQuery = '';
+                                  _searchController.clear();
+                                });
+                              },
+                            )
+                          : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    onChanged: (value) => setState(() => _searchQuery = value),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  onPressed: _showSortOptions,
+                  tooltip: 'Urutkan',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.filter_list),
+                  onPressed: _showFilterOptions,
+                  tooltip: 'Filter',
+                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Active Filters
+        SliverToBoxAdapter(child: _buildActiveFilters()),
+
+        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+
+        // Reports List Header
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              '${filteredReports.length} Laporan',
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: AppTheme.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppTheme.info.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                children: [
-                  const CircleAvatar(
-                    backgroundColor: AppTheme.info,
-                    child: Icon(Icons.person, color: Colors.white),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    report.cleanerName!,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+          ),
+        ),
 
-          // Delete button (only for pending status)
-          if (report.status == ReportStatus.pending) ...[
-            const SizedBox(height: 20),
-            OutlinedButton.icon(
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline),
-              label: const Text(AppStrings.deleteReport),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.error,
-                side: const BorderSide(color: AppTheme.error),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+        // Reports List
+        filteredReports.isEmpty
+            ? SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly
+                            ? Icons.search_off
+                            : Icons.description_outlined,
+                        size: 64,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly
+                            ? 'Tidak ada laporan yang sesuai'
+                            : 'Belum ada laporan',
+                        style: const TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                      if (_searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly) ...[
+                        const SizedBox(height: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _searchQuery = '';
+                              _searchController.clear();
+                              _selectedStatusFilter = null;
+                              _showUrgentOnly = false;
+                            });
+                          },
+                          child: const Text('Reset Filter'),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              )
+            : SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _buildReportCard(filteredReports[index]),
+                  childCount: filteredReports.length,
+                ),
               ),
+        
+        const SliverToBoxAdapter(child: SizedBox(height: 80)),
+      ],
+    );
+  }
+
+  Widget _buildDrawer() {
+    final profileAsync = ref.watch(currentUserProfileProvider);
+
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: const BoxDecoration(color: AppTheme.primary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const CircleAvatar(
+                  radius: 30,
+                  backgroundColor: Colors.white,
+                  child: Icon(Icons.person, size: 30, color: AppTheme.primary),
+                ),
+                const SizedBox(height: 12),
+                profileAsync.when(
+                  data: (profile) => Text(
+                    profile?.displayName ?? 'Employee',
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  loading: () => const Text(
+                    'Loading...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  error: (_, __) => const Text(
+                    'Error',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                const Text(
+                  'Karyawan',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+              ],
             ),
-          ],
+          ),
+          ListTile(
+            leading: const Icon(Icons.home),
+            title: const Text('Beranda'),
+            onTap: () => Navigator.pop(context),
+          ),
+          ListTile(
+            leading: const Icon(Icons.history),
+            title: const Text('Riwayat Laporan'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ReportHistoryScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: AppTheme.error),
+            title: const Text('Keluar', style: TextStyle(color: AppTheme.error)),
+            onTap: () async {
+              final shouldLogout = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Keluar'),
+                  content: const Text('Apakah Anda yakin ingin keluar?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Batal'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.error,
+                      ),
+                      child: const Text('Keluar'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (shouldLogout == true && mounted) {
+                // ✅ FIXED: Pakai .notifier.logout()
+                await ref.read(authActionsProvider.notifier).logout();
+              }
+            },
+          ),
         ],
       ),
     );

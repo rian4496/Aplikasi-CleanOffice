@@ -66,4 +66,20 @@ class DateFormatter {
       return '$years tahun lalu';
     }
   }
+
+  // ==================== TAMBAHAN UNTUK EMPLOYEE SCREENS ====================
+  
+  /// Format tanggal standar (alias untuk shortDate).
+  /// Contoh: 24 Okt 2025
+  /// Digunakan oleh report_history_screen.dart
+  static String format(DateTime date) {
+    return DateFormat('dd MMM yyyy', 'id_ID').format(date);
+  }
+
+  /// Format waktu saja (alias untuk timeOnly).
+  /// Contoh: 14:30
+  /// Digunakan oleh report_detail_employee_screen.dart
+  static String time(DateTime date) {
+    return DateFormat('HH:mm', 'id_ID').format(date);
+  }
 }

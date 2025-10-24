@@ -18,7 +18,7 @@ import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 import 'request_detail_screen.dart';
-import 'cleaner_report_detail_screen.dart';
+import 'report_detail_cleaner_screen.dart';
 import 'create_cleaning_report_screen.dart';
 
 class CleanerHomeScreen extends ConsumerStatefulWidget {

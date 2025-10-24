@@ -1,4 +1,5 @@
-// lib/screens/notification_screen.dart - UPDATED WITH REAL DATA
+// lib/screens/notification_screen.dart
+// ✅ FIXED: Import ReportDetailEmployeeScreen yang benar
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +8,7 @@ import '../core/theme/app_theme.dart';
 import '../models/notification_model.dart';
 import '../providers/riverpod/notification_providers.dart';
 import '../providers/riverpod/employee_providers.dart';
-import 'employee/report_detail_screen.dart';
+import 'employee/report_detail_employee_screen.dart'; // ✅ FIXED: Import yang benar
 
 class NotificationScreen extends ConsumerWidget {
   const NotificationScreen({super.key});
@@ -169,7 +170,8 @@ class NotificationScreen extends ConsumerWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ReportDetailScreen(report: report),
+              // ✅ FIXED: Menggunakan ReportDetailEmployeeScreen yang benar
+              builder: (context) => ReportDetailEmployeeScreen(report: report),
             ),
           );
         } else if (context.mounted) {

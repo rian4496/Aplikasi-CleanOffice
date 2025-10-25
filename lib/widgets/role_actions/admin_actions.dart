@@ -1,14 +1,15 @@
-// lib/screens/shared/report_detail/widgets/role_actions/admin_actions.dart
+// lib/widgets/role_actions/admin_actions.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_theme.dart';
-import '../../../../../core/constants/app_constants.dart';
-import '../../../../../core/logging/app_logger.dart';
-import '../../../../../core/error/exceptions.dart';
-import '../../../../../models/report.dart';
-import '../../../../../providers/riverpod/admin_providers.dart';
+// ✅ FIXED: Import paths untuk lokasi lib/widgets/role_actions/ (naik 2 level)
+import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import '../../models/report.dart';
+import '../../providers/riverpod/admin_providers.dart';
 
 final _logger = AppLogger('AdminActions');
 
@@ -189,10 +190,13 @@ class _AdminActionsState extends ConsumerState<AdminActions> {
     setState(() => _isProcessing = true);
 
     try {
-      final actions = ref.read(adminActionsProvider.notifier);
-      await actions.verifyReport(
-        widget.report.id,
-        verificationNotes: notes.isEmpty ? null : notes,
+      // ✅ FIXED: Gunakan verificationActionsProvider yang sudah ada
+      final actions = ref.read(verificationActionsProvider);
+      
+      // ✅ FIXED: Gunakan method approveReport() dengan report object
+      await actions.approveReport(
+        widget.report,
+        notes: notes.isEmpty ? null : notes,
       );
 
       if (!mounted) return;
@@ -224,10 +228,13 @@ class _AdminActionsState extends ConsumerState<AdminActions> {
     setState(() => _isProcessing = true);
 
     try {
-      final actions = ref.read(adminActionsProvider.notifier);
+      // ✅ FIXED: Gunakan verificationActionsProvider yang sudah ada
+      final actions = ref.read(verificationActionsProvider);
+      
+      // ✅ FIXED: Gunakan method rejectReport() dengan report object
       await actions.rejectReport(
-        widget.report.id,
-        rejectionReason: reason,
+        widget.report,
+        reason: reason,
       );
 
       if (!mounted) return;

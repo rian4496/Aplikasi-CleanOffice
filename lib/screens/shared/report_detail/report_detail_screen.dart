@@ -4,23 +4,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_theme.dart';
-import '../../../../../core/constants/app_constants.dart';
-import '../../../../../core/utils/date_formatter.dart';
-import '../../../../../models/report.dart';
-import '../../../../../providers/riverpod/auth_providers.dart';
+// ✅ FIXED: Import paths (dari lib/screens/shared/report_detail/ ke lib/)
+import '../../../core/theme/app_theme.dart';
+import '../../../core/constants/app_constants.dart';
+import '../../../models/report.dart';
+import '../../../providers/riverpod/auth_providers.dart';
 
-// Widget components
-import '../../widgets/report_header.dart';
-import '../../widgets/report_info_sections.dart';
-import '../../widgets/report_timeline.dart';
-import '../../widgets/report_images_section.dart';
-import '../../widgets/report_verification_section.dart';
+// ✅ FIXED: Widget components (LANGSUNG dari lib/widgets/, TIDAK ada subfolder shared)
+import '../../../widgets/report_header.dart';
+import '../../../widgets/report_info_sections.dart';
+import '../../../widgets/report_timeline.dart';
+import '../../../widgets/report_images_section.dart';
+import '../../../widgets/report_verification_section.dart';
 
-// Role-specific actions
-import '../../widgets/role_actions/cleaner_actions.dart';
-import '../../widgets/role_actions/employee_actions.dart';
-import '../../widgets/role_actions/admin_actions.dart';
+// ✅ FIXED: Role-specific actions (dari lib/widgets/role_actions/)
+import '../../../widgets/role_actions/cleaner_actions.dart';
+import '../../../widgets/role_actions/employee_actions.dart';
+import '../../../widgets/role_actions/admin_actions.dart';
 
 /// Universal Report Detail Screen
 /// Supports: Employee, Cleaner, Admin roles

@@ -1,8 +1,10 @@
-// lib/screens/shared/report_detail/widgets/role_actions/employee_actions.dart
+// lib/widgets/role_actions/employee_actions.dart
 
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_theme.dart';
-import '../../../../../models/report.dart';
+
+// ✅ FIXED: Import paths untuk lokasi lib/widgets/role_actions/ (naik 2 level)
+import '../../core/theme/app_theme.dart';
+import '../../models/report.dart';
 
 /// Action section for Employee role (usually just info, no actions)
 class EmployeeActions extends StatelessWidget {
@@ -78,9 +80,10 @@ class EmployeeActions extends StatelessWidget {
     return Card(
       color: color.withValues(alpha: 0.1),
       elevation: 0,
+      // ✅ FIXED: Gunakan 'shape' bukan 'border' untuk Card widget
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
+        side: BorderSide(
           color: color.withValues(alpha: 0.3),
           width: 1,
         ),

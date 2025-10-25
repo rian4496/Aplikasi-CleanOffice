@@ -1,5 +1,6 @@
 // lib/models/report.dart
 // ✅ UNIFIED: Report model + ReportStatus enum dalam 1 file
+// ✅ UPDATED: Added soft delete support with deletedAt & deletedBy fields
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -164,7 +165,7 @@ class Report {
 
   // Detail Laporan
   final String? imageUrl;              // ← Foto laporan awal (dari employee)
-  final String? completionImageUrl;    // ← Foto bukti selesai (dari cleaner) 🆕
+  final String? completionImageUrl;    // ← Foto bukti selesai (dari cleaner)
   final String? description;
   final bool isUrgent;
 
@@ -175,6 +176,10 @@ class Report {
 
   // Department (untuk filtering supervisor)
   final String? departmentId;
+
+  // 🆕 Soft Delete Support
+  final DateTime? deletedAt;
+  final String? deletedBy;
 
   Report({
     required this.id,
@@ -192,13 +197,15 @@ class Report {
     this.verifiedAt,
     this.verificationNotes,
     this.imageUrl,
-    this.completionImageUrl,          // 🆕 TAMBAH INI
+    this.completionImageUrl,
     this.description,
     this.isUrgent = false,
     this.assignedAt,
     this.startedAt,
     this.completedAt,
     this.departmentId,
+    this.deletedAt,                   // 🆕 SOFT DELETE
+    this.deletedBy,                   // 🆕 SOFT DELETE
   });
 
   /// Convert dari Firestore document ke Report object
@@ -221,13 +228,15 @@ class Report {
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,  // 🆕 TAMBAH INI
+      completionImageUrl: data['completionImageUrl'] as String?,
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
       assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
       startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       departmentId: data['departmentId'] as String?,
+      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),       // 🆕
+      deletedBy: data['deletedBy'] as String?,                      // 🆕
     );
   }
 
@@ -249,13 +258,15 @@ class Report {
       verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,  // 🆕 TAMBAH INI
+      completionImageUrl: data['completionImageUrl'] as String?,
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
       assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
       startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
       completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
       departmentId: data['departmentId'] as String?,
+      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),       // 🆕
+      deletedBy: data['deletedBy'] as String?,                      // 🆕
     );
   }
 
@@ -276,7 +287,7 @@ class Report {
       'verifiedAt': verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
       'verificationNotes': verificationNotes,
       'imageUrl': imageUrl,
-      'completionImageUrl': completionImageUrl,  // 🆕 TAMBAH INI
+      'completionImageUrl': completionImageUrl,
       'description': description,
       'isUrgent': isUrgent,
       'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
@@ -285,6 +296,8 @@ class Report {
           ? Timestamp.fromDate(completedAt!)
           : null,
       'departmentId': departmentId,
+      'deletedAt': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null,  // 🆕
+      'deletedBy': deletedBy,                                                   // 🆕
     };
   }
 
@@ -305,13 +318,15 @@ class Report {
     DateTime? verifiedAt,
     String? verificationNotes,
     String? imageUrl,
-    String? completionImageUrl,        // 🆕 TAMBAH INI
+    String? completionImageUrl,
     String? description,
     bool? isUrgent,
     DateTime? assignedAt,
     DateTime? startedAt,
     DateTime? completedAt,
     String? departmentId,
+    DateTime? deletedAt,              // 🆕
+    String? deletedBy,                // 🆕
   }) {
     return Report(
       id: id ?? this.id,
@@ -329,13 +344,15 @@ class Report {
       verifiedAt: verifiedAt ?? this.verifiedAt,
       verificationNotes: verificationNotes ?? this.verificationNotes,
       imageUrl: imageUrl ?? this.imageUrl,
-      completionImageUrl: completionImageUrl ?? this.completionImageUrl,  // 🆕 TAMBAH INI
+      completionImageUrl: completionImageUrl ?? this.completionImageUrl,
       description: description ?? this.description,
       isUrgent: isUrgent ?? this.isUrgent,
       assignedAt: assignedAt ?? this.assignedAt,
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       departmentId: departmentId ?? this.departmentId,
+      deletedAt: deletedAt ?? this.deletedAt,                      // 🆕
+      deletedBy: deletedBy ?? this.deletedBy,                      // 🆕
     );
   }
 
@@ -343,6 +360,7 @@ class Report {
   bool get isAssigned => cleanerId != null;
   bool get isVerified => status == ReportStatus.verified;
   bool get needsVerification => status == ReportStatus.completed;
+  bool get isDeleted => deletedAt != null;                        // 🆕 Helper untuk check soft delete
 
   /// Durasi pengerjaan (jika ada)
   Duration? get workDuration {

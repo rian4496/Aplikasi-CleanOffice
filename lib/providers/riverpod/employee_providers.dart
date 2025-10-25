@@ -300,10 +300,21 @@ class EmployeeActions {
     );
   }
 
-  /// Delete report
+
+  /// Delete report (soft delete)
+  /// 🆕 UPDATED: Now uses soft delete instead of permanent delete
   Future<void> deleteReport(String reportId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('User not logged in');
+    
     final service = ref.read(firestoreServiceProvider);
-    await service.deleteReport(reportId);
+    await service.softDeleteReport(reportId, user.uid);
+  }
+
+  /// 🆕 NEW: Restore deleted report
+  Future<void> restoreReport(String reportId) async {
+    final service = ref.read(firestoreServiceProvider);
+    await service.restoreReport(reportId);
   }
 
   /// Get report by ID

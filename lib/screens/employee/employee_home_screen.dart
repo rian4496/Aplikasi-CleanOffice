@@ -1,17 +1,16 @@
+// lib/screens/employee/employee_home_screen.dart
+// ✅ COMPLETE Employee Home Screen dengan Riverpod
+// ✅ UPDATED: Dengan endDrawer, no title, no profile icon, white icons
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-// ✅ FIXED: Import paths sesuai struktur lib/core/
-import '../../core/theme/app_theme.dart';
-import '../../core/constants/app_strings.dart';
-import '../../core/constants/app_constants.dart';
-import '../../core/utils/date_formatter.dart';
+import 'package:intl/intl.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
 import '../../providers/riverpod/auth_providers.dart';
-import '../shared/report_detail_screen.dart';
-import 'create_report_screen.dart';
-import 'report_history_screen.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_strings.dart';
+import '../../widgets/shared/drawer_menu_widget.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
@@ -28,7 +27,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   bool _showUrgentOnly = false;
   String _sortBy = 'newest'; // newest, oldest, urgent, location
   
-  // 🆕 Undo functionality
+  // Undo functionality
   Report? _lastDeletedReport; // Simpan report yang dihapus untuk undo
 
   @override
@@ -37,140 +36,32 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     super.dispose();
   }
 
-  // ==================== GREETING BASED ON TIME ====================
+  // ==================== FILTERED & SORTED REPORTS ====================
 
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Selamat Pagi';
-    if (hour < 15) return 'Selamat Siang';
-    if (hour < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
-  }
+  List<Report> _getFilteredAndSortedReports(List<Report> reports) {
+    var filtered = reports;
 
-  // ==================== STATISTICS ====================
-
-  Map<String, int> _getStatistics(List<Report> reports) {
-    return {
-      'total': reports.length,
-      'pending': reports.where((r) => r.status == ReportStatus.pending).length,
-      'in_progress': reports.where((r) => r.status == ReportStatus.inProgress).length,
-      'completed': reports.where((r) => r.status == ReportStatus.completed).length,
-      'verified': reports.where((r) => r.status == ReportStatus.verified).length,
-      'urgent': reports.where((r) => r.isUrgent).length,
-    };
-  }
-
-  Widget _buildStatsCard({
-    required String title,
-    required int count,
-    required IconData icon,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Icon(icon, color: color, size: 28),
-                  Text(
-                    count.toString(),
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ==================== QUICK ACTIONS ====================
-
-  Widget _buildQuickAction({
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ==================== SEARCH & FILTER ====================
-
-  List<Report> _filterAndSortReports(List<Report> reports) {
-    var filtered = reports.where((report) {
-      // Search filter
-      if (_searchQuery.isNotEmpty) {
+    // Apply search filter
+    if (_searchQuery.isNotEmpty) {
+      filtered = filtered.where((report) {
         final query = _searchQuery.toLowerCase();
-        final matchesLocation = report.location.toLowerCase().contains(query);
-        final matchesDescription = report.description?.toLowerCase().contains(query) ?? false;
-        if (!matchesLocation && !matchesDescription) return false;
-      }
+        return report.location.toLowerCase().contains(query) ||
+            report.title.toLowerCase().contains(query) ||
+            (report.description?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
 
-      // Status filter
-      if (_selectedStatusFilter != null && report.status != _selectedStatusFilter) {
-        return false;
-      }
+    // Apply status filter
+    if (_selectedStatusFilter != null) {
+      filtered = filtered.where((r) => r.status == _selectedStatusFilter).toList();
+    }
 
-      // Urgent filter
-      if (_showUrgentOnly && !report.isUrgent) {
-        return false;
-      }
+    // Apply urgent filter
+    if (_showUrgentOnly) {
+      filtered = filtered.where((r) => r.isUrgent).toList();
+    }
 
-      return true;
-    }).toList();
-
-    // Sort - ✅ FIXED: Pakai report.date
+    // Apply sorting
     switch (_sortBy) {
       case 'oldest':
         filtered.sort((a, b) => a.date.compareTo(b.date));
@@ -188,18 +79,574 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       case 'newest':
       default:
         filtered.sort((a, b) => b.date.compareTo(a.date));
+        break;
     }
 
     return filtered;
   }
 
+  // ==================== BUILD METHOD ====================
+
+  @override
+  Widget build(BuildContext context) {
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
+    final reportsAsync = ref.watch(employeeReportsProvider);
+    final summary = ref.watch(employeeReportsSummaryProvider);
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: _buildAppBar(context, userProfileAsync),
+      endDrawer: _buildEndDrawer(context), // ✅ ADDED: endDrawer
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(employeeReportsProvider);
+          ref.invalidate(currentUserProfileProvider);
+        },
+        child: CustomScrollView(
+          slivers: [
+            // Header dengan nama user
+            SliverToBoxAdapter(
+              child: _buildHeader(userProfileAsync),
+            ),
+
+            // Stats Cards
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _buildStatsCards(summary),
+              ),
+            ),
+
+            // Quick Actions
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _buildQuickActions(),
+              ),
+            ),
+
+            // Search & Filter
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: _buildSearchAndFilter(),
+              ),
+            ),
+
+            // Active Filters Chips
+            if (_selectedStatusFilter != null || _showUrgentOnly)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  child: _buildActiveFilters(),
+                ),
+              ),
+
+            // Reports List
+            reportsAsync.when(
+              data: (reports) {
+                final filteredReports = _getFilteredAndSortedReports(reports);
+                return _buildReportsList(filteredReports);
+              },
+              loading: () => _buildLoadingState(),
+              error: (error, stack) => _buildErrorState(error),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: _buildFAB(),
+    );
+  }
+
+  // ==================== APP BAR ====================
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, AsyncValue userProfileAsync) {
+    return AppBar(
+      // ✅ REMOVED: title (no "Beranda Karyawan" text)
+      backgroundColor: AppTheme.primary,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        // ✅ Notification icon (white)
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          onPressed: () => Navigator.pushNamed(context, '/notifications'),
+        ),
+        // ✅ ADDED: Hamburger menu icon untuk buka endDrawer
+        Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openEndDrawer(),
+            tooltip: 'Menu',
+          ),
+        ),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  // ==================== END DRAWER ====================
+
+  Widget _buildEndDrawer(BuildContext context) {
+    return Drawer(
+      child: DrawerMenuWidget(
+        menuItems: [
+          DrawerMenuItem(
+            icon: Icons.home,
+            title: 'Beranda',
+            onTap: () {
+              Navigator.pop(context); // Close drawer
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.description,
+            title: 'Riwayat Laporan',  // ✅ CHANGED: from "Laporan Saya"
+            onTap: () {
+              Navigator.pop(context);
+              // Already on home screen, just scroll to top or refresh
+              ref.invalidate(employeeReportsProvider);
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.person,
+            title: 'Profil',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+          DrawerMenuItem(
+            icon: Icons.settings,
+            title: 'Pengaturan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/settings');
+            },
+          ),
+        ],
+        onLogout: () => _handleLogout(context),
+      ),
+    );
+  }
+
+  // ==================== LOGOUT HANDLER ====================
+
+  Future<void> _handleLogout(BuildContext context) async {
+    // Close drawer first
+    Navigator.pop(context);
+
+    // Show confirmation dialog
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(AppStrings.logoutTitle),
+        content: const Text(AppStrings.logoutConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(AppStrings.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text(AppStrings.logout),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && context.mounted) {
+      try {
+        // Perform logout using Riverpod provider
+        await ref.read(authActionsProvider.notifier).logout();
+        
+        // Navigate to login screen
+        if (context.mounted) {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            '/login',
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        // Show error message
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal logout: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  // ==================== HEADER ====================
+
+  Widget _buildHeader(AsyncValue userProfileAsync) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: userProfileAsync.when(
+        data: (profile) {
+          final name = profile?.displayName ?? 'User';
+          final greeting = _getGreeting();
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                greeting,
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                name,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          );
+        },
+        loading: () => const SizedBox(height: 60),
+        error: (_, _) => const SizedBox(height: 60),
+      ),
+    );
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }
+
+  // ==================== STATS CARDS ====================
+
+  Widget _buildStatsCards(EmployeeReportsSummary summary) {
+    return Row(
+      children: [
+        Expanded(
+          child: _StatsCard(
+            title: AppStrings.progressSent,
+            count: summary.pending,
+            color: AppTheme.warning,
+            icon: Icons.schedule,
+            onTap: () {
+              setState(() {
+                _selectedStatusFilter = ReportStatus.pending;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatsCard(
+            title: AppStrings.progressInProgress,
+            count: summary.inProgress,
+            color: AppTheme.info,
+            icon: Icons.pending_actions,
+            onTap: () {
+              setState(() {
+                _selectedStatusFilter = ReportStatus.inProgress;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _StatsCard(
+            title: AppStrings.progressCompleted,
+            count: summary.completed,
+            color: AppTheme.success,
+            icon: Icons.check_circle,
+            onTap: () {
+              setState(() {
+                _selectedStatusFilter = ReportStatus.completed;
+              });
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== QUICK ACTIONS ====================
+
+  Widget _buildQuickActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.add_circle,
+            label: 'Buat Laporan',
+            color: AppTheme.primary,
+            onTap: () => Navigator.pushNamed(context, '/create_report'),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.priority_high,
+            label: AppStrings.quickActionUrgent,
+            color: AppTheme.error,
+            onTap: () {
+              setState(() {
+                _showUrgentOnly = !_showUrgentOnly;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _QuickActionButton(
+            icon: Icons.sort,
+            label: 'Urutkan',
+            color: AppTheme.textSecondary,
+            onTap: _showSortOptions,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== SEARCH & FILTER ====================
+
+  Widget _buildSearchAndFilter() {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: AppStrings.searchReports,
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() {
+                          _searchQuery = '';
+                        });
+                      },
+                    )
+                  : null,
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+            ),
+            onChanged: (value) {
+              setState(() {
+                _searchQuery = value;
+              });
+            },
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showFilterOptions,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActiveFilters() {
+    return Wrap(
+      spacing: 8,
+      children: [
+        if (_selectedStatusFilter != null)
+          Chip(
+            label: Text(_selectedStatusFilter!.displayName),
+            backgroundColor: _selectedStatusFilter!.color.withValues(alpha: 0.1),
+            deleteIcon: const Icon(Icons.close, size: 16),
+            onDeleted: () {
+              setState(() {
+                _selectedStatusFilter = null;
+              });
+            },
+          ),
+        if (_showUrgentOnly)
+          Chip(
+            label: const Text('Urgen Saja'),
+            backgroundColor: AppTheme.error.withValues(alpha: 0.1),
+            deleteIcon: const Icon(Icons.close, size: 16),
+            onDeleted: () {
+              setState(() {
+                _showUrgentOnly = false;
+              });
+            },
+          ),
+      ],
+    );
+  }
+
+  // ==================== REPORTS LIST ====================
+
+  Widget _buildReportsList(List<Report> reports) {
+    if (reports.isEmpty) {
+      return SliverFillRemaining(
+        child: Center(
+          child: SingleChildScrollView( // ✅ FIXED: Wrap dengan SingleChildScrollView untuk fix overflow
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.description_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _searchQuery.isNotEmpty
+                      ? AppStrings.emptySearchTitle
+                      : AppStrings.emptyStateTitle,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _searchQuery.isNotEmpty
+                      ? AppStrings.emptySearchSubtitle
+                      : AppStrings.emptyStateSubtitle,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textHint,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final report = reports[index];
+            return _ReportCard(
+              report: report,
+              onTap: () => _showReportDetail(report),
+            );
+          },
+          childCount: reports.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return const SliverFillRemaining(
+      child: Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(Object error) {
+    return SliverFillRemaining(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: AppTheme.error,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                AppStrings.errorGeneric,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.error,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                error.toString(),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () {
+                  ref.invalidate(employeeReportsProvider);
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text(AppStrings.tryAgain),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.error,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ==================== FAB ====================
+
+  Widget _buildFAB() {
+    return FloatingActionButton.extended(
+      onPressed: () => Navigator.pushNamed(context, '/create_report'),
+      icon: const Icon(Icons.add),
+      label: const Text('Buat Laporan'),
+      backgroundColor: AppTheme.primary,
+      foregroundColor: Colors.white,
+    );
+  }
+
+  // ==================== DIALOGS & SHEETS ====================
+
   void _showSortOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
+      builder: (context) => Container(
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -207,68 +654,45 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           children: [
             const Text(
               'Urutkan Berdasarkan',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 16),
-            _buildSortOption('Terbaru', 'newest', Icons.access_time),
-            _buildSortOption('Terlama', 'oldest', Icons.history),
-            _buildSortOption('Urgent', 'urgent', Icons.priority_high),
-            _buildSortOption('Lokasi', 'location', Icons.location_on),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSortOption(String label, String value, IconData icon) {
-    final isSelected = _sortBy == value;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? AppTheme.primary : Colors.grey),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.primary : Colors.black87,
-        ),
-      ),
-      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.primary) : null,
-      onTap: () {
-        setState(() => _sortBy = value);
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  void _showFilterOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Filter Status',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            _SortOption(
+              title: AppStrings.sortByNewest,
+              icon: Icons.access_time,
+              isSelected: _sortBy == 'newest',
+              onTap: () {
+                setState(() => _sortBy = 'newest');
+                Navigator.pop(context);
+              },
             ),
-            const SizedBox(height: 16),
-            _buildStatusFilter('Semua', null, Icons.list),
-            _buildStatusFilter('Pending', ReportStatus.pending, Icons.schedule),
-            _buildStatusFilter('Dikerjakan', ReportStatus.inProgress, Icons.construction),
-            _buildStatusFilter('Selesai', ReportStatus.completed, Icons.check_circle),
-            _buildStatusFilter('Terverifikasi', ReportStatus.verified, Icons.verified),
-            const Divider(height: 32),
-            SwitchListTile(
-              title: const Text('Hanya Urgent'),
-              secondary: const Icon(Icons.priority_high, color: AppTheme.error),
-              value: _showUrgentOnly,
-              activeColor: AppTheme.error,
-              onChanged: (value) {
-                setState(() => _showUrgentOnly = value);
+            _SortOption(
+              title: AppStrings.sortByOldest,
+              icon: Icons.history,
+              isSelected: _sortBy == 'oldest',
+              onTap: () {
+                setState(() => _sortBy = 'oldest');
+                Navigator.pop(context);
+              },
+            ),
+            _SortOption(
+              title: AppStrings.sortByUrgent,
+              icon: Icons.priority_high,
+              isSelected: _sortBy == 'urgent',
+              onTap: () {
+                setState(() => _sortBy = 'urgent');
+                Navigator.pop(context);
+              },
+            ),
+            _SortOption(
+              title: AppStrings.sortByLocation,
+              icon: Icons.location_on,
+              isSelected: _sortBy == 'location',
+              onTap: () {
+                setState(() => _sortBy = 'location');
                 Navigator.pop(context);
               },
             ),
@@ -278,797 +702,781 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
     );
   }
 
-  Widget _buildStatusFilter(String label, ReportStatus? status, IconData icon) {
-    final isSelected = _selectedStatusFilter == status;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? AppTheme.primary : Colors.grey),
-      title: Text(
-        label,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.primary : Colors.black87,
+  void _showFilterOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Filter Status',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _FilterOption(
+              title: AppStrings.filterAll,
+              icon: Icons.all_inbox,
+              color: AppTheme.textPrimary,
+              isSelected: _selectedStatusFilter == null,
+              onTap: () {
+                setState(() => _selectedStatusFilter = null);
+                Navigator.pop(context);
+              },
+            ),
+            _FilterOption(
+              title: AppStrings.filterPending,
+              icon: Icons.schedule,
+              color: AppTheme.warning,
+              isSelected: _selectedStatusFilter == ReportStatus.pending,
+              onTap: () {
+                setState(() => _selectedStatusFilter = ReportStatus.pending);
+                Navigator.pop(context);
+              },
+            ),
+            _FilterOption(
+              title: AppStrings.filterInProgress,
+              icon: Icons.pending_actions,
+              color: AppTheme.info,
+              isSelected: _selectedStatusFilter == ReportStatus.inProgress,
+              onTap: () {
+                setState(() => _selectedStatusFilter = ReportStatus.inProgress);
+                Navigator.pop(context);
+              },
+            ),
+            _FilterOption(
+              title: AppStrings.filterCompleted,
+              icon: Icons.check_circle,
+              color: AppTheme.success,
+              isSelected: _selectedStatusFilter == ReportStatus.completed,
+              onTap: () {
+                setState(() => _selectedStatusFilter = ReportStatus.completed);
+                Navigator.pop(context);
+              },
+            ),
+          ],
         ),
       ),
-      trailing: isSelected ? const Icon(Icons.check, color: AppTheme.primary) : null,
-      onTap: () {
-        setState(() => _selectedStatusFilter = status);
-        Navigator.pop(context);
-      },
     );
   }
 
-  Widget _buildActiveFilters() {
-    final hasFilters = _selectedStatusFilter != null || _showUrgentOnly || _searchQuery.isNotEmpty;
-    
-    if (!hasFilters) return const SizedBox.shrink();
+  void _showReportDetail(Report report) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.75,
+        minChildSize: 0.5,
+        maxChildSize: 0.95,
+        expand: false,
+        builder: (context, scrollController) => _ReportDetailSheet(
+          report: report,
+          scrollController: scrollController,
+          onDelete: () => _deleteReport(report),
+        ),
+      ),
+    );
+  }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          if (_searchQuery.isNotEmpty)
-            _buildFilterChip(
-              label: 'Pencarian: "$_searchQuery"',
-              onRemove: () => setState(() {
-                _searchQuery = '';
-                _searchController.clear();
-              }),
-            ),
-          if (_selectedStatusFilter != null)
-            _buildFilterChip(
-              label: _getStatusLabel(_selectedStatusFilter!),
-              onRemove: () => setState(() => _selectedStatusFilter = null),
-            ),
-          if (_showUrgentOnly)
-            _buildFilterChip(
-              label: 'Urgent',
-              color: AppTheme.error,
-              onRemove: () => setState(() => _showUrgentOnly = false),
-            ),
+  Future<void> _deleteReport(Report report) async {
+    Navigator.pop(context); // Close detail sheet
+
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(AppStrings.deleteReport),
+        content: const Text(AppStrings.deleteReportConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(AppStrings.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
+            child: const Text(AppStrings.delete),
+          ),
         ],
       ),
     );
+
+    if (shouldDelete == true && mounted) {
+      try {
+        // ✅ FIXED: Use employeeActionsProvider instead of .notifier
+        await ref.read(employeeActionsProvider).deleteReport(report.id);
+        
+        setState(() {
+          _lastDeletedReport = report;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(AppStrings.reportDeleted),
+              action: SnackBarAction(
+                label: AppStrings.undo,
+                onPressed: () => _undoDelete(),
+              ),
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('${AppStrings.errorDeleteFailed}: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
   }
 
-  Widget _buildFilterChip({
-    required String label,
-    required VoidCallback onRemove,
-    Color? color,
-  }) {
-    return Chip(
-      label: Text(label, style: const TextStyle(fontSize: 12)),
-      deleteIcon: const Icon(Icons.close, size: 18),
-      onDeleted: onRemove,
-      backgroundColor: (color ?? AppTheme.primary).withValues(alpha: 0.1),
-      deleteIconColor: color ?? AppTheme.primary,
-      labelStyle: TextStyle(color: color ?? AppTheme.primary),
+  Future<void> _undoDelete() async {
+    if (_lastDeletedReport != null) {
+      try {
+        // ✅ FIXED: Use proper restore method with soft delete
+        await ref.read(employeeActionsProvider).restoreReport(_lastDeletedReport!.id);
+        
+        _lastDeletedReport = null;
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Laporan berhasil dikembalikan'),
+              backgroundColor: AppTheme.success,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Gagal mengembalikan: $e'),
+              backgroundColor: AppTheme.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+}
+
+// ==================== STATS CARD WIDGET ====================
+
+class _StatsCard extends StatelessWidget {
+  final String title;
+  final int count;
+  final Color color;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _StatsCard({
+    required this.title,
+    required this.count,
+    required this.color,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 28),
+            const SizedBox(height: 8),
+            Text(
+              count.toString(),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              title,
+              style: const TextStyle(
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
+}
 
-  String _getStatusLabel(ReportStatus status) {
-    switch (status) {
-      case ReportStatus.pending:
-        return 'Pending';
-      case ReportStatus.assigned:
-        return 'Ditugaskan';
-      case ReportStatus.inProgress:
-        return 'Dikerjakan';
-      case ReportStatus.completed:
-        return 'Selesai';
-      case ReportStatus.verified:
-        return 'Terverifikasi';
-      case ReportStatus.rejected:
-        return 'Ditolak';
-    }
+// ==================== QUICK ACTION BUTTON ====================
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
   }
+}
 
-  // ==================== DELETE REPORT WITH UNDO ====================
+// ==================== REPORT CARD ====================
 
-  Future<void> _deleteReport(Report report) async {
-    try {
-      final actions = ref.read(employeeActionsProvider);
-      await actions.deleteReport(report.id);
+class _ReportCard extends StatefulWidget {
+  final Report report;
+  final VoidCallback onTap;
 
-      if (!mounted) return;
+  const _ReportCard({
+    required this.report,
+    required this.onTap,
+  });
 
-      // 🆕 Save deleted report for undo
-      setState(() {
-        _lastDeletedReport = report;
-      });
+  @override
+  State<_ReportCard> createState() => _ReportCardState();
+}
 
-      // 🆕 Show success snackbar with UNDO option
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text(AppStrings.reportDeleted),
-          duration: const Duration(seconds: 5), // ⏱️ Kasih waktu 5 detik untuk undo
-          action: SnackBarAction(
-            label: AppStrings.undo,
-            onPressed: () {
-              // ✅ UNDO: Restore deleted report
-              if (_lastDeletedReport != null) {
-                _restoreReport(_lastDeletedReport!);
-              }
-            },
+class _ReportCardState extends State<_ReportCard> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOut,
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _isHovered ? Colors.grey.shade300 : Colors.grey.shade200,
+            width: 0.5,
           ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: _isHovered ? 0.08 : 0.04),
+              blurRadius: _isHovered ? 12 : 8,
+              offset: Offset(0, _isHovered ? 4 : 2),
+            ),
+          ],
         ),
-      ).closed.then((reason) {
-        // 🗑️ Auto-clear setelah SnackBar hilang (jika tidak di-undo)
-        if (reason != SnackBarClosedReason.action && mounted) {
-          setState(() {
-            _lastDeletedReport = null;
-          });
-        }
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal menghapus laporan: $e'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
-    }
-  }
-
-  // ==================== RESTORE DELETED REPORT (UNDO) ====================
-
-  Future<void> _restoreReport(Report report) async {
-    try {
-      final actions = ref.read(employeeActionsProvider);
-      
-      // ✅ Recreate the report with same data (dengan ID baru)
-      await actions.createReport(
-        location: report.location,
-        description: report.description ?? '',
-        imageUrl: report.imageUrl,
-        isUrgent: report.isUrgent,
-      );
-
-      if (!mounted) return;
-
-      // ✅ Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('✅ Laporan berhasil dipulihkan'),
-          backgroundColor: AppTheme.success,
-          duration: Duration(seconds: 2),
-        ),
-      );
-
-      // 🗑️ Clear the saved report
-      setState(() {
-        _lastDeletedReport = null;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal memulihkan laporan: $e'),
-          backgroundColor: AppTheme.error,
-        ),
-      );
-    }
-  }
-
-  // ==================== REPORT LIST ====================
-
-  Widget _buildReportCard(Report report) {
-    final statusColor = _getStatusColor(report.status);
-    final statusLabel = _getStatusLabel(report.status);
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        onTap: () => _showReportDetail(report),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header: Status Badge + Urgent Badge
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
+            borderRadius: BorderRadius.circular(12),
+            splashColor: AppTheme.primary.withValues(alpha: 0.1),
+            highlightColor: AppTheme.primary.withValues(alpha: 0.05),
+            hoverColor: AppTheme.primary.withValues(alpha: 0.02),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+              // Header: Status Badge & Urgent Badge
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.1),
+                      color: widget.report.status.color.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.3)),
                     ),
-                    child: Text(
-                      statusLabel,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.report.status.icon,
+                          size: 16,
+                          color: widget.report.status.color,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.report.status.displayName,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: widget.report.status.color,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (report.isUrgent) ...[
+                  if (widget.report.isUrgent) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Row(
+                      child: const Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: const [
+                        children: [
                           Icon(Icons.priority_high, size: 14, color: AppTheme.error),
                           SizedBox(width: 4),
                           Text(
                             'URGENT',
                             style: TextStyle(
-                              color: AppTheme.error,
+                              fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                              color: AppTheme.error,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ],
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppTheme.error),
-                    onPressed: () => _confirmDelete(report),
-                    tooltip: 'Hapus Laporan',
-                  ),
                 ],
               ),
+              
               const SizedBox(height: 12),
               
               // Location
               Row(
                 children: [
-                  const Icon(Icons.location_on, size: 20, color: AppTheme.primary),
-                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.location_on,
+                    size: 18,
+                    color: AppTheme.primary,
+                  ),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      report.location,
+                      widget.report.location,
                       style: const TextStyle(
-                        fontWeight: FontWeight.bold,
                         fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.textPrimary,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
               
               // Description
-              if (report.description != null && report.description!.isNotEmpty) ...[
+              if (widget.report.description != null) ...[
                 const SizedBox(height: 8),
                 Text(
-                  report.description!,
-                  style: const TextStyle(color: Colors.grey),
+                  widget.report.description!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
               
+              // ✅ ADDED: Divider sebelum footer
               const SizedBox(height: 12),
-              const Divider(),
-              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
               
-              // Footer: Date + Image indicator - ✅ FIXED: Pakai report.date
+              // Footer: Date & Cleaner info
               Row(
                 children: [
-                  Icon(Icons.calendar_today, size: 14, color: Colors.grey[600]),
+                  // ✅ UPDATED: Date dengan format jam (dd MMM yyyy, HH:mm)
+                  const Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: AppTheme.textSecondary,
+                  ),
                   const SizedBox(width: 4),
                   Text(
-                    DateFormatter.fullDateTime(report.date),
-                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                    DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.report.date),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppTheme.textSecondary,
+                    ),
                   ),
-                  const Spacer(),
-                  if (report.imageUrl != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Icon(Icons.image, size: 14, color: Colors.blue),
-                          SizedBox(width: 4),
-                          Text(
-                            'Ada Foto',
-                            style: TextStyle(fontSize: 11, color: Colors.blue),
-                          ),
-                        ],
+                  
+                  // Cleaner info (if assigned)
+                  if (widget.report.cleanerName != null) ...[
+                    const SizedBox(width: 16),
+                    const Icon(
+                      Icons.person,
+                      size: 14,
+                      color: AppTheme.info,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        widget.report.cleanerName!,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.info,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
+                  ],
                 ],
               ),
             ],
           ),
         ),
       ),
+    ),
+  ),
     );
   }
+}
 
-  Color _getStatusColor(ReportStatus status) {
-    switch (status) {
-      case ReportStatus.pending:
-      case ReportStatus.assigned:
-        return AppTheme.warning;
-      case ReportStatus.inProgress:
-        return Colors.blue;
-      case ReportStatus.completed:
-      case ReportStatus.verified:
-        return AppTheme.success;
-      case ReportStatus.rejected:
-        return AppTheme.error;
-    }
-  }
+// ==================== SORT OPTION ====================
 
-  void _showReportDetail(Report report) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        // TODO: [WEEK-1] Create shared ReportDetailScreen
-        // For now, navigate to employee-specific screen
-        builder: (context) => const Placeholder(), // Replace with actual screen
-      ),
-    );
-  }
+class _SortOption extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-  void _confirmDelete(Report report) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Hapus Laporan'),
-        content: const Text(
-          'Apakah Anda yakin ingin menghapus laporan ini? Anda bisa membatalkan dalam 5 detik.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _deleteReport(report);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.error,
-            ),
-            child: const Text('Hapus'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== BUILD UI ====================
+  const _SortOption({
+    required this.title,
+    required this.icon,
+    required this.isSelected,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final reportsAsync = ref.watch(employeeReportsProvider);
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(AppConstants.appName),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportHistoryScreen(),
-                ),
-              );
-            },
-            tooltip: 'Riwayat Laporan',
-          ),
-        ],
-      ),
-      drawer: _buildDrawer(),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.invalidate(employeeReportsProvider);
-        },
-        child: reportsAsync.when(
-          data: (reports) => _buildContent(reports),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
-                const SizedBox(height: 16),
-                Text(
-                  'Error: $error',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppTheme.error),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () => ref.invalidate(employeeReportsProvider),
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Coba Lagi'),
-                ),
-              ],
-            ),
-          ),
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? AppTheme.primary : AppTheme.textSecondary),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? AppTheme.primary : AppTheme.textPrimary,
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const Placeholder(), // TODO: Replace with CreateReportScreen
-            ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Buat Laporan'),
-      ),
+      trailing: isSelected
+          ? const Icon(Icons.check, color: AppTheme.primary)
+          : null,
+      onTap: onTap,
     );
   }
+}
 
-  Widget _buildContent(List<Report> allReports) {
-    final stats = _getStatistics(allReports);
-    final filteredReports = _filterAndSortReports(allReports);
+class _FilterOption extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final bool isSelected;
+  final VoidCallback onTap;
 
-    return CustomScrollView(
-      slivers: [
-        // Greeting
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getGreeting(),
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Selamat datang di ${AppConstants.appName}',
-                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                ),
-              ],
+  const _FilterOption({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          color: isSelected ? color : AppTheme.textPrimary,
+        ),
+      ),
+      trailing: isSelected ? Icon(Icons.check, color: color) : null,
+      onTap: onTap,
+    );
+  }
+}
+
+class _ReportDetailSheet extends StatelessWidget {
+  final Report report;
+  final ScrollController scrollController;
+  final VoidCallback onDelete;
+
+  const _ReportDetailSheet({
+    required this.report,
+    required this.scrollController,
+    required this.onDelete,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: ListView(
+        controller: scrollController,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 20),
 
-        // Statistics Cards
-        SliverToBoxAdapter(
-          child: SizedBox(
-            height: 120,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              children: [
-                SizedBox(
-                  width: 140,
-                  child: _buildStatsCard(
-                    title: 'Total Laporan',
-                    count: stats['total']!,
-                    icon: Icons.description,
-                    color: AppTheme.primary,
-                    onTap: () => setState(() {
-                      _selectedStatusFilter = null;
-                      _showUrgentOnly = false;
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 140,
-                  child: _buildStatsCard(
-                    title: 'Pending',
-                    count: stats['pending']!,
-                    icon: Icons.schedule,
-                    color: AppTheme.warning,
-                    onTap: () => setState(() {
-                      _selectedStatusFilter = ReportStatus.pending;
-                      _showUrgentOnly = false;
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 140,
-                  child: _buildStatsCard(
-                    title: 'Dikerjakan',
-                    count: stats['in_progress']!,
-                    icon: Icons.construction,
-                    color: Colors.blue,
-                    onTap: () => setState(() {
-                      _selectedStatusFilter = ReportStatus.inProgress;
-                      _showUrgentOnly = false;
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 140,
-                  child: _buildStatsCard(
-                    title: 'Selesai',
-                    count: stats['completed']!,
-                    icon: Icons.check_circle,
-                    color: AppTheme.success,
-                    onTap: () => setState(() {
-                      _selectedStatusFilter = ReportStatus.completed;
-                      _showUrgentOnly = false;
-                    }),
-                  ),
-                ),
-                SizedBox(
-                  width: 140,
-                  child: _buildStatsCard(
-                    title: 'Urgent',
-                    count: stats['urgent']!,
-                    icon: Icons.priority_high,
-                    color: AppTheme.error,
-                    onTap: () => setState(() {
-                      _showUrgentOnly = true;
-                      _selectedStatusFilter = null;
-                    }),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-        // Quick Actions
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildQuickAction(
-                    label: 'Buat Laporan',
-                    icon: Icons.add_circle_outline,
-                    color: AppTheme.primary,
-                    onTap: () {
-                      // TODO: Navigate to CreateReportScreen
-                    },
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildQuickAction(
-                    label: 'Filter Urgent',
-                    icon: Icons.priority_high,
-                    color: AppTheme.error,
-                    onTap: () => setState(() => _showUrgentOnly = !_showUrgentOnly),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-
-        const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-        // Search Bar
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
-                      hintText: 'Cari lokasi atau deskripsi...',
-                      prefixIcon: const Icon(Icons.search),
-                      suffixIcon: _searchQuery.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear),
-                              onPressed: () {
-                                setState(() {
-                                  _searchQuery = '';
-                                  _searchController.clear();
-                                });
-                              },
-                            )
-                          : null,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          // Status Badge
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: report.status.color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(report.status.icon, size: 20, color: report.status.color),
+                  const SizedBox(width: 8),
+                  Text(
+                    report.status.displayName,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: report.status.color,
                     ),
-                    onChanged: (value) => setState(() => _searchQuery = value),
                   ),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.sort),
-                  onPressed: _showSortOptions,
-                  tooltip: 'Urutkan',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.filter_list),
-                  onPressed: _showFilterOptions,
-                  tooltip: 'Filter',
-                ),
-              ],
+                ],
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 16),
 
-        // Active Filters
-        SliverToBoxAdapter(child: _buildActiveFilters()),
+          // Location
+          Text(
+            report.location,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
 
-        const SliverToBoxAdapter(child: SizedBox(height: 8)),
+          // Date
+          Row(
+            children: [
+              const Icon(Icons.calendar_today, size: 16, color: AppTheme.textSecondary),
+              const SizedBox(width: 8),
+              Text(
+                DateFormat('dd MMMM yyyy, HH:mm', 'id_ID').format(report.date),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+            ],
+          ),
 
-        // Reports List Header
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Text(
-              '${filteredReports.length} Laporan',
-              style: const TextStyle(
+          if (report.isUrgent) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppTheme.error.withValues(alpha: 0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.priority_high, color: AppTheme.error),
+                  SizedBox(width: 8),
+                  Text(
+                    'Laporan URGEN - Perlu ditangani segera',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
+          const SizedBox(height: 20),
+          const Divider(),
+          const SizedBox(height: 20),
+
+          // Description
+          if (report.description != null) ...[
+            const Text(
+              'Deskripsi',
+              style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
               ),
             ),
-          ),
-        ),
+            const SizedBox(height: 8),
+            Text(
+              report.description!,
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
 
-        // Reports List
-        filteredReports.isEmpty
-            ? SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly
-                            ? Icons.search_off
-                            : Icons.description_outlined,
-                        size: 64,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly
-                            ? 'Tidak ada laporan yang sesuai'
-                            : 'Belum ada laporan',
-                        style: const TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                      if (_searchQuery.isNotEmpty || _selectedStatusFilter != null || _showUrgentOnly) ...[
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _searchQuery = '';
-                              _searchController.clear();
-                              _selectedStatusFilter = null;
-                              _showUrgentOnly = false;
-                            });
-                          },
-                          child: const Text('Reset Filter'),
-                        ),
-                      ],
-                    ],
+          // Image
+          if (report.imageUrl != null) ...[
+            const Text(
+              'Foto Laporan',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.network(
+                report.imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  height: 200,
+                  color: Colors.grey.shade200,
+                  child: const Center(
+                    child: Icon(Icons.image_not_supported, size: 48),
                   ),
-                ),
-              )
-            : SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _buildReportCard(filteredReports[index]),
-                  childCount: filteredReports.length,
                 ),
               ),
-        
-        const SliverToBoxAdapter(child: SizedBox(height: 80)),
-      ],
-    );
-  }
-
-  Widget _buildDrawer() {
-    final profileAsync = ref.watch(currentUserProfileProvider);
-
-    return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: const BoxDecoration(color: AppTheme.primary),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                const CircleAvatar(
-                  radius: 30,
-                  backgroundColor: Colors.white,
-                  child: Icon(Icons.person, size: 30, color: AppTheme.primary),
-                ),
-                const SizedBox(height: 12),
-                profileAsync.when(
-                  data: (profile) => Text(
-                    profile?.displayName ?? 'Employee',
-                    style: const TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                  loading: () => const Text(
-                    'Loading...',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  error: (_, __) => const Text(
-                    'Error',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-                const Text(
-                  'Karyawan',
-                  style: TextStyle(color: Colors.white70, fontSize: 14),
-                ),
-              ],
             ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.home),
-            title: const Text('Beranda'),
-            onTap: () => Navigator.pop(context),
-          ),
-          ListTile(
-            leading: const Icon(Icons.history),
-            title: const Text('Riwayat Laporan'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ReportHistoryScreen(),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: AppTheme.error),
-            title: const Text('Keluar', style: TextStyle(color: AppTheme.error)),
-            onTap: () async {
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Keluar'),
-                  content: const Text('Apakah Anda yakin ingin keluar?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Batal'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.error,
-                      ),
-                      child: const Text('Keluar'),
-                    ),
-                  ],
-                ),
-              );
+            const SizedBox(height: 20),
+          ],
 
-              if (shouldLogout == true && mounted) {
-                // ✅ FIXED: Pakai .notifier.logout()
-                await ref.read(authActionsProvider.notifier).logout();
-              }
-            },
-          ),
+          // Cleaner Info
+          if (report.cleanerName != null) ...[
+            const Text(
+              'Petugas',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.info.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  const CircleAvatar(
+                    backgroundColor: AppTheme.info,
+                    child: Icon(Icons.person, color: Colors.white),
+                  ),
+                  const SizedBox(width: 12),
+                  Text(
+                    report.cleanerName!,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+
+          // Delete button (only for pending status)
+          if (report.status == ReportStatus.pending) ...[
+            const SizedBox(height: 20),
+            OutlinedButton.icon(
+              onPressed: onDelete,
+              icon: const Icon(Icons.delete_outline),
+              label: const Text(AppStrings.deleteReport),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppTheme.error,
+                side: const BorderSide(color: AppTheme.error),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ],
         ],
       ),
     );

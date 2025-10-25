@@ -1,9 +1,9 @@
-// lib/screens/shared/report_detail/widgets/report_verification_section.dart
+// lib/widgets/report_verification_section.dart
 
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_theme.dart';
-import '../../../../core/utils/date_formatter.dart';
-import '../../../../models/report.dart';
+// ✅ FIXED: Correct path for lib/widgets/ location (naik 2 level, bukan 4)
+import '../core/utils/date_formatter.dart';
+import '../models/report.dart';
 
 /// Verification section (shown when report is verified)
 class ReportVerificationSection extends StatelessWidget {

@@ -1,6 +1,8 @@
-// lib/screens/employee/edit_report_screen.dart - FIXED VERSION
+// lib/screens/employee/edit_report_screen.dart
+// ✅ FIXED: Web support dengan UniversalImage
 
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -8,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/universal_image.dart';
 
 class EditReportScreen extends ConsumerStatefulWidget {
   final Report report;
@@ -27,7 +30,10 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
   late TextEditingController _locationController;
   late TextEditingController _descriptionController;
   
-  File? _imageFile;
+  // ✅ Web-compatible: Simpan bytes instead of File
+  Uint8List? _imageBytes;
+  String? _imageName;
+  
   bool _isUrgent = false;
   bool _isLoading = false;
 
@@ -58,13 +64,26 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
     );
 
     if (pickedFile != null) {
+      // ✅ Convert to bytes (works on both mobile and web)
+      final bytes = await pickedFile.readAsBytes();
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _imageBytes = bytes;
+        _imageName = pickedFile.name;
       });
     }
   }
 
   Future<void> _takePhoto() async {
+    if (kIsWeb) {
+      // Web doesn't support camera, fallback to gallery
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Kamera tidak didukung di web, silakan pilih dari galeri'),
+        ),
+      );
+      return;
+    }
+
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(
       source: ImageSource.camera,
@@ -74,8 +93,10 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
     );
 
     if (pickedFile != null) {
+      final bytes = await pickedFile.readAsBytes();
       setState(() {
-        _imageFile = File(pickedFile.path);
+        _imageBytes = bytes;
+        _imageName = pickedFile.name;
       });
     }
   }
@@ -88,14 +109,15 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.camera_alt),
-              title: const Text('Kamera'),
-              onTap: () {
-                Navigator.pop(context);
-                _takePhoto();
-              },
-            ),
+            if (!kIsWeb) // Only show camera option on mobile
+              ListTile(
+                leading: const Icon(Icons.camera_alt),
+                title: const Text('Kamera'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _takePhoto();
+                },
+              ),
             ListTile(
               leading: const Icon(Icons.photo_library),
               title: const Text('Galeri'),
@@ -116,13 +138,14 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // ✅ Pass bytes instead of File for web compatibility
       await ref.read(employeeActionsProvider).updateReport(
         reportId: widget.report.id,
         title: _titleController.text.trim(),
         location: _locationController.text.trim(),
         description: _descriptionController.text.trim(),
         isUrgent: _isUrgent,
-        imageFile: _imageFile,
+        imageBytes: _imageBytes,
       );
 
       if (mounted) {
@@ -243,18 +266,17 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
                     ),
                     const SizedBox(height: 8),
                     
-                    if (_imageFile != null)
+                    // ✅ Use UniversalImage for cross-platform compatibility
+                    if (_imageBytes != null)
                       // New image preview
                       Stack(
                         children: [
-                          ClipRRect(
+                          UniversalImage(
+                            imageBytes: _imageBytes,
+                            height: 200,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                             borderRadius: BorderRadius.circular(12),
-                            child: Image.file(
-                              _imageFile!,
-                              height: 200,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
-                            ),
                           ),
                           Positioned(
                             top: 8,
@@ -262,7 +284,10 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
                             child: IconButton(
                               icon: const Icon(Icons.close, color: Colors.white),
                               onPressed: () {
-                                setState(() => _imageFile = null);
+                                setState(() {
+                                  _imageBytes = null;
+                                  _imageName = null;
+                                });
                               },
                               style: IconButton.styleFrom(
                                 backgroundColor: Colors.black54,
@@ -273,19 +298,12 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
                       )
                     else if (widget.report.imageUrl != null)
                       // Existing image preview
-                      ClipRRect(
+                      UniversalImage(
+                        imageUrl: widget.report.imageUrl,
+                        height: 200,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(
-                          widget.report.imageUrl!,
-                          height: 200,
-                          width: double.infinity,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Container(
-                            height: 200,
-                            color: Colors.grey[300],
-                            child: const Icon(Icons.broken_image, size: 64),
-                          ),
-                        ),
                       )
                     else
                       // No image placeholder
@@ -306,7 +324,7 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
                     OutlinedButton.icon(
                       onPressed: _showImageSourceDialog,
                       icon: const Icon(Icons.camera_alt),
-                      label: Text(_imageFile != null || widget.report.imageUrl != null 
+                      label: Text(_imageBytes != null || widget.report.imageUrl != null 
                           ? 'Ganti Foto' 
                           : 'Tambah Foto'),
                       style: OutlinedButton.styleFrom(

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/report.dart';
+import '../../services/notification_service.dart'; // ✅ ADDED
 import './auth_providers.dart';
 import './report_providers.dart';
 
@@ -304,6 +305,12 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Completing report with proof: $reportId');
 
+      // Get report data before updating
+      final reportDoc = await _firestore.collection('reports').doc(reportId).get();
+      if (!reportDoc.exists) {
+        throw Exception('Report not found');
+      }
+
       await _firestore.collection('reports').doc(reportId).update({
         'status': 'completed',
         'completedAt': FieldValue.serverTimestamp(),
@@ -311,6 +318,41 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
       });
 
       _logger.info('Report completed with proof successfully');
+
+      // ✅ SEND NOTIFICATION TO EMPLOYEE
+      try {
+        // Recreate report object with completed status
+        final completedReport = Report.fromFirestore(reportDoc);
+        final updatedReport = Report(
+          id: completedReport.id,
+          title: completedReport.title,
+          location: completedReport.location,
+          date: completedReport.date,
+          status: ReportStatus.completed,
+          userId: completedReport.userId,
+          userName: completedReport.userName,
+          userEmail: completedReport.userEmail,
+          cleanerId: completedReport.cleanerId,
+          cleanerName: completedReport.cleanerName,
+          description: completedReport.description,
+          imageUrl: completedReport.imageUrl,
+          isUrgent: completedReport.isUrgent,
+          assignedAt: completedReport.assignedAt,
+          startedAt: completedReport.startedAt,
+          completedAt: DateTime.now(),
+          departmentId: completedReport.departmentId,
+          completionImageUrl: completionImageUrl,
+        );
+
+        _logger.info('Sending completion notification to employee: ${updatedReport.userId}');
+        await NotificationService().notifyReportCompleted(report: updatedReport);
+        _logger.info('✅ Notification sent successfully');
+      } catch (e) {
+        // Don't fail the completion if notification fails
+        _logger.error('Failed to send notification', e);
+      }
+      // ✅✅✅ END OF NOTIFICATION CODE ✅✅✅
+
       state = const AsyncValue.data(null);
     } on FirebaseException catch (e, stackTrace) {
       _logger.error('Complete report with proof error', e, stackTrace);

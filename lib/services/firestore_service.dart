@@ -6,6 +6,7 @@ library;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logging/logging.dart';
 import '../models/report.dart';
+import 'notification_service.dart';
 
 class FirestoreService {
   static final FirestoreService _instance = FirestoreService._internal();
@@ -268,6 +269,20 @@ class FirestoreService {
       }
 
       await updateReport(reportId, updates);
+
+        // ✅ ADDED: Send notification based on status
+      final report = await getReportById(reportId);
+      if (report != null) {
+        switch (newStatus) {
+          case ReportStatus.assigned:
+            await NotificationService().notifyReportInProgress(
+              report: report,
+            );
+            break;
+          default:
+            break;
+        }
+      }
     } catch (e) {
       _logger.severe('Error updating report status: $e');
       rethrow;
@@ -300,6 +315,24 @@ class FirestoreService {
       _logger.info(
         'Report $reportId ${approved ? "verified" : "rejected"} by $adminName',
       );
+
+      // ✅ ADDED: Send notification
+      final report = await getReportById(reportId);
+      if (report != null) {
+        if (approved) {
+          await NotificationService().notifyReportVerified(
+            report: report,
+            verifiedBy: adminName,
+            notes: notes,
+          );
+        } else {
+          await NotificationService().notifyReportRejected(
+            report: report,
+            rejectedBy: adminName,
+            reason: notes,
+          );
+        }
+      }
     } catch (e) {
       _logger.severe('Error verifying report: $e');
       rethrow;
@@ -320,6 +353,16 @@ class FirestoreService {
         'assignedAt': FieldValue.serverTimestamp(),
       });
       _logger.info('Report $reportId assigned to $cleanerName');
+
+        // ✅ ADDED: Send notification to cleaner
+      final report = await getReportById(reportId);
+      if (report != null) {
+        await NotificationService().notifyReportAssigned(
+          report: report,
+          cleanerId: cleanerId,
+          cleanerName: cleanerName,
+        );      
+      }
     } catch (e) {
       _logger.severe('Error assigning report to cleaner: $e');
       rethrow;
@@ -339,6 +382,15 @@ class FirestoreService {
         'completionImageUrl': completionImageUrl,
       });
       _logger.info('Report $reportId completed with proof image');
+
+      // ✅ ADDED: Send notification to employee and admins
+      final report = await getReportById(reportId);
+      if (report != null) {
+        await NotificationService().notifyReportCompleted(
+          report: report,
+          completionImageUrl: completionImageUrl,
+        );
+      }
     } catch (e) {
       _logger.severe('Error completing report with proof: $e');
       rethrow;

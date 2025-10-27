@@ -1,6 +1,6 @@
 {
   "projects": {
-    "default": "clean-office-app"
+    "default": "cleanoffice-app"
   },
   "targets": {},
   "etags": {}

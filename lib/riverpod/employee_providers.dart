@@ -1,11 +1,12 @@
 // lib/providers/riverpod/employee_providers.dart - USING EXISTING STORAGE SERVICE
+// ✅ UPDATED: Support imageBytes for web compatibility
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report.dart';
-import '../../services/notification_helper.dart';
+import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import './report_providers.dart';
 
@@ -189,20 +190,12 @@ class EmployeeActions {
 
     // Send notifications to admins
     try {
-      final adminIds = await NotificationHelper.getAdminIds();
-      
       if (isUrgent) {
         // Send urgent notification
-        await NotificationHelper.notifyUrgentReport(
-          report: createdReport,
-          adminIds: adminIds,
-        );
+        await NotificationService().notifyUrgentReport(createdReport);
       } else {
         // Send regular notification
-        await NotificationHelper.notifyReportCreated(
-          report: createdReport,
-          adminIds: adminIds,
-        );
+        await NotificationService().notifyReportCreated(createdReport);
       }
     } catch (e) {
       // Log error but don't fail the report creation
@@ -211,13 +204,15 @@ class EmployeeActions {
   }
 
   /// Update existing report
+  /// ✅ UPDATED: Support imageBytes for web compatibility
   Future<void> updateReport({
     required String reportId,
     String? title,
     String? location,
     String? description,
     bool? isUrgent,
-    dynamic imageFile, // File dari image_picker
+    dynamic imageFile,       // DEPRECATED: Use imageBytes instead
+    Uint8List? imageBytes,   // ✅ NEW: Web-compatible bytes
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('User not logged in');
@@ -240,14 +235,26 @@ class EmployeeActions {
       throw Exception('Cannot edit report with status: ${existingReport.status.displayName}');
     }
 
-    // Handle image upload if new file provided
+    // Handle image upload
     String? newImageUrl = existingReport.imageUrl;
-    if (imageFile != null && imageFile is File) {
+    Uint8List? bytes;
+    
+    // ✅ UPDATED: Support both File (mobile) and Uint8List (web)
+    if (imageBytes != null) {
+      // Web or explicitly provided bytes
+      bytes = imageBytes;
+    } else if (imageFile != null && imageFile is File) {
+      // Mobile: File from image_picker
       try {
-        // Read file bytes
-        final bytes = await imageFile.readAsBytes();
-        
-        // Upload using existing StorageService
+        bytes = await imageFile.readAsBytes();
+      } catch (e) {
+        debugPrint('❌ Error reading file: $e');
+      }
+    }
+    
+    // Upload if we have bytes
+    if (bytes != null) {
+      try {
         final storageService = ref.read(storageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: bytes,
@@ -260,11 +267,9 @@ class EmployeeActions {
           debugPrint('✅ New image uploaded: $newImageUrl');
         } else {
           debugPrint('❌ Failed to upload image: ${result.error}');
-          // Continue with old image URL
         }
       } catch (e) {
         debugPrint('❌ Image upload error: $e');
-        // Continue with old image URL
       }
     }
 
@@ -300,10 +305,20 @@ class EmployeeActions {
     );
   }
 
-  /// Delete report
+  /// Delete report (soft delete)
+  /// 🆕 UPDATED: Now uses soft delete instead of permanent delete
   Future<void> deleteReport(String reportId) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) throw Exception('User not logged in');
+    
     final service = ref.read(firestoreServiceProvider);
-    await service.deleteReport(reportId);
+    await service.softDeleteReport(reportId, user.uid);
+  }
+
+  /// 🆕 NEW: Restore deleted report
+  Future<void> restoreReport(String reportId) async {
+    final service = ref.read(firestoreServiceProvider);
+    await service.restoreReport(reportId);
   }
 
   /// Get report by ID

@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/report.dart';
-import '../../services/notification_helper.dart';
+import '../../services/notification_service.dart';
 import '../../services/storage_service.dart';
 import './report_providers.dart';
 
@@ -188,21 +188,13 @@ class EmployeeActions {
     );
 
     // Send notifications to admins
-    try {
-      final adminIds = await NotificationHelper.getAdminIds();
-      
+    try {      
       if (isUrgent) {
         // Send urgent notification
-        await NotificationHelper.notifyUrgentReport(
-          report: createdReport,
-          adminIds: adminIds,
-        );
+        await NotificationService().notifyUrgentReport(createdReport);
       } else {
         // Send regular notification
-        await NotificationHelper.notifyReportCreated(
-          report: createdReport,
-          adminIds: adminIds,
-        );
+        await NotificationService().notifyReportCreated(createdReport);
       }
     } catch (e) {
       // Log error but don't fail the report creation
@@ -218,6 +210,7 @@ class EmployeeActions {
     String? description,
     bool? isUrgent,
     dynamic imageFile, // File dari image_picker
+    Uint8List? imageBytes, // Untuk web
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('User not logged in');

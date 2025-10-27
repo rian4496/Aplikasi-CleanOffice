@@ -11,6 +11,7 @@ import '../../providers/riverpod/auth_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_strings.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../providers/riverpod/notification_providers.dart';
 
 class EmployeeHomeScreen extends ConsumerStatefulWidget {
   const EmployeeHomeScreen({super.key});
@@ -167,11 +168,47 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       foregroundColor: Colors.white,
       elevation: 0,
       actions: [
-        // ✅ Notification icon (white)
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-          onPressed: () => Navigator.pushNamed(context, '/notifications'),
+        // ✅ Notification icon dengan badge counter
+        Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+              onPressed: () => Navigator.pushNamed(context, '/notifications'),
         ),
+        // Badge untuk unread count
+        Consumer(
+          builder: (context, ref, child) {
+            final unreadCount = ref.watch(unreadNotificationCountProvider);
+            if (unreadCount == 0) return const SizedBox();
+            return Positioned(
+              top: 8,
+              right: 8,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: AppTheme.error,
+                  shape: BoxShape.circle,
+                ),
+                constraints: const BoxConstraints(
+                  minWidth: 18,
+                  minHeight: 18,
+                ),
+                child: Text(
+                  unreadCount > 99 ? '99+' : unreadCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
+    
         // ✅ ADDED: Hamburger menu icon untuk buka endDrawer
         Builder(
           builder: (context) => IconButton(

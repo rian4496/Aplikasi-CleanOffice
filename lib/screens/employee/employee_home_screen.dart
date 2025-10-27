@@ -223,14 +223,14 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       child: DrawerMenuWidget(
         menuItems: [
           DrawerMenuItem(
-            icon: Icons.home,
+            icon: Icons.home_outlined,
             title: 'Beranda',
             onTap: () {
               Navigator.pop(context); // Close drawer
             },
           ),
           DrawerMenuItem(
-            icon: Icons.cleaning_services,
+            icon: Icons.cleaning_services_outlined,
             title: 'Minta Layanan',
             onTap: () {
               Navigator.pop(context);
@@ -238,16 +238,15 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             },
           ),
           DrawerMenuItem(
-            icon: Icons.description,
-            title: 'Riwayat Laporan', // ✅ CHANGED: from "Laporan Saya"
+            icon: Icons.history_outlined,
+            title: 'Riwayat Laporan', 
             onTap: () {
               Navigator.pop(context);
-              // Already on home screen, just scroll to top or refresh
               ref.invalidate(employeeReportsProvider);
             },
           ),
           DrawerMenuItem(
-            icon: Icons.person,
+            icon: Icons.person_outlined,
             title: 'Profil',
             onTap: () {
               Navigator.pop(context);
@@ -255,7 +254,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             },
           ),
           DrawerMenuItem(
-            icon: Icons.settings,
+            icon: Icons.settings_outlined,
             title: 'Pengaturan',
             onTap: () {
               Navigator.pop(context);
@@ -352,6 +351,16 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                   color: Colors.white,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                ),
+              ),
+
+              const SizedBox(height: 8),
+              // Tanggal hari ini
+              Text(
+                DateFormat('EEEE, dd MMMM yyyy', 'id_ID').format(DateTime.now()), 
+                style: TextStyle(
+                  color: Colors.white.withAlpha(204),
+                  fontSize: 14,
                 ),
               ),
             ],

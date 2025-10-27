@@ -1,3 +1,5 @@
+// lib/widgets/shared/drawer_menu_widget.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_theme.dart';

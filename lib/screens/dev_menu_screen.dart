@@ -4,7 +4,7 @@ import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/auth/login_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_report_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/create_request_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/employee/create_request_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/change_password_screen.dart';

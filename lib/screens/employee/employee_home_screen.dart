@@ -1,7 +1,10 @@
 // lib/screens/employee/employee_home_screen.dart
 // ✅ COMPLETE Employee Home Screen dengan Riverpod
 // ✅ UPDATED: Dengan endDrawer, no title, no profile icon, white icons
-
+// ✅ UPDATED: Sort & Filter digabung jadi satu dialog di tengah layar
+// ✅ REMOVED: Tombol "Urgen" di quick actions
+// ✅ ADDED: Item "Minta Layanan" di drawer
+// ✅ UPDATED: Jarak antara header dan card stats pakai return Padding
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -27,7 +30,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   ReportStatus? _selectedStatusFilter;
   bool _showUrgentOnly = false;
   String _sortBy = 'newest'; // newest, oldest, urgent, location
-  
+
   // Undo functionality
   Report? _lastDeletedReport; // Simpan report yang dihapus untuk undo
 
@@ -38,7 +41,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== FILTERED & SORTED REPORTS ====================
-
   List<Report> _getFilteredAndSortedReports(List<Report> reports) {
     var filtered = reports;
 
@@ -82,12 +84,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         filtered.sort((a, b) => b.date.compareTo(a.date));
         break;
     }
-
     return filtered;
   }
 
   // ==================== BUILD METHOD ====================
-
   @override
   Widget build(BuildContext context) {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
@@ -107,17 +107,18 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           slivers: [
             // Header dengan nama user
             SliverToBoxAdapter(
-              child: _buildHeader(userProfileAsync),
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 5), // ✅ Jarak dari sisi kiri/kanan dan atas/bawah
+                child: _buildHeader(userProfileAsync),
+              ),
             ),
-
-            // Stats Cards
+            // Stats Cards - Dibungkus Padding untuk jarak
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 30), // ✅ Jarak dari sisi kiri/kanan dan atas/bawah
                 child: _buildStatsCards(summary),
               ),
             ),
-
             // Quick Actions
             SliverToBoxAdapter(
               child: Padding(
@@ -125,7 +126,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 child: _buildQuickActions(),
               ),
             ),
-
             // Search & Filter
             SliverToBoxAdapter(
               child: Padding(
@@ -133,7 +133,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                 child: _buildSearchAndFilter(),
               ),
             ),
-
             // Active Filters Chips
             if (_selectedStatusFilter != null || _showUrgentOnly)
               SliverToBoxAdapter(
@@ -142,10 +141,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                   child: _buildActiveFilters(),
                 ),
               ),
-
             // Reports List
             reportsAsync.when(
-              data: (reports) {
+               data: (reports) {
                 final filteredReports = _getFilteredAndSortedReports(reports);
                 return _buildReportsList(filteredReports);
               },
@@ -160,10 +158,8 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== APP BAR ====================
-
   PreferredSizeWidget _buildAppBar(BuildContext context, AsyncValue userProfileAsync) {
     return AppBar(
-      // ✅ REMOVED: title (no "Beranda Karyawan" text)
       backgroundColor: AppTheme.primary,
       foregroundColor: Colors.white,
       elevation: 0,
@@ -174,42 +170,41 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             IconButton(
               icon: const Icon(Icons.notifications_outlined, color: Colors.white),
               onPressed: () => Navigator.pushNamed(context, '/notifications'),
-        ),
-        // Badge untuk unread count
-        Consumer(
-          builder: (context, ref, child) {
-            final unreadCount = ref.watch(unreadNotificationCountProvider);
-            if (unreadCount == 0) return const SizedBox();
-            return Positioned(
-              top: 8,
-              right: 8,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: AppTheme.error,
-                  shape: BoxShape.circle,
-                ),
-                constraints: const BoxConstraints(
-                  minWidth: 18,
-                  minHeight: 18,
-                ),
-                child: Text(
-                  unreadCount > 99 ? '99+' : unreadCount.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
+            ),
+            // Badge untuk unread count
+            Consumer(
+              builder: (context, ref, child) {
+                final unreadCount = ref.watch(unreadNotificationCountProvider);
+                if (unreadCount == 0) return const SizedBox();
+                return Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      unreadCount > 99 ? '99+' : unreadCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          },
+                );
+              },
+            ),
+          ],
         ),
-      ],
-    ),
-    
-        // ✅ ADDED: Hamburger menu icon untuk buka endDrawer
+        // Hamburger menu icon untuk buka endDrawer
         Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
@@ -223,7 +218,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== END DRAWER ====================
-
   Widget _buildEndDrawer(BuildContext context) {
     return Drawer(
       child: DrawerMenuWidget(
@@ -236,8 +230,16 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             },
           ),
           DrawerMenuItem(
+            icon: Icons.cleaning_services,
+            title: 'Minta Layanan',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.pushNamed(context, '/create_request');
+            },
+          ),
+          DrawerMenuItem(
             icon: Icons.description,
-            title: 'Riwayat Laporan',  // ✅ CHANGED: from "Laporan Saya"
+            title: 'Riwayat Laporan', // ✅ CHANGED: from "Laporan Saya"
             onTap: () {
               Navigator.pop(context);
               // Already on home screen, just scroll to top or refresh
@@ -267,7 +269,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== LOGOUT HANDLER ====================
-
   Future<void> _handleLogout(BuildContext context) async {
     // Close drawer first
     Navigator.pop(context);
@@ -296,7 +297,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       try {
         // Perform logout using Riverpod provider
         await ref.read(authActionsProvider.notifier).logout();
-        
         // Navigate to login screen
         if (context.mounted) {
           Navigator.pushNamedAndRemoveUntil(
@@ -320,7 +320,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== HEADER ====================
-
   Widget _buildHeader(AsyncValue userProfileAsync) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -332,11 +331,12 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
         ),
       ),
       child: userProfileAsync.when(
-        data: (profile) {
+         data: (profile) { // ✅ PERBAIKAN: Gunakan named parameter `data`
           final name = profile?.displayName ?? 'User';
           final greeting = _getGreeting();
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center, // Center content vertically
             children: [
               Text(
                 greeting,
@@ -365,14 +365,13 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Selamat Pagi';
-    if (hour < 15) return 'Selamat Siang';
-    if (hour < 18) return 'Selamat Sore';
-    return 'Selamat Malam';
+    if (hour < 12) return 'Selamat Pagi,';
+    if (hour < 15) return 'Selamat Siang,';
+    if (hour < 18) return 'Selamat Sore,';
+    return 'Selamat Malam,';
   }
 
   // ==================== STATS CARDS ====================
-
   Widget _buildStatsCards(EmployeeReportsSummary summary) {
     return Row(
       children: [
@@ -422,7 +421,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== QUICK ACTIONS ====================
-
   Widget _buildQuickActions() {
     return Row(
       children: [
@@ -434,34 +432,11 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             onTap: () => Navigator.pushNamed(context, '/create_report'),
           ),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.priority_high,
-            label: AppStrings.quickActionUrgent,
-            color: AppTheme.error,
-            onTap: () {
-              setState(() {
-                _showUrgentOnly = !_showUrgentOnly;
-              });
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _QuickActionButton(
-            icon: Icons.sort,
-            label: 'Urutkan',
-            color: AppTheme.textSecondary,
-            onTap: _showSortOptions,
-          ),
-        ),
       ],
     );
   }
 
   // ==================== SEARCH & FILTER ====================
-
   Widget _buildSearchAndFilter() {
     return Row(
       children: [
@@ -501,6 +476,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
         ),
         const SizedBox(width: 8),
+        // ✅ TAMBAHKAN TOMBOL DI SINI
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -508,7 +484,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           ),
           child: IconButton(
             icon: const Icon(Icons.filter_list),
-            onPressed: _showFilterOptions,
+            onPressed: _showSortAndFilterOptions, // Gabungan sort & filter
           ),
         ),
       ],
@@ -546,7 +522,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== REPORTS LIST ====================
-
   Widget _buildReportsList(List<Report> reports) {
     if (reports.isEmpty) {
       return SliverFillRemaining(
@@ -580,7 +555,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
                       : AppStrings.emptyStateSubtitle,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AppTheme.textHint,
+                    color: AppTheme.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -667,7 +642,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
   }
 
   // ==================== FAB ====================
-
   Widget _buildFAB() {
     return FloatingActionButton.extended(
       onPressed: () => Navigator.pushNamed(context, '/create_report'),
@@ -680,127 +654,149 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   // ==================== DIALOGS & SHEETS ====================
 
-  void _showSortOptions() {
-    showModalBottomSheet(
+  // Sort & Filter Options sebagai Dialog
+  void _showSortAndFilterOptions() {
+    showDialog(
       context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Urutkan Berdasarkan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Pengaturan Tampilan',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            _SortOption(
-              title: AppStrings.sortByNewest,
-              icon: Icons.access_time,
-              isSelected: _sortBy == 'newest',
-              onTap: () {
-                setState(() => _sortBy = 'newest');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByOldest,
-              icon: Icons.history,
-              isSelected: _sortBy == 'oldest',
-              onTap: () {
-                setState(() => _sortBy = 'oldest');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByUrgent,
-              icon: Icons.priority_high,
-              isSelected: _sortBy == 'urgent',
-              onTap: () {
-                setState(() => _sortBy = 'urgent');
-                Navigator.pop(context);
-              },
-            ),
-            _SortOption(
-              title: AppStrings.sortByLocation,
-              icon: Icons.location_on,
-              isSelected: _sortBy == 'location',
-              onTap: () {
-                setState(() => _sortBy = 'location');
-                Navigator.pop(context);
-              },
-            ),
-          ],
+              const SizedBox(height: 24),
+
+              // Section: Urutkan Berdasarkan
+              const Text(
+                'Urutkan Berdasarkan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _SortOption(
+                title: AppStrings.sortByNewest,
+                icon: Icons.access_time,
+                isSelected: _sortBy == 'newest',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'newest';
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _SortOption(
+                title: AppStrings.sortByOldest,
+                icon: Icons.history,
+                isSelected: _sortBy == 'oldest',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'oldest';
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _SortOption(
+                title: AppStrings.sortByUrgent,
+                icon: Icons.priority_high,
+                isSelected: _sortBy == 'urgent',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'urgent';
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _SortOption(
+                title: AppStrings.sortByLocation,
+                icon: Icons.location_on,
+                isSelected: _sortBy == 'location',
+                onTap: () {
+                  setState(() {
+                    _sortBy = 'location';
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              const SizedBox(height: 24),
+
+              // Section: Filter Status
+              const Text(
+                'Filter Status',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _FilterOption(
+                title: AppStrings.filterAll,
+                icon: Icons.all_inbox,
+                color: AppTheme.textPrimary,
+                isSelected: _selectedStatusFilter == null,
+                onTap: () {
+                  setState(() {
+                    _selectedStatusFilter = null;
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _FilterOption(
+                title: AppStrings.filterPending,
+                icon: Icons.schedule,
+                color: AppTheme.warning,
+                isSelected: _selectedStatusFilter == ReportStatus.pending,
+                onTap: () {
+                  setState(() {
+                    _selectedStatusFilter = ReportStatus.pending;
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _FilterOption(
+                title: AppStrings.filterInProgress,
+                icon: Icons.pending_actions,
+                color: AppTheme.info,
+                isSelected: _selectedStatusFilter == ReportStatus.inProgress,
+                onTap: () {
+                  setState(() {
+                    _selectedStatusFilter = ReportStatus.inProgress;
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+              _FilterOption(
+                title: AppStrings.filterCompleted,
+                icon: Icons.check_circle,
+                color: AppTheme.success,
+                isSelected: _selectedStatusFilter == ReportStatus.completed,
+                onTap: () {
+                  setState(() {
+                    _selectedStatusFilter = ReportStatus.completed;
+                  });
+                  Navigator.pop(context); // Tutup dialog
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  void _showFilterOptions() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Filter Status',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _FilterOption(
-              title: AppStrings.filterAll,
-              icon: Icons.all_inbox,
-              color: AppTheme.textPrimary,
-              isSelected: _selectedStatusFilter == null,
-              onTap: () {
-                setState(() => _selectedStatusFilter = null);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterPending,
-              icon: Icons.schedule,
-              color: AppTheme.warning,
-              isSelected: _selectedStatusFilter == ReportStatus.pending,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.pending);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterInProgress,
-              icon: Icons.pending_actions,
-              color: AppTheme.info,
-              isSelected: _selectedStatusFilter == ReportStatus.inProgress,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.inProgress);
-                Navigator.pop(context);
-              },
-            ),
-            _FilterOption(
-              title: AppStrings.filterCompleted,
-              icon: Icons.check_circle,
-              color: AppTheme.success,
-              isSelected: _selectedStatusFilter == ReportStatus.completed,
-              onTap: () {
-                setState(() => _selectedStatusFilter = ReportStatus.completed);
-                Navigator.pop(context);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // ❌ REMOVED: _showSortOptions() dan _showFilterOptions() karena sudah digabung
 
   void _showReportDetail(Report report) {
     showModalBottomSheet(
@@ -822,7 +818,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   Future<void> _deleteReport(Report report) async {
     Navigator.pop(context); // Close detail sheet
-
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -846,11 +841,9 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       try {
         // ✅ FIXED: Use employeeActionsProvider instead of .notifier
         await ref.read(employeeActionsProvider).deleteReport(report.id);
-        
         setState(() {
           _lastDeletedReport = report;
         });
-
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -881,9 +874,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
       try {
         // ✅ FIXED: Use proper restore method with soft delete
         await ref.read(employeeActionsProvider).restoreReport(_lastDeletedReport!.id);
-        
         _lastDeletedReport = null;
-        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -908,7 +899,6 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 }
 
 // ==================== STATS CARD WIDGET ====================
-
 class _StatsCard extends StatelessWidget {
   final String title;
   final int count;
@@ -973,7 +963,6 @@ class _StatsCard extends StatelessWidget {
 }
 
 // ==================== QUICK ACTION BUTTON ====================
-
 class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -1022,7 +1011,6 @@ class _QuickActionButton extends StatelessWidget {
 }
 
 // ==================== REPORT CARD ====================
-
 class _ReportCard extends StatefulWidget {
   final Report report;
   final VoidCallback onTap;
@@ -1077,162 +1065,155 @@ class _ReportCardState extends State<_ReportCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-              // Header: Status Badge & Urgent Badge
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: widget.report.status.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          widget.report.status.icon,
-                          size: 16,
-                          color: widget.report.status.color,
+                  // Header: Status Badge & Urgent Badge
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: widget.report.status.color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                        const SizedBox(width: 6),
-                        Text(
-                          widget.report.status.displayName,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: widget.report.status.color,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              widget.report.status.icon,
+                              size: 16,
+                              color: widget.report.status.color,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.report.status.displayName,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: widget.report.status.color,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (widget.report.isUrgent) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: AppTheme.error.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.priority_high, size: 14, color: AppTheme.error),
+                              SizedBox(width: 4),
+                              Text(
+                                'URGENT',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.error,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
-                  if (widget.report.isUrgent) ...[
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: AppTheme.error.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 12),
+                  // Location
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.location_on,
+                        size: 18,
+                        color: AppTheme.primary,
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.priority_high, size: 14, color: AppTheme.error),
-                          SizedBox(width: 4),
-                          Text(
-                            'URGENT',
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.error,
-                            ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          widget.report.location,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
                           ),
-                        ],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
-                    ),
-                  ],
-                ],
-              ),
-              
-              const SizedBox(height: 12),
-              
-              // Location
-              Row(
-                children: [
-                  const Icon(
-                    Icons.location_on,
-                    size: 18,
-                    color: AppTheme.primary,
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      widget.report.location,
+                  // Description
+                  if (widget.report.description != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.report.description!,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
+                        fontSize: 14,
+                        color: AppTheme.textSecondary,
                       ),
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                ],
-              ),
-              
-              // Description
-              if (widget.report.description != null) ...[
-                const SizedBox(height: 8),
-                Text(
-                  widget.report.description!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-              
-              // ✅ ADDED: Divider sebelum footer
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
-              
-              // Footer: Date & Cleaner info
-              Row(
-                children: [
-                  // ✅ UPDATED: Date dengan format jam (dd MMM yyyy, HH:mm)
-                  const Icon(
-                    Icons.access_time,
-                    size: 14,
-                    color: AppTheme.textSecondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.report.date),
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: AppTheme.textSecondary,
-                    ),
-                  ),
-                  
-                  // Cleaner info (if assigned)
-                  if (widget.report.cleanerName != null) ...[
-                    const SizedBox(width: 16),
-                    const Icon(
-                      Icons.person,
-                      size: 14,
-                      color: AppTheme.info,
-                    ),
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: Text(
-                        widget.report.cleanerName!,
+                  ],
+                  // ✅ ADDED: Divider sebelum footer
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 12),
+                  // Footer: Date & Cleaner info
+                  Row(
+                    children: [
+                      // ✅ UPDATED: Date dengan format jam (dd MMM yyyy, HH:mm)
+                      const Icon(
+                        Icons.access_time,
+                        size: 14,
+                        color: AppTheme.textSecondary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(widget.report.date),
                         style: const TextStyle(
                           fontSize: 12,
-                          color: AppTheme.info,
-                          fontWeight: FontWeight.w500,
+                          color: AppTheme.textSecondary,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    ),
-                  ],
+                      // Cleaner info (if assigned)
+                      if (widget.report.cleanerName != null) ...[
+                        const SizedBox(width: 16),
+                        const Icon(
+                          Icons.person,
+                          size: 14,
+                          color: AppTheme.info,
+                        ),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            widget.report.cleanerName!,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.info,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
-    ),
-  ),
     );
   }
 }
 
 // ==================== SORT OPTION ====================
-
 class _SortOption extends StatelessWidget {
   final String title;
   final IconData icon;
@@ -1327,7 +1308,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 20),
-
           // Status Badge
           Align(
             alignment: Alignment.centerLeft,
@@ -1355,7 +1335,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-
           // Location
           Text(
             report.location,
@@ -1366,7 +1345,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
           // Date
           Row(
             children: [
@@ -1381,7 +1359,6 @@ class _ReportDetailSheet extends StatelessWidget {
               ),
             ],
           ),
-
           if (report.isUrgent) ...[
             const SizedBox(height: 12),
             Container(
@@ -1407,11 +1384,9 @@ class _ReportDetailSheet extends StatelessWidget {
               ),
             ),
           ],
-
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 20),
-
           // Description
           if (report.description != null) ...[
             const Text(
@@ -1433,7 +1408,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
-
           // Image
           if (report.imageUrl != null) ...[
             const Text(
@@ -1461,7 +1435,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
-
           // Cleaner Info
           if (report.cleanerName != null) ...[
             const Text(
@@ -1499,7 +1472,6 @@ class _ReportDetailSheet extends StatelessWidget {
             ),
             const SizedBox(height: 20),
           ],
-
           // Delete button (only for pending status)
           if (report.status == ReportStatus.pending) ...[
             const SizedBox(height: 20),

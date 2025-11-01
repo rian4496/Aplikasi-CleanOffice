@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Rules untuk collection users
+    match /users/{userId} {
+      // Allow create saat register (belum ada auth.uid di database)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      
+      // User bisa read/write data mereka sendiri
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+      
+      // Admin bisa read semua users
+      allow read: if request.auth != null && 
+                     exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                     get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
+    }
+    
+    // Rules untuk collection reports
+    match /reports/{reportId} {
+      // Semua authenticated users bisa read
+      allow read: if request.auth != null;
+      
+      // User bisa create report dengan userId mereka sendiri
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // User bisa update/delete report mereka sendiri
+      allow update, delete: if request.auth != null && 
+                               resource.data.userId == request.auth.uid;
+      
+      // Admin bisa update semua reports
+      allow update: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
+    }
+    
+    // Rules untuk collection requests
+    match /requests/{requestId} {
+      // Semua authenticated users bisa read
+      allow read: if request.auth != null;
+      
+      // User bisa create request
+      allow create: if request.auth != null && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Cleaner & admin bisa update
+      allow update: if request.auth != null && 
+                       exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['cleaner', 'supervisor'];
+    }
+  }
+}

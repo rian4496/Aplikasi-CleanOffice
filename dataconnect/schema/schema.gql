@@ -1,0 +1,37 @@
+type Building @table {
+  name: String!
+  address: String!
+  contactPerson: String
+  contactPhone: String
+}
+
+type Area @table {
+  building: Building!
+  name: String!
+  description: String
+}
+
+type CleaningTaskTemplate @table {
+  name: String!
+  description: String!
+  frequency: String!
+  estimatedDurationMinutes: Int
+  requiredEquipment: String
+}
+
+type StaffMember @table {
+  displayName: String!
+  email: String
+  phoneNumber: String
+}
+
+type AssignedTask @table {
+  cleaningTaskTemplate: CleaningTaskTemplate!
+  staffMember: StaffMember!
+  area: Area!
+  assignedDate: Date!
+  status: String!
+  completionDate: Date
+  notes: String
+  issueDescription: String
+}

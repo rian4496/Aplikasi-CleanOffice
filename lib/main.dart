@@ -19,6 +19,7 @@ import 'screens/auth/sign_up_screen.dart';
 // Employee Screens
 import 'screens/employee/employee_home_screen.dart';
 import 'screens/employee/create_report_screen.dart';
+import 'screens/employee/all_reports_screen.dart';
 
 // Cleaner Screens
 import 'screens/cleaner/cleaner_home_screen.dart';
@@ -118,6 +119,7 @@ class MyApp extends StatelessWidget {
         
         // ==================== EMPLOYEE ROUTES ====================
         '/create_report': (context) => const CreateReportScreen(),
+        '/all_reports': (context) => const AllReportsScreen(),
         '/request_history': (context) => const Scaffold(
           body: Center(child: Text('Request History - Coming Soon')),
         ),

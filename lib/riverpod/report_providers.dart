@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
 import '../../services/firestore_service.dart';
+import 'dart:async';
 
 // ==================== SERVICE PROVIDER ====================
 
@@ -17,12 +18,15 @@ final allReportsProvider = StreamProvider.family<List<Report>, String?>((
   ref,
   departmentId,
 ) {
+  // Keep provider alive for caching
+  ref.keepAlive();
+
   final service = ref.watch(firestoreServiceProvider);
   return service.getAllReports(departmentId: departmentId);
 });
 
 /// Provider untuk stream laporan berdasarkan user ID
-final userReportsProvider = StreamProvider.family<List<Report>, String>((
+final userReportsProvider = StreamProvider.autoDispose.family<List<Report>, String>((
   ref,
   userId,
 ) {
@@ -31,7 +35,7 @@ final userReportsProvider = StreamProvider.family<List<Report>, String>((
 });
 
 /// Provider untuk stream laporan berdasarkan cleaner ID
-final cleanerReportsProvider = StreamProvider.family<List<Report>, String>((
+final cleanerReportsProvider = StreamProvider.autoDispose.family<List<Report>, String>((
   ref,
   cleanerId,
 ) {
@@ -41,7 +45,7 @@ final cleanerReportsProvider = StreamProvider.family<List<Report>, String>((
 
 /// Provider untuk stream laporan berdasarkan status
 final reportsByStatusProvider =
-    StreamProvider.family<List<Report>, ReportStatusQuery>((ref, query) {
+    StreamProvider.autoDispose.family<List<Report>, ReportStatusQuery>((ref, query) {
       final service = ref.watch(firestoreServiceProvider);
       return service.getReportsByStatus(
         query.status,
@@ -70,14 +74,14 @@ class ReportStatusQuery {
 
 /// Provider untuk summary report berdasarkan status
 final reportSummaryProvider =
-    StreamProvider.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
+    StreamProvider.autoDispose.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
       final service = ref.watch(firestoreServiceProvider);
       return service.getReportSummary(departmentId: departmentId);
     });
 
 /// Provider untuk laporan yang selesai hari ini
 final todayCompletedReportsProvider =
-    StreamProvider.family<List<Report>, String?>((ref, departmentId) {
+    StreamProvider.autoDispose.family<List<Report>, String?>((ref, departmentId) {
       final service = ref.watch(firestoreServiceProvider);
       return service.getTodayCompletedReports(departmentId: departmentId);
     });

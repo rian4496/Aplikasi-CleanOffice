@@ -1,5 +1,5 @@
 // lib/services/notification_service.dart
-// ✅ COMPLETE Notification Service for In-App Notifications
+// ✅ IMPROVED Notification Service - Added Cleaning Request Support + Enhancements
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
@@ -28,7 +28,41 @@ class NotificationService {
       
       return adminIds;
     } catch (e) {
-      debugPrint('Error getting admin IDs: $e');
+      debugPrint('❌ Error getting admin IDs: $e');
+      return [];
+    }
+  }
+
+  /// ✨ NEW: Get all cleaner user IDs
+  Future<List<String>> _getCleanerIds() async {
+    try {
+      debugPrint('🔍 Getting cleaner IDs...');
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'cleaner')
+          .get();
+
+      final cleanerIds = snapshot.docs.map((doc) => doc.id).toList();
+      debugPrint('✅ Found ${cleanerIds.length} cleaners: $cleanerIds');
+      
+      return cleanerIds;
+    } catch (e) {
+      debugPrint('❌ Error getting cleaner IDs: $e');
+      return [];
+    }
+  }
+
+  /// ✨ NEW: Get all staff IDs (admins + cleaners)
+  Future<List<String>> _getStaffIds() async {
+    try {
+      final adminIds = await _getAdminIds();
+      final cleanerIds = await _getCleanerIds();
+      final staffIds = [...adminIds, ...cleanerIds];
+      
+      debugPrint('✅ Found ${staffIds.length} staff members (${adminIds.length} admins + ${cleanerIds.length} cleaners)');
+      return staffIds;
+    } catch (e) {
+      debugPrint('❌ Error getting staff IDs: $e');
       return [];
     }
   }
@@ -40,6 +74,7 @@ class NotificationService {
     required String title,
     required String message,
     String? reportId,
+    String? requestId, // ✨ NEW: for cleaning requests
     String? imageUrl,
     bool isUrgent = false,
     String? status,
@@ -52,6 +87,7 @@ class NotificationService {
         'title': title,
         'message': message,
         'reportId': reportId,
+        'requestId': requestId, // ✨ NEW
         'imageUrl': imageUrl,
         'isUrgent': isUrgent,
         'status': status,
@@ -66,34 +102,73 @@ class NotificationService {
     }
   }
 
-  /// Send notification to multiple recipients
+  /// ✨ IMPROVED: Send notification to multiple recipients with batch write
   Future<void> _sendToMultipleRecipients({
     required List<String> recipientIds,
     required String type,
     required String title,
     required String message,
     String? reportId,
+    String? requestId, // ✨ NEW
     String? imageUrl,
     bool isUrgent = false,
     String? status,
     Map<String, dynamic>? data,
   }) async {
-    for (final recipientId in recipientIds) {
-      await _createNotification(
-        recipientId: recipientId,
-        type: type,
-        title: title,
-        message: message,
-        reportId: reportId,
-        imageUrl: imageUrl,
-        isUrgent: isUrgent,
-        status: status,
-        data: data,
-      );
+    if (recipientIds.isEmpty) {
+      debugPrint('⚠️ No recipients to send notification');
+      return;
+    }
+
+    try {
+      // ✨ IMPROVED: Use batch write for better performance
+      final batch = _firestore.batch();
+      final timestamp = FieldValue.serverTimestamp();
+
+      for (final recipientId in recipientIds) {
+        final notificationRef = _firestore.collection('notifications').doc();
+        
+        batch.set(notificationRef, {
+          'recipientId': recipientId,
+          'type': type,
+          'title': title,
+          'message': message,
+          'reportId': reportId,
+          'requestId': requestId, // ✨ NEW
+          'imageUrl': imageUrl,
+          'isUrgent': isUrgent,
+          'status': status,
+          'data': data,
+          'isRead': false,
+          'createdAt': timestamp,
+        });
+      }
+
+      await batch.commit();
+      debugPrint('✅ Batch notification sent to ${recipientIds.length} recipients');
+    } catch (e) {
+      debugPrint('❌ Error sending batch notifications: $e');
+      
+      // ✨ IMPROVED: Fallback to individual sends if batch fails
+      debugPrint('🔄 Attempting individual sends as fallback...');
+      for (final recipientId in recipientIds) {
+        await _createNotification(
+          recipientId: recipientId,
+          type: type,
+          title: title,
+          message: message,
+          reportId: reportId,
+          requestId: requestId,
+          imageUrl: imageUrl,
+          isUrgent: isUrgent,
+          status: status,
+          data: data,
+        );
+      }
     }
   }
 
-  // ==================== NOTIFICATION TRIGGERS ====================
+  // ==================== REPORT NOTIFICATIONS ====================
 
   /// 1. Notify when report is created (to admins)
   Future<void> notifyReportCreated(Report report) async {
@@ -373,7 +448,178 @@ class NotificationService {
     }
   }
 
-  // ==================== UTILITY METHODS ====================
+  // ==================== ✨ NEW: CLEANING REQUEST NOTIFICATIONS ====================
+
+  /// 8. ✨ NEW: Notify when cleaning request is created (to cleaners & admins)
+  Future<void> notifyNewRequest({
+    required String requestId,
+    required String location,
+    required bool isUrgent,
+    String? description,
+    String? imageUrl,
+    DateTime? preferredDateTime,
+  }) async {
+    try {
+      debugPrint('📨 Creating notification for cleaning request: $requestId');
+      
+      // Get all staff (cleaners + admins)
+      final staffIds = await _getStaffIds();
+      debugPrint('📤 Sending to ${staffIds.length} staff members');
+      
+      // Format preferred time if exists
+      String timeInfo = '';
+      if (preferredDateTime != null) {
+        timeInfo = '\nWaktu diinginkan: ${preferredDateTime.day}/${preferredDateTime.month} ${preferredDateTime.hour}:${preferredDateTime.minute.toString().padLeft(2, '0')}';
+      }
+      
+      await _sendToMultipleRecipients(
+        recipientIds: staffIds,
+        type: 'request_created',
+        title: isUrgent ? '🚨 URGEN: Permintaan Layanan Baru' : '📋 Permintaan Layanan Baru',
+        message: 'Permintaan layanan kebersihan di $location$timeInfo',
+        requestId: requestId,
+        imageUrl: imageUrl,
+        isUrgent: isUrgent,
+        status: 'pending',
+        data: {
+          'location': location,
+          'description': description,
+          'preferredDateTime': preferredDateTime?.toIso8601String(),
+          'isUrgent': isUrgent,
+        },
+      );
+      
+      debugPrint('✅ Cleaning request notification sent to ${staffIds.length} staff members');
+    } catch (e) {
+      debugPrint('❌ Error sending cleaning request notification: $e');
+      rethrow; // Re-throw to handle in create_request_screen
+    }
+  }
+
+  /// 9. ✨ NEW: Notify when request is assigned (to requester & cleaner)
+  Future<void> notifyRequestAssigned({
+    required String requestId,
+    required String requesterId,
+    required String cleanerId,
+    required String cleanerName,
+    required String location,
+  }) async {
+    try {
+      // Notify requester
+      await _createNotification(
+        recipientId: requesterId,
+        type: 'request_assigned',
+        title: 'Permintaan Ditugaskan',
+        message: 'Permintaan Anda di $location telah ditugaskan ke $cleanerName',
+        requestId: requestId,
+        status: 'assigned',
+        data: {
+          'cleanerId': cleanerId,
+          'cleanerName': cleanerName,
+          'location': location,
+        },
+      );
+      
+      // Notify cleaner
+      await _createNotification(
+        recipientId: cleanerId,
+        type: 'request_assigned',
+        title: 'Tugas Baru',
+        message: 'Anda ditugaskan untuk permintaan layanan di $location',
+        requestId: requestId,
+        status: 'assigned',
+        data: {
+          'requesterId': requesterId,
+          'location': location,
+        },
+      );
+      
+      debugPrint('✅ Request assignment notification sent');
+    } catch (e) {
+      debugPrint('❌ Error sending request assignment notification: $e');
+    }
+  }
+
+  /// 10. ✨ NEW: Notify when request is completed (to requester)
+  Future<void> notifyRequestCompleted({
+    required String requestId,
+    required String requesterId,
+    required String location,
+    required String cleanerName,
+    String? completionImageUrl,
+  }) async {
+    try {
+      await _createNotification(
+        recipientId: requesterId,
+        type: 'request_completed',
+        title: 'Permintaan Selesai ✓',
+        message: '$cleanerName telah menyelesaikan permintaan Anda di $location',
+        requestId: requestId,
+        imageUrl: completionImageUrl,
+        status: 'completed',
+        data: {
+          'cleanerName': cleanerName,
+          'location': location,
+          'completionImageUrl': completionImageUrl,
+        },
+      );
+      
+      debugPrint('✅ Request completion notification sent');
+    } catch (e) {
+      debugPrint('❌ Error sending request completion notification: $e');
+    }
+  }
+
+  // ==================== ✨ NEW: ENHANCED UTILITY METHODS ====================
+
+  /// Mark notification as read
+  Future<void> markAsRead(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+      
+      debugPrint('✅ Notification marked as read: $notificationId');
+    } catch (e) {
+      debugPrint('❌ Error marking notification as read: $e');
+    }
+  }
+
+  /// Mark all notifications as read for a user
+  Future<void> markAllAsRead(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: userId)
+          .where('isRead', isEqualTo: false)
+          .get();
+      
+      final batch = _firestore.batch();
+      for (var doc in snapshot.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+      await batch.commit();
+      
+      debugPrint('✅ All notifications marked as read for user: $userId');
+    } catch (e) {
+      debugPrint('❌ Error marking all notifications as read: $e');
+    }
+  }
+
+  /// Delete single notification
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+      
+      debugPrint('✅ Notification deleted: $notificationId');
+    } catch (e) {
+      debugPrint('❌ Error deleting notification: $e');
+    }
+  }
 
   /// Delete all notifications for a user
   Future<void> deleteUserNotifications(String userId) async {
@@ -409,5 +655,31 @@ class NotificationService {
       debugPrint('❌ Error getting unread count: $e');
       return 0;
     }
+  }
+
+  /// ✨ NEW: Get unread count stream (real-time updates)
+  Stream<int> getUnreadCountStream(String userId) {
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// ✨ NEW: Get notifications stream for a user (real-time updates)
+  Stream<List<Map<String, dynamic>>> getNotificationsStream(String userId) {
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .limit(50) // Limit to recent 50 notifications
+        .snapshots()
+        .map((snapshot) => snapshot.docs.map((doc) {
+              return {
+                'id': doc.id,
+                ...doc.data(),
+              };
+            }).toList());
   }
 }

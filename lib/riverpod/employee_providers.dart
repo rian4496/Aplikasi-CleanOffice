@@ -26,6 +26,7 @@ final currentEmployeeIdProvider = Provider<String?>((ref) {
 // ==================== EMPLOYEE REPORTS PROVIDERS ====================
 
 /// Provider untuk semua laporan employee
+/// OPTIMIZED: dengan autoDispose dan keepAlive untuk caching
 final employeeReportsProvider = StreamProvider<List<Report>>((ref) {
   final userId = ref.watch(currentEmployeeIdProvider);
 
@@ -33,6 +34,9 @@ final employeeReportsProvider = StreamProvider<List<Report>>((ref) {
     return Stream.value([]);
   }
 
+  // Keep provider alive for caching
+  ref.keepAlive();
+  
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportsByUser(userId);
 });

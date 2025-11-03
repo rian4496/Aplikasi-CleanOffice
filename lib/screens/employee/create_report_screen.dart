@@ -220,9 +220,13 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
                           return TextFormField(
                             controller: controller,
                             focusNode: focusNode,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Lokasi',
                               hintText: 'Ketik atau pilih lokasi',
+                              hintStyle: TextStyle(
+                                color: Colors.grey[400],
+                                fontSize: 14,
+                              ),
                               prefixIcon: Icon(Icons.location_on),
                             ),
                             validator: (value) {
@@ -252,9 +256,13 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
 
                   TextFormField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Deskripsi',
                       hintText: 'Jelaskan masalah singkat...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
                       prefixIcon: Icon(Icons.description),
                     ),
                     maxLines: 4,

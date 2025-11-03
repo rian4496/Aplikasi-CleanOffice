@@ -13,11 +13,11 @@ import '../../providers/riverpod/cleaner_providers.dart';
 import '../../providers/riverpod/notification_providers.dart';
 
 import '../../widgets/cleaner/stats_card_widget.dart';
-import '../../widgets/cleaner/request_card_widget.dart';
+import '../../widgets/shared/request_card_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
-import 'request_detail_screen.dart';
+import '../shared/request_detail/request_detail_screen.dart';
 import 'report_detail_cleaner_screen.dart';
 import 'create_cleaning_report_screen.dart';
 
@@ -519,17 +519,17 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
           itemCount: requests.length,
           itemBuilder: (context, index) {
             final request = requests[index];
-            return RequestCard(
-              location: request['location'] as String? ?? 'Lokasi tidak diketahui',
-              description: request['description'] as String? ?? '',
-              isUrgent: request['isUrgent'] as bool? ?? false,
+            return RequestCardWidget(
+              request: request, //Passing full request object           
               animationIndex: index,
+              compact: true,
+              showAssignee: false, //Cleaner tidak perlu lihat assignee
               onTap: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (context) =>
-                        RequestDetailScreen(requestId: request['id'] as String),
+                        RequestDetailScreen(requestId: request.id),
                   ),
                 );
               },
@@ -573,18 +573,17 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                   const SizedBox(height: 8),
                   ...requests.asMap().entries.map((entry) {
                     final request = entry.value;
-                    return RequestCard(
-                      location: request['location'] as String? ??
-                          'Lokasi tidak diketahui',
-                      description: request['description'] as String? ?? '',
-                      isUrgent: request['isUrgent'] as bool? ?? false,
+                    return RequestCardWidget(
+                      request: request, //Passing full request object
                       animationIndex: entry.key,
+                      compact: true,
+                      showAssignee: false, //Clener tidak perlu lihat assignee
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder: (context) => RequestDetailScreen(
-                              requestId: request['id'] as String,
+                              requestId: request.id,
                             ),
                           ),
                         );

@@ -352,13 +352,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
           label: 'Minta Layanan',
           backgroundColor: SpeedDialColors.green,
           onTap: () {
-            // TODO: Navigate to request service screen
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Fitur Minta Layanan segera hadir'),
-                duration: Duration(seconds: 2),
-              ),
-            );
+            Navigator.pushNamed(context, '/create_request');
           },
         ),
         

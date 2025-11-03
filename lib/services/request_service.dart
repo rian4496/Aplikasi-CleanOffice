@@ -15,7 +15,6 @@
 // - Admin: See ALL requests
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart';
 import '../models/request.dart';
 import '../core/logging/app_logger.dart';
 import '../core/error/exceptions.dart';
@@ -107,7 +106,7 @@ class RequestService {
       final canCreate = await canCreateRequest(userId);
       if (!canCreate) {
         throw ValidationException(
-          'Anda sudah memiliki 3 permintaan aktif. '
+          message: 'Anda sudah memiliki 3 permintaan aktif. '
           'Tunggu hingga salah satu selesai untuk membuat permintaan baru.',
         );
       }
@@ -176,7 +175,7 @@ class RequestService {
     } catch (e) {
       _logger.error('Error creating request', e);
       throw FirestoreException(
-        'Gagal membuat permintaan. Silakan coba lagi.',
+        message: 'Gagal membuat permintaan. Silakan coba lagi.',
         code: e.toString(),
       );
     }
@@ -293,6 +292,21 @@ class RequestService {
     }
   }
 
+  /// Watch request by ID (stream)
+  Stream<Request?> watchRequestById(String requestId) {
+    try {
+      return _collection.doc(requestId).snapshots().map((doc) {
+        if (!doc.exists) {
+          return null;
+        }
+        return Request.fromFirestore(doc);
+      });
+    } catch (e) {
+      _logger.error('Error watching request by ID', e);
+      return Stream.value(null);
+    }
+  }
+
   // ==================== UPDATE ====================
 
   /// Self-assign request (cleaner picks from pending)
@@ -303,12 +317,12 @@ class RequestService {
       // Get request to validate
       final request = await getRequestById(requestId);
       if (request == null) {
-        throw FirestoreException('Permintaan tidak ditemukan');
+        throw const FirestoreException(message: 'Permintaan tidak ditemukan');
       }
 
       // Validate can self-assign
       if (!request.canBeSelfAssigned()) {
-        throw ValidationException(
+        throw ValidationException(message: 
           'Permintaan ini tidak dapat diambil. Status: ${request.status.displayName}',
         );
       }
@@ -341,7 +355,7 @@ class RequestService {
       if (e is ValidationException || e is FirestoreException) {
         rethrow;
       }
-      throw FirestoreException('Gagal mengambil permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal mengambil permintaan. Silakan coba lagi.');
     }
   }
 
@@ -353,12 +367,12 @@ class RequestService {
       // Get request to validate
       final request = await getRequestById(requestId);
       if (request == null) {
-        throw FirestoreException('Permintaan tidak ditemukan');
+        throw const FirestoreException(message: 'Permintaan tidak ditemukan');
       }
 
       // Validate can start
       if (!request.canBeStartedBy(cleanerId)) {
-        throw ValidationException(
+        throw ValidationException(message: 
           'Anda tidak dapat memulai permintaan ini. '
           'Status: ${request.status.displayName}',
         );
@@ -376,7 +390,7 @@ class RequestService {
       if (e is ValidationException || e is FirestoreException) {
         rethrow;
       }
-      throw FirestoreException('Gagal memulai permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal memulai permintaan. Silakan coba lagi.');
     }
   }
 
@@ -393,12 +407,12 @@ class RequestService {
       // Get request to validate
       final request = await getRequestById(requestId);
       if (request == null) {
-        throw FirestoreException('Permintaan tidak ditemukan');
+        throw const FirestoreException(message: 'Permintaan tidak ditemukan');
       }
 
       // Validate can complete
       if (!request.canBeCompletedBy(cleanerId)) {
-        throw ValidationException(
+        throw ValidationException(message: 
           'Anda tidak dapat menyelesaikan permintaan ini. '
           'Status: ${request.status.displayName}',
         );
@@ -431,7 +445,7 @@ class RequestService {
       if (e is ValidationException || e is FirestoreException) {
         rethrow;
       }
-      throw FirestoreException('Gagal menyelesaikan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal menyelesaikan permintaan. Silakan coba lagi.');
     }
   }
 
@@ -443,12 +457,12 @@ class RequestService {
       // Get request to validate
       final request = await getRequestById(requestId);
       if (request == null) {
-        throw FirestoreException('Permintaan tidak ditemukan');
+        throw const FirestoreException(message: 'Permintaan tidak ditemukan');
       }
 
       // Validate can cancel
       if (!request.canBeCancelledBy(userId)) {
-        throw ValidationException(
+        throw ValidationException(message: 
           'Anda tidak dapat membatalkan permintaan ini. '
           'Status: ${request.status.displayName}',
         );
@@ -465,7 +479,7 @@ class RequestService {
       if (e is ValidationException || e is FirestoreException) {
         rethrow;
       }
-      throw FirestoreException('Gagal membatalkan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal membatalkan permintaan. Silakan coba lagi.');
     }
   }
 
@@ -484,7 +498,7 @@ class RequestService {
       _logger.info('Request soft deleted successfully');
     } catch (e) {
       _logger.error('Error soft deleting request', e);
-      throw FirestoreException('Gagal menghapus permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal menghapus permintaan. Silakan coba lagi.');
     }
   }
 
@@ -501,7 +515,7 @@ class RequestService {
       _logger.info('Request restored successfully');
     } catch (e) {
       _logger.error('Error restoring request', e);
-      throw FirestoreException('Gagal memulihkan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal memulihkan permintaan. Silakan coba lagi.');
     }
   }
 

@@ -21,7 +21,6 @@ import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../providers/riverpod/request_providers.dart';
-import '../../models/request.dart';
 
 final _logger = AppLogger('CreateRequestScreen');
 
@@ -125,40 +124,25 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
 
   // ==================== DATE TIME PICKER ====================
   Future<void> _selectDateTime() async {
+    // Pick date first
     final DateTime? date = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 30)),
       locale: const Locale('id', 'ID'),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppConstants.primaryColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (date == null) return;
 
+    // Pick time second
     if (!mounted) return;
+
+    // Use BuildContext to ensure MaterialLocalizations is available
+    final BuildContext dialogContext = context;
     final TimeOfDay? time = await showTimePicker(
-      context: context,
+      context: dialogContext,
       initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppConstants.primaryColor,
-            ),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (time != null) {
@@ -817,28 +801,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
               _buildPhotoUpload(),
 
               const SizedBox(height: 16),
-
-              // 7. Urgent Toggle
-              _buildUrgentToggle(),
-
+             
               const SizedBox(height: 32),
 
               // 8. Submit Button
               _buildSubmitButton(),
-
-              const SizedBox(height: 16),
-
-              // Helper Text
-              Center(
-                child: Text(
-                  '* = Wajib diisi',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[600],
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
-              ),
 
               const SizedBox(height: 32),
             ],
@@ -886,8 +853,12 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
             TextFormField(
               controller: _locationController,
               enabled: !_isSubmitting,
-              decoration: const InputDecoration(
-                hintText: 'Contoh: Parkiran Depan, Pantry Lt 2',
+              decoration: InputDecoration(
+                hintText: 'Contoh: Air minum ruang umum pegawai',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
                 border: OutlineInputBorder(),
               ),
               validator: (value) {
@@ -939,8 +910,12 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
             TextFormField(
               controller: _descriptionController,
               enabled: !_isSubmitting,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Jelaskan detail layanan yang dibutuhkan...',
+                hintStyle: TextStyle(
+                  color: Colors.grey[400],
+                  fontSize: 14,
+                ),
                 border: OutlineInputBorder(),
               ),
               maxLines: 4,
@@ -1088,62 +1063,6 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildUrgentToggle() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: _isUrgent ? Colors.red[50] : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isUrgent ? Colors.red : Colors.grey[300]!,
-          width: _isUrgent ? 2 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _isUrgent
-                ? Colors.red.withOpacity(0.1)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: SwitchListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        title: Text(
-          'Tandai sebagai Urgen',
-          style: TextStyle(
-            fontWeight: _isUrgent ? FontWeight.bold : FontWeight.w500,
-            color: _isUrgent ? Colors.red[700] : Colors.black87,
-            fontSize: 16,
-          ),
-        ),
-        subtitle: Text(
-          'Permintaan yang perlu segera ditangani',
-          style: TextStyle(
-            color: _isUrgent ? Colors.red[600] : Colors.grey[600],
-            fontSize: 12,
-          ),
-        ),
-        value: _isUrgent,
-        onChanged: _isSubmitting
-            ? null
-            : (bool value) {
-                setState(() {
-                  _isUrgent = value;
-                });
-              },
-        secondary: Icon(
-          _isUrgent ? Icons.warning : Icons.priority_high,
-          color: _isUrgent ? Colors.red[700] : Colors.grey,
-          size: 32,
-        ),
-        activeColor: Colors.red,
       ),
     );
   }

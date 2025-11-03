@@ -1,4 +1,5 @@
 // lib/providers/riverpod/employee_providers.dart - USING EXISTING STORAGE SERVICE
+// ✅ UPDATED: Support imageBytes for web compatibility
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -25,6 +26,7 @@ final currentEmployeeIdProvider = Provider<String?>((ref) {
 // ==================== EMPLOYEE REPORTS PROVIDERS ====================
 
 /// Provider untuk semua laporan employee
+/// OPTIMIZED: dengan autoDispose dan keepAlive untuk caching
 final employeeReportsProvider = StreamProvider<List<Report>>((ref) {
   final userId = ref.watch(currentEmployeeIdProvider);
 
@@ -32,6 +34,9 @@ final employeeReportsProvider = StreamProvider<List<Report>>((ref) {
     return Stream.value([]);
   }
 
+  // Keep provider alive for caching
+  ref.keepAlive();
+  
   final service = ref.watch(firestoreServiceProvider);
   return service.getReportsByUser(userId);
 });
@@ -188,7 +193,7 @@ class EmployeeActions {
     );
 
     // Send notifications to admins
-    try {      
+    try {
       if (isUrgent) {
         // Send urgent notification
         await NotificationService().notifyUrgentReport(createdReport);
@@ -203,14 +208,15 @@ class EmployeeActions {
   }
 
   /// Update existing report
+  /// ✅ UPDATED: Support imageBytes for web compatibility
   Future<void> updateReport({
     required String reportId,
     String? title,
     String? location,
     String? description,
     bool? isUrgent,
-    dynamic imageFile, // File dari image_picker
-    Uint8List? imageBytes, // Untuk web
+    dynamic imageFile,       // DEPRECATED: Use imageBytes instead
+    Uint8List? imageBytes,   // ✅ NEW: Web-compatible bytes
   }) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception('User not logged in');
@@ -233,14 +239,26 @@ class EmployeeActions {
       throw Exception('Cannot edit report with status: ${existingReport.status.displayName}');
     }
 
-    // Handle image upload if new file provided
+    // Handle image upload
     String? newImageUrl = existingReport.imageUrl;
-    if (imageFile != null && imageFile is File) {
+    Uint8List? bytes;
+    
+    // ✅ UPDATED: Support both File (mobile) and Uint8List (web)
+    if (imageBytes != null) {
+      // Web or explicitly provided bytes
+      bytes = imageBytes;
+    } else if (imageFile != null && imageFile is File) {
+      // Mobile: File from image_picker
       try {
-        // Read file bytes
-        final bytes = await imageFile.readAsBytes();
-        
-        // Upload using existing StorageService
+        bytes = await imageFile.readAsBytes();
+      } catch (e) {
+        debugPrint('❌ Error reading file: $e');
+      }
+    }
+    
+    // Upload if we have bytes
+    if (bytes != null) {
+      try {
         final storageService = ref.read(storageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: bytes,
@@ -253,11 +271,9 @@ class EmployeeActions {
           debugPrint('✅ New image uploaded: $newImageUrl');
         } else {
           debugPrint('❌ Failed to upload image: ${result.error}');
-          // Continue with old image URL
         }
       } catch (e) {
         debugPrint('❌ Image upload error: $e');
-        // Continue with old image URL
       }
     }
 
@@ -292,7 +308,6 @@ class EmployeeActions {
       updatedReport.toFirestore(),
     );
   }
-
 
   /// Delete report (soft delete)
   /// 🆕 UPDATED: Now uses soft delete instead of permanent delete

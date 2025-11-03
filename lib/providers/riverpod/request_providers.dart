@@ -17,7 +17,6 @@ import '../../services/request_service.dart';
 import '../../services/storage_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
-import './auth_providers.dart';
 
 final _logger = AppLogger('RequestProviders');
 
@@ -84,6 +83,14 @@ final requestsByStatusProvider = StreamProvider.family<List<Request>, RequestSta
   (ref, status) {
     final service = ref.watch(requestServiceProvider);
     return service.getRequestsByStatus(status);
+  },
+);
+
+/// Request by ID Provider (for detail screen)
+final requestByIdProvider = StreamProvider.family<Request?, String>(
+  (ref, requestId) {
+    final service = ref.watch(requestServiceProvider);
+    return service.watchRequestById(requestId);
   },
 );
 
@@ -260,7 +267,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       // Upload image if provided
@@ -303,7 +310,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error creating request', e);
-      throw FirestoreException('Gagal membuat permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal membuat permintaan. Silakan coba lagi.');
     }
   }
 
@@ -312,7 +319,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       final service = ref.read(requestServiceProvider);
@@ -329,7 +336,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error self-assigning request', e);
-      throw FirestoreException('Gagal mengambil permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal mengambil permintaan. Silakan coba lagi.');
     }
   }
 
@@ -338,7 +345,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       final service = ref.read(requestServiceProvider);
@@ -351,7 +358,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error starting request', e);
-      throw FirestoreException('Gagal memulai permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal memulai permintaan. Silakan coba lagi.');
     }
   }
 
@@ -364,7 +371,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       // Upload completion image if provided
@@ -402,7 +409,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error completing request', e);
-      throw FirestoreException('Gagal menyelesaikan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal menyelesaikan permintaan. Silakan coba lagi.');
     }
   }
 
@@ -411,7 +418,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       final service = ref.read(requestServiceProvider);
@@ -424,7 +431,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error cancelling request', e);
-      throw FirestoreException('Gagal membatalkan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal membatalkan permintaan. Silakan coba lagi.');
     }
   }
 
@@ -433,7 +440,7 @@ class RequestActions {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) {
-        throw ValidationException('User not logged in');
+        throw const ValidationException(message: 'User not logged in');
       }
 
       final service = ref.read(requestServiceProvider);
@@ -446,7 +453,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error deleting request', e);
-      throw FirestoreException('Gagal menghapus permintaan. Silakan coba lagi.');
+      throw const FirestoreException(message: 'Gagal menghapus permintaan. Silakan coba lagi.');
     }
   }
 

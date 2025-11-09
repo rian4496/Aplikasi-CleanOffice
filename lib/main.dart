@@ -53,21 +53,39 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Setup Crashlytics
-    FlutterError.onError = (errorDetails) {
-      // Report to Crashlytics
-      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-      // Also print to console in debug mode
+    // Setup Crashlytics (only on mobile platforms, not web)
+    if (!kIsWeb) {
+      // Pass all uncaught "fatal" errors from the framework to Crashlytics
+      FlutterError.onError = (errorDetails) {
+        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      };
+      
+      // Pass all uncaught asynchronous errors to Crashlytics
+      PlatformDispatcher.instance.onError = (error, stack) {
+        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+        return true;
+      };
+      
+      // Toggle crash collection based on user consent (optional)
       if (kDebugMode) {
-        FlutterError.presentError(errorDetails);
+        // In debug mode, disable Crashlytics to avoid noise
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
+      } else {
+        // In release mode, enable Crashlytics
+        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
       }
-    };
-
-    // Pass all uncaught asynchronous errors to Crashlytics
-    PlatformDispatcher.instance.onError = (error, stack) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
-    };
+    }
+    
+    // In debug mode, also print errors to console
+    if (kDebugMode) {
+      FlutterError.onError = (errorDetails) {
+        FlutterError.presentError(errorDetails);
+        // Also send to Crashlytics if not web
+        if (!kIsWeb) {
+          FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+        }
+      };
+    }
 
   // ==================== FIREBASE EMULATOR CONFIG ====================
   // 
@@ -116,8 +134,15 @@ void main() async {
       ),
     );
   }, (error, stack) {
-    // Catch errors outside Flutter
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    // Catch errors outside Flutter (only on mobile, not web)
+    if (!kIsWeb) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    }
+    // In debug, also print to console
+    if (kDebugMode) {
+      debugPrint('Uncaught error: $error');
+      debugPrint('Stack trace: $stack');
+    }
   });
 }
 

@@ -29,8 +29,7 @@ class NotificationScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.done_all),
             onPressed: () async {
-              final actions = ref.read(notificationActionsProvider);
-              await actions.markAllAsRead();
+              await ref.read(markAllNotificationsAsReadProvider.future);
               
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -151,12 +150,11 @@ class NotificationScreen extends ConsumerWidget {
   Future<void> _handleNotificationTap(
     BuildContext context,
     WidgetRef ref,
-    NotificationModel notification,
+    AppNotification notification,
   ) async {
     // Mark as read
-    final actions = ref.read(notificationActionsProvider);
     if (!notification.isRead) {
-      await actions.markAsRead(notification.id);
+      await ref.read(markNotificationAsReadProvider(notification.id).future);
     }
 
     // Navigate to detail if it's a report notification
@@ -195,16 +193,15 @@ class NotificationScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _handleDismiss(WidgetRef ref, NotificationModel notification) async {
-    final actions = ref.read(notificationActionsProvider);
-    await actions.deleteNotification(notification.id);
+  Future<void> _handleDismiss(WidgetRef ref, AppNotification notification) async {
+    await ref.read(deleteNotificationProvider(notification.id).future);
   }
 }
 
 // ==================== NOTIFICATION CARD WIDGET ====================
 
 class _NotificationCard extends StatelessWidget {
-  final NotificationModel notification;
+  final AppNotification notification;
   final VoidCallback onTap;
   final VoidCallback onDismiss;
 

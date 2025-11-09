@@ -1,5 +1,6 @@
-// lib/main.dart - UPDATED: Production Firebase Mode
+// lib/main.dart - UPDATED: Production Firebase Mode + Crashlytics
 
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +8,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
@@ -27,6 +29,7 @@ import 'screens/cleaner/cleaner_home_screen.dart';
 
 // Admin Screens
 import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/analytics_screen.dart';
 
 // Shared Screens
 import 'screens/shared/profile_screen.dart';
@@ -36,14 +39,35 @@ import 'screens/shared/change_password_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/employee/create_request_screen.dart';
 
-void main() async {
-  // Ensure Flutter binding is initialized
-  WidgetsFlutterBinding.ensureInitialized();
+// Inventory Screens
+import 'screens/inventory/inventory_list_screen.dart';
 
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+void main() async {
+  // Run app with error handling zone
+  runZonedGuarded(() async {
+    // Ensure Flutter binding is initialized
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Setup Crashlytics
+    FlutterError.onError = (errorDetails) {
+      // Report to Crashlytics
+      FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+      // Also print to console in debug mode
+      if (kDebugMode) {
+        FlutterError.presentError(errorDetails);
+      }
+    };
+
+    // Pass all uncaught asynchronous errors to Crashlytics
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
 
   // ==================== FIREBASE EMULATOR CONFIG ====================
   // 
@@ -82,15 +106,19 @@ void main() async {
   }
 
 
-  // Initialize date formatting for Indonesian locale
-  await initializeDateFormatting('id_ID', null);
+    // Initialize date formatting for Indonesian locale
+    await initializeDateFormatting('id_ID', null);
 
-  // Run app with ProviderScope for Riverpod
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+    // Run app with ProviderScope for Riverpod
+    runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
+  }, (error, stack) {
+    // Catch errors outside Flutter
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+  });
 }
 
 class MyApp extends StatelessWidget {
@@ -120,6 +148,9 @@ class MyApp extends StatelessWidget {
       
       // Routes
       routes: {
+        // ==================== ROOT ====================
+        '/': (context) => const LoginScreen(), // Add home/root route
+
         // ==================== AUTH ====================
         AppConstants.loginRoute: (context) => const LoginScreen(),
         '/register': (context) => const SignUpScreen(),
@@ -137,6 +168,33 @@ class MyApp extends StatelessWidget {
           body: Center(child: Text('Request History - Coming Soon')),
         ),
         
+        // ==================== CLEANER ROUTES ====================
+        '/cleaner/pending_reports': (context) => const Scaffold(
+          body: Center(child: Text('Pending Reports - Use direct import')),
+        ),
+        '/cleaner/available_requests': (context) => const Scaffold(
+          body: Center(child: Text('Available Requests - Use direct import')),
+        ),
+        '/cleaner/my_tasks': (context) => const Scaffold(
+          body: Center(child: Text('My Tasks - Use direct import')),
+        ),
+        
+        // ==================== ADMIN ROUTES ====================
+        '/admin/analytics': (context) => const AnalyticsScreen(),
+        '/analytics': (context) => const AnalyticsScreen(),
+        '/admin/reports_management': (context) => const Scaffold(
+          body: Center(child: Text('Reports Management - Use direct import')),
+        ),
+        '/admin/requests_management': (context) => const Scaffold(
+          body: Center(child: Text('Requests Management - Use direct import')),
+        ),
+        '/admin/cleaner_management': (context) => const Scaffold(
+          body: Center(child: Text('Cleaner Management - Use direct import')),
+        ),
+        '/admin/verification_queue': (context) => const Scaffold(
+          body: Center(child: Text('Verification Queue - Use direct import')),
+        ),
+        
         // ==================== SHARED ROUTES ====================
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
@@ -144,6 +202,11 @@ class MyApp extends StatelessWidget {
         '/change_password': (context) => const ChangePasswordScreen(),
         '/notifications': (context) => const NotificationScreen(),
         '/create_request': (context) => const CreateRequestScreen(),
+        
+        // ==================== INVENTORY ROUTES ====================
+        '/inventory': (context) => const InventoryListScreen(),
+        '/inventory/list': (context) => const InventoryListScreen(),
+        '/inventory_list': (context) => const InventoryListScreen(),
       },
       
       // Handle unknown routes - redirect to login

@@ -309,6 +309,63 @@ class RequestService {
 
   // ==================== UPDATE ====================
 
+  /// Admin assign request to cleaner
+  Future<void> adminAssignRequest({
+    required String requestId,
+    required String cleanerId,
+    required String cleanerName,
+    required String adminId,
+  }) async {
+    try {
+      _logger.info('Admin assigning request $requestId to $cleanerId');
+
+      // Get request to validate
+      final request = await getRequestById(requestId);
+      if (request == null) {
+        throw const FirestoreException(message: 'Permintaan tidak ditemukan');
+      }
+
+      // Admin can assign any request except completed/cancelled
+      if (request.status == RequestStatus.completed || 
+          request.status == RequestStatus.cancelled) {
+        throw ValidationException(message: 
+          'Permintaan yang ${request.status.displayName} tidak dapat di-assign ulang',
+        );
+      }
+
+      // Update request
+      await _collection.doc(requestId).update({
+        'status': RequestStatus.assigned.toFirestore(),
+        'assignedTo': cleanerId,
+        'assignedToName': cleanerName,
+        'assignedAt': FieldValue.serverTimestamp(),
+        'assignedBy': 'admin',
+        'assignedByAdmin': adminId,
+      });
+
+      _logger.info('Request assigned by admin successfully');
+
+      // Send notification to cleaner and requester
+      try {
+        await _notificationService.notifyRequestAssigned(
+          requestId: requestId,
+          requesterId: request.requestedBy,
+          cleanerId: cleanerId,
+          cleanerName: cleanerName,
+          location: request.location,
+        );
+      } catch (e) {
+        _logger.error('Failed to send notification (non-critical)', e);
+      }
+    } catch (e) {
+      _logger.error('Error admin assigning request', e);
+      if (e is ValidationException || e is FirestoreException) {
+        rethrow;
+      }
+      throw const FirestoreException(message: 'Gagal assign permintaan. Silakan coba lagi.');
+    }
+  }
+
   /// Self-assign request (cleaner picks from pending)
   Future<void> selfAssignRequest(String requestId, String cleanerId, String cleanerName) async {
     try {

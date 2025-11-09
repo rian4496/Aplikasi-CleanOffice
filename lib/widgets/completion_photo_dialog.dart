@@ -11,7 +11,7 @@ import 'universal_image.dart';
 /// Digunakan oleh cleaner saat menandai pekerjaan selesai
 /// ✅ UPDATED: Support web dengan Uint8List
 class CompletionPhotoDialog {
-  /// Static method untuk show dialog dengan return Future<XFile?>
+  /// Static method untuk show dialog dengan return Future of XFile
   /// Returns XFile instead of File for cross-platform compatibility
   static Future<XFile?> show(
     BuildContext context, {

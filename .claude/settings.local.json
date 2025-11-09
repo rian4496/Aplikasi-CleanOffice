@@ -5,7 +5,22 @@
       "Bash(find:*)",
       "Bash(sed:*)",
       "Bash(flutter analyze:*)",
-      "Bash(dart analyze:*)"
+      "Bash(dart analyze:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub get:*)",
+      "Bash(flutter pub run build_runner build:*)",
+      "Bash(flutter build:*)",
+      "Bash(dir /s /b build.gradle 2)",
+      "Bash(nul)",
+      "Bash(git checkout:*)",
+      "Bash(del libwidgetsinventoryinventory_export_dialog.dart)",
+      "Bash(firebase --version:*)",
+      "Bash(flutter run:*)",
+      "Bash(.add-admin-to-firestore.bat)",
+      "Bash(curl:*)",
+      "Bash(nc:*)",
+      "Bash(del libscreensadminall_reports_management_screen_UPDATED.dart)",
+      "Bash(timeout 30 flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

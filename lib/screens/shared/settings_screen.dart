@@ -103,7 +103,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         body: Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: AppBar(title: const Text('Settings')),
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+          ),
+          title: const Text(
+            'Settings',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: AppTheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -125,9 +137,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(_t('title', lang)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          _t('title', lang),
+          style: const TextStyle(color: Colors.white),
+        ),
         backgroundColor: AppTheme.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: ListView(
         children: [

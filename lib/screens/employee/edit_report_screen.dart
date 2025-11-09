@@ -32,8 +32,7 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
   
   // ✅ Web-compatible: Simpan bytes instead of File
   Uint8List? _imageBytes;
-  String? _imageName;
-  
+
   bool _isUrgent = false;
   bool _isLoading = false;
 
@@ -68,7 +67,6 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _imageBytes = bytes;
-        _imageName = pickedFile.name;
       });
     }
   }
@@ -96,7 +94,6 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _imageBytes = bytes;
-        _imageName = pickedFile.name;
       });
     }
   }
@@ -286,7 +283,6 @@ class _EditReportScreenState extends ConsumerState<EditReportScreen> {
                               onPressed: () {
                                 setState(() {
                                   _imageBytes = null;
-                                  _imageName = null;
                                 });
                               },
                               style: IconButton.styleFrom(

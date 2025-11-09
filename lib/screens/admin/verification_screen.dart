@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../models/report.dart';
+import '../../providers/riverpod/admin_providers.dart';
 
 /// Screen untuk verifikasi laporan yang sudah selesai dikerjakan
 /// Admin dapat menyetujui atau menolak laporan
@@ -459,9 +460,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      // TODO: Panggil provider untuk approve report
-      // final actions = ref.read(verificationActionsProvider);
-      // await actions.approveReport(widget.report, notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim());
+      final actions = ref.read(verificationActionsProvider);
+      await actions.approveReport(
+        widget.report,
+        notes: _notesController.text.trim().isEmpty 
+            ? null 
+            : _notesController.text.trim(),
+      );
 
       if (!mounted) return;
 
@@ -527,9 +532,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     setState(() => _isProcessing = true);
 
     try {
-      // TODO: Panggil provider untuk reject report
-      // final actions = ref.read(verificationActionsProvider);
-      // await actions.rejectReport(widget.report, reason: _notesController.text.trim());
+      final actions = ref.read(verificationActionsProvider);
+      await actions.rejectReport(
+        widget.report,
+        reason: _notesController.text.trim(),
+      );
 
       if (!mounted) return;
 

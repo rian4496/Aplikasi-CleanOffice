@@ -12,6 +12,13 @@
 .swiftpm/
 migrate_working_dir/
 
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -43,3 +50,10 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Firebase Emulator Data
+emulator-data/
+*.bat
+*.bat
+nul
+seed-data.json

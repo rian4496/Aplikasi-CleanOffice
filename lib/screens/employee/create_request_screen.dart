@@ -37,8 +37,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
-  
-  bool _isUrgent = false;
+
+  final bool _isUrgent = false;
   bool _isSubmitting = false;
   DateTime? _preferredDateTime;
   File? _selectedImage;
@@ -223,11 +223,11 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
             ),
           ),
           loading: () => const SizedBox.shrink(),
-          error: (_, __) => const SizedBox.shrink(),
+          error: (e, _) => const SizedBox.shrink(),
         );
       },
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
     );
   }
 
@@ -240,7 +240,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -825,7 +825,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -882,7 +882,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -943,7 +943,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -983,7 +983,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

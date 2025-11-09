@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/request.dart';
 import '../../providers/riverpod/request_providers.dart';
 import '../../screens/shared/request_detail/request_detail_screen.dart';
@@ -146,7 +147,7 @@ class _RequestManagementWidgetState
         height: 80,
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (_, __) => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
     );
   }
 
@@ -633,19 +634,39 @@ class _RequestManagementWidgetState
 
         if (selectedCleaner == null) return;
 
-        // TODO: Implement admin assign function in request_service
-        // For now, just show success message
-        _showSnackBar(
-          'Request berhasil di-assign ke ${selectedCleaner.name}',
-          isError: false,
-        );
-        
-        widget.onRequestUpdated?.call();
+        try {
+          final requestService = ref.read(requestServiceProvider);
+          final currentUser = FirebaseAuth.instance.currentUser;
+          
+          if (currentUser == null) {
+            _showSnackBar('User tidak ditemukan', isError: true);
+            return;
+          }
+
+          await requestService.adminAssignRequest(
+            requestId: request.id,
+            cleanerId: selectedCleaner.id,
+            cleanerName: selectedCleaner.name,
+            adminId: currentUser.uid,
+          );
+
+          _showSnackBar(
+            'Request berhasil di-assign ke ${selectedCleaner.name}',
+            isError: false,
+          );
+          
+          widget.onRequestUpdated?.call();
+        } catch (e) {
+          _showSnackBar(
+            'Gagal assign request: ${e.toString()}',
+            isError: true,
+          );
+        }
       },
       loading: () {
         _showSnackBar('Memuat data cleaner...', isError: false);
       },
-      error: (_, __) {
+      error: (e, _) {
         _showSnackBar('Gagal memuat data cleaner', isError: true);
       },
     );

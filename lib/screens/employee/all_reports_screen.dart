@@ -248,7 +248,7 @@ class _AllReportsScreenState extends ConsumerState<AllReportsScreen> {
         label: Text(label),
         deleteIcon: const Icon(Icons.close, size: 18),
         onDeleted: onDelete,
-        backgroundColor: AppTheme.primary.withOpacity(0.1),
+        backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
         labelStyle: TextStyle(
           color: AppTheme.primary,
           fontWeight: FontWeight.w500,
@@ -276,7 +276,7 @@ class _AllReportsScreenState extends ConsumerState<AllReportsScreen> {
           border: Border.all(color: Colors.grey[300]!, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -308,7 +308,7 @@ class _AllReportsScreenState extends ConsumerState<AllReportsScreen> {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.error.withOpacity(0.1),
+                      color: AppTheme.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -409,7 +409,7 @@ class _AllReportsScreenState extends ConsumerState<AllReportsScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: status.color.withOpacity(0.1),
+        color: status.color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -556,7 +556,7 @@ class _AllReportsScreenState extends ConsumerState<AllReportsScreen> {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => onTap(),
-      selectedColor: color?.withOpacity(0.2) ?? AppTheme.primary.withOpacity(0.2),
+      selectedColor: color?.withValues(alpha: 0.2) ?? AppTheme.primary.withValues(alpha: 0.2),
       labelStyle: TextStyle(
         color: isSelected ? (color ?? AppTheme.primary) : Colors.grey[700],
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,

@@ -242,11 +242,19 @@ class Report {
 
   /// Convert dari Map ke Report object (untuk compatibility)
   factory Report.fromMap(String id, Map<String, dynamic> data) {
+    // Handle both Firestore Timestamp and ISO String formats
+    DateTime parseDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is Timestamp) return value.toDate();
+      if (value is String) return DateTime.parse(value);
+      return DateTime.now();
+    }
+
     return Report(
       id: id,
       title: data['title'] as String? ?? '',
       location: data['location'] as String? ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      date: parseDate(data['date']),
       status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
       userId: data['userId'] as String? ?? '',
       userName: data['userName'] as String? ?? '',
@@ -255,19 +263,49 @@ class Report {
       cleanerName: data['cleanerName'] as String?,
       verifiedBy: data['verifiedBy'] as String?,
       verifiedByName: data['verifiedByName'] as String?,
-      verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
+      verifiedAt: data['verifiedAt'] != null ? parseDate(data['verifiedAt']) : null,
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
       completionImageUrl: data['completionImageUrl'] as String?,
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
-      assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
-      startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
+      assignedAt: data['assignedAt'] != null ? parseDate(data['assignedAt']) : null,
+      startedAt: data['startedAt'] != null ? parseDate(data['startedAt']) : null,
+      completedAt: data['completedAt'] != null ? parseDate(data['completedAt']) : null,
       departmentId: data['departmentId'] as String?,
-      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),       // 🆕
-      deletedBy: data['deletedBy'] as String?,                      // 🆕
+      deletedAt: data['deletedAt'] != null ? parseDate(data['deletedAt']) : null,
+      deletedBy: data['deletedBy'] as String?,
     );
+  }
+
+  /// Convert Report object ke Map (for cache/JSON)
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'location': location,
+      'date': date.toIso8601String(),
+      'status': status.name,
+      'userId': userId,
+      'userName': userName,
+      'userEmail': userEmail,
+      'cleanerId': cleanerId,
+      'cleanerName': cleanerName,
+      'verifiedBy': verifiedBy,
+      'verifiedByName': verifiedByName,
+      'verifiedAt': verifiedAt?.toIso8601String(),
+      'verificationNotes': verificationNotes,
+      'imageUrl': imageUrl,
+      'completionImageUrl': completionImageUrl,
+      'description': description,
+      'isUrgent': isUrgent,
+      'assignedAt': assignedAt?.toIso8601String(),
+      'startedAt': startedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'departmentId': departmentId,
+      'deletedAt': deletedAt?.toIso8601String(),
+      'deletedBy': deletedBy,
+    };
   }
 
   /// Convert Report object ke Map untuk Firestore

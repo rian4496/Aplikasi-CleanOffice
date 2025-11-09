@@ -1,4 +1,5 @@
-// lib/screens/cleaner/cleaner_home_screen.dart - WITH 3 TAB SYSTEM (FIXED)
+// lib/screens/cleaner/cleaner_home_screen.dart
+// ✅ REFACTORED: Clean single-page layout (like Employee)
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,13 +14,15 @@ import '../../providers/riverpod/cleaner_providers.dart';
 import '../../providers/riverpod/notification_providers.dart';
 
 import '../../widgets/cleaner/stats_card_widget.dart';
-import '../../widgets/shared/request_card_widget.dart';
+import '../../widgets/cleaner/tasks_overview_widget.dart';
+import '../../widgets/cleaner/recent_tasks_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/shared/empty_state_widget.dart';
+import '../../widgets/shared/custom_speed_dial.dart';
 
-import '../shared/request_detail/request_detail_screen.dart';
-import 'report_detail_cleaner_screen.dart';
-import 'create_cleaning_report_screen.dart';
+import './pending_reports_list_screen.dart';
+import './available_requests_list_screen.dart';
+import './my_tasks_screen.dart';
+import './create_cleaning_report_screen.dart';
 
 class CleanerHomeScreen extends ConsumerStatefulWidget {
   const CleanerHomeScreen({super.key});
@@ -28,155 +31,96 @@ class CleanerHomeScreen extends ConsumerStatefulWidget {
   ConsumerState<CleanerHomeScreen> createState() => _CleanerHomeScreenState();
 }
 
-class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
-  late AnimationController _fabAnimationController;
-  late Animation<double> _fabScaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 3, vsync: this); // 3 TABS!
-
-    _fabAnimationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-    _fabScaleAnimation = CurvedAnimation(
-      parent: _fabAnimationController,
-      curve: Curves.easeInOut,
-    );
-    _fabAnimationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _fabAnimationController.dispose();
-    super.dispose();
-  }
+class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
+    final cleanerStats = ref.watch(cleanerStatsProvider);
+    final activeReportsAsync = ref.watch(cleanerActiveReportsProvider);
+    final assignedRequestsAsync = ref.watch(cleanerAssignedRequestsProvider);
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      endDrawer: _buildDrawer(context),
+      key: _scaffoldKey,
+      backgroundColor: Colors.grey[50],
+      
+      // ==================== APP BAR ====================
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        elevation: 0,
+        automaticallyImplyLeading: false,
+        actions: [
+          // Notification Icon
+          _buildNotificationIcon(),
+          // Menu Icon
+          IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+          ),
+        ],
+      ),
+
+      // ==================== DRAWER ====================
+      endDrawer: Drawer(
+        child: _buildDrawer(),
+      ),
+
+      // ==================== BODY ====================
       body: RefreshIndicator(
         onRefresh: () async {
-          ref.invalidate(pendingReportsProvider);
-          ref.invalidate(availableRequestsProvider);
           ref.invalidate(cleanerActiveReportsProvider);
           ref.invalidate(cleanerAssignedRequestsProvider);
           ref.invalidate(cleanerStatsProvider);
+          await Future.delayed(const Duration(milliseconds: 500));
         },
         child: CustomScrollView(
           slivers: [
-            _buildSliverHeader(),
+            // ==================== HEADER ====================
             SliverToBoxAdapter(
-              child: Column(
-                children: [
-                  const SizedBox(height: 16),
-                  _buildStatsCards(),
-                  const SizedBox(height: 24),
-                  _buildTabBar(),
-                ],
+              child: _buildHeader(),
+            ),
+
+            // ==================== STATS CARDS ====================
+            SliverToBoxAdapter(
+              child: _buildStatsCards(cleanerStats),
+            ),
+
+            // ==================== TASKS OVERVIEW & RECENT ====================
+            SliverToBoxAdapter(
+              child: _buildRecentActivity(
+                activeReportsAsync,
+                assignedRequestsAsync,
               ),
             ),
-            SliverFillRemaining(
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildPendingReportsTab(), // TAB 1: Laporan Masuk
-                  _buildAvailableRequestsTab(), // TAB 2: Permintaan Layanan
-                  _buildMyTasksTab(), // TAB 3: Tugas Saya
-                ],
-              ),
+
+            // Bottom padding for FAB
+            const SliverToBoxAdapter(
+              child: SizedBox(height: 80),
             ),
           ],
         ),
       ),
-      floatingActionButton: _buildFAB(context),
+
+      // ==================== SPEED DIAL FAB ====================
+      floatingActionButton: _buildSpeedDial(),
     );
   }
 
-  // ==================== DRAWER MENU ====================
+  // ==================== NOTIFICATION ICON ====================
 
-  Widget _buildDrawer(BuildContext context) {
-    return Drawer(
-      child: DrawerMenuWidget(
-        menuItems: [
-          DrawerMenuItem(
-            icon: Icons.home_outlined,
-            title: 'Beranda',
-            onTap: () => Navigator.pop(context),
-          ),
-          DrawerMenuItem(
-            icon: Icons.task_alt,
-            title: 'Tugas Saya',
-            onTap: () {
-              Navigator.pop(context);
-              _tabController.animateTo(2);
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.history,
-            title: 'Riwayat Laporan',
-            onTap: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Fitur segera hadir')),
-              );
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.person_outline,
-            title: 'Profil',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, AppConstants.profileRoute);
-            },
-          ),
-          DrawerMenuItem(
-            icon: Icons.settings_outlined,
-            title: 'Pengaturan',
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings');
-            },
-          ),
-        ],
-        onLogout: () => _handleLogout(context),
-        roleTitle: 'Petugas Kebersihan',
-      ),
-    );
-  }
+  Widget _buildNotificationIcon() {
+    final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
 
-  // ==================== SLIVER HEADER ====================
-
-  Widget _buildSliverHeader() {
-    final userProfileAsync = ref.watch(currentUserProfileProvider);
-    final unreadCount = ref.watch(unreadNotificationCountProvider);
-
-    return SliverAppBar(
-      expandedHeight: 200,
-      floating: false,
-      pinned: true,
-      automaticallyImplyLeading: false,
-      backgroundColor: AppTheme.primary,
-      iconTheme: const IconThemeData(color: Colors.white),
-      actions: [
-        Stack(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_outlined, color: Colors.white),
-              onPressed: () {
-                Navigator.pushNamed(context, '/notifications');
-              },
-              tooltip: 'Notifikasi',
-            ),
-            if (unreadCount > 0)
-              Positioned(
+    return Stack(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+          onPressed: () => Navigator.pushNamed(context, '/notifications'),
+        ),
+        unreadCountAsync.when(
+          data: (count) {
+            if (count > 0) {
+              return Positioned(
                 right: 8,
                 top: 8,
                 child: Container(
@@ -190,7 +134,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                     minHeight: 18,
                   ),
                   child: Text(
-                    unreadCount > 99 ? '99+' : unreadCount.toString(),
+                    count > 99 ? '99+' : count.toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,
@@ -199,635 +143,304 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen>
                     textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-          ],
+              );
+            }
+            return const SizedBox.shrink();
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => const SizedBox.shrink(),
         ),
-        Builder(
-          builder: (buttonContext) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () {
-              Scaffold.of(buttonContext).openEndDrawer();
-            },
-            tooltip: MaterialLocalizations.of(context).openAppDrawerTooltip,
-          ),
-        ),
-        const SizedBox(width: 8),
       ],
-      flexibleSpace: FlexibleSpaceBar(
-        background: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppTheme.primary, AppTheme.primaryDark],
+    );
+  }
+
+  // ==================== DRAWER MENU ====================
+
+  Widget _buildDrawer() {
+    return DrawerMenuWidget(
+      menuItems: [
+        DrawerMenuItem(
+          icon: Icons.home_outlined,
+          title: 'Beranda',
+          onTap: () => Navigator.pop(context),
+        ),
+        DrawerMenuItem(
+          icon: Icons.inventory_2,
+          title: 'Inventaris Alat',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/inventory');
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.task_alt,
+          title: 'Tugas Saya',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const MyTasksScreen()),
+            );
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.history,
+          title: 'Riwayat Laporan',
+          onTap: () {
+            Navigator.pop(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Fitur segera hadir')),
+            );
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.person_outline,
+          title: 'Profil',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, AppConstants.profileRoute);
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.settings_outlined,
+          title: 'Pengaturan',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/settings');
+          },
+        ),
+      ],
+      onLogout: () => _handleLogout(),
+      roleTitle: 'Petugas Kebersihan',
+    );
+  }
+
+  // ==================== HEADER ====================
+
+  Widget _buildHeader() {
+    final user = FirebaseAuth.instance.currentUser;
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
+    final hour = DateTime.now().hour;
+    String greeting;
+    
+    if (hour < 12) {
+      greeting = 'Selamat Pagi';
+    } else if (hour < 15) {
+      greeting = 'Selamat Siang';
+    } else if (hour < 18) {
+      greeting = 'Selamat Sore';
+    } else {
+      greeting = 'Selamat Malam';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primary,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            greeting,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white70,
             ),
           ),
-          child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TweenAnimationBuilder<double>(
-                    tween: Tween(begin: 0.0, end: 1.0),
-                    duration: const Duration(milliseconds: 600),
-                    curve: Curves.easeOut,
-                    builder: (context, value, child) {
-                      return Opacity(
-                        opacity: value,
-                        child: Transform.translate(
-                          offset: Offset(0, 20 * (1 - value)),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Selamat Datang,',
-                          style: TextStyle(
-                            color: Colors.white.withAlpha(230),
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        userProfileAsync.when(
-                          data: (profile) => Text(
-                            profile?.displayName ?? 'Petugas Kebersihan',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          loading: () => Container(
-                            height: 24,
-                            width: 150,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(77),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          error: (error, stackTrace) => const Text(
-                            'Petugas Kebersihan',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          DateFormatter.fullDate(DateTime.now()),
-                          style: TextStyle(
-                            color: Colors.white.withAlpha(204),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+          const SizedBox(height: 4),
+          userProfileAsync.when(
+            data: (profile) => Text(
+              profile?.displayName ?? user?.displayName ?? 'Petugas Kebersihan',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            loading: () => const Text(
+              'Petugas Kebersihan',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            error: (e, _) => const Text(
+              'Petugas Kebersihan',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
           ),
-        ),
+          const SizedBox(height: 4),
+          Text(
+            DateFormatter.fullDate(DateTime.now()),
+            style: const TextStyle(
+              fontSize: 14,
+              color: Colors.white70,
+            ),
+          ),
+        ],
       ),
     );
   }
 
   // ==================== STATS CARDS ====================
 
-  Widget _buildStatsCards() {
-    final cleanerStats = ref.watch(cleanerStatsProvider);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+  Widget _buildStatsCards(Map<String, int> stats) {
+    return Container(
+      padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          _buildStatsCardWithDelay(
-            index: 0,
-            icon: Icons.assignment_outlined,
-            label: 'Ditugaskan',
-            value: (cleanerStats['assigned'] ?? 0).toString(),
-            color: AppTheme.info,
+          Expanded(
+            child: StatsCard(
+              icon: Icons.assignment_outlined,
+              label: 'Ditugaskan',
+              value: (stats['assigned'] ?? 0).toString(),
+              color: AppTheme.info,
+            ),
           ),
           const SizedBox(width: 8),
-          _buildStatsCardWithDelay(
-            index: 1,
-            icon: Icons.pending_actions_outlined,
-            label: 'Proses',
-            value: (cleanerStats['inProgress'] ?? 0).toString(),
-            color: AppTheme.warning,
+          Expanded(
+            child: StatsCard(
+              icon: Icons.pending_actions_outlined,
+              label: 'Proses',
+              value: (stats['inProgress'] ?? 0).toString(),
+              color: AppTheme.warning,
+            ),
           ),
           const SizedBox(width: 8),
-          _buildStatsCardWithDelay(
-            index: 2,
-            icon: Icons.check_circle_outline,
-            label: 'Selesai',
-            value: (cleanerStats['completed'] ?? 0).toString(),
-            color: AppTheme.success,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatsCardWithDelay({
-    required int index,
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color color,
-  }) {
-    return Expanded(
-      child: TweenAnimationBuilder<double>(
-        tween: Tween(begin: 0.0, end: 1.0),
-        duration: Duration(milliseconds: 400 + (index * 100)),
-        curve: Curves.easeOutCubic,
-        builder: (context, animValue, child) {
-          return Opacity(
-            opacity: animValue,
-            child: Transform.translate(
-              offset: Offset(0, 30 * (1 - animValue)),
-              child: child,
-            ),
-          );
-        },
-        child: StatsCard(
-          icon: icon,
-          label: label,
-          value: value,
-          color: color,
-        ),
-      ),
-    );
-  }
-
-  // ==================== TAB BAR (3 TABS!) ====================
-
-  Widget _buildTabBar() {
-    final pendingReports = ref.watch(pendingReportsProvider);
-    final availableRequests = ref.watch(availableRequestsProvider);
-    final activeReports = ref.watch(cleanerActiveReportsProvider);
-    final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
-
-    final pendingCount = pendingReports.maybeWhen(
-      data: (reports) => reports.length,
-      orElse: () => 0,
-    );
-
-    final requestsCount = availableRequests.maybeWhen(
-      data: (requests) => requests.length,
-      orElse: () => 0,
-    );
-
-    final activeReportsCount = activeReports.maybeWhen(
-      data: (reports) => reports.length,
-      orElse: () => 0,
-    );
-
-    final assignedRequestsCount = assignedRequests.maybeWhen(
-      data: (requests) => requests.length,
-      orElse: () => 0,
-    );
-
-    final myTasksCount = activeReportsCount + assignedRequestsCount;
-
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: TabBar(
-        controller: _tabController,
-        labelColor: AppTheme.primary,
-        unselectedLabelColor: AppTheme.textSecondary,
-        indicatorColor: AppTheme.primary,
-        indicatorWeight: 3,
-        labelStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.bold,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 13,
-          fontWeight: FontWeight.normal,
-        ),
-        tabs: [
-          Tab(
-            child: _buildTabWithBadge('Laporan Masuk', pendingCount, AppTheme.error),
-          ),
-          Tab(
-            child: _buildTabWithBadge('Permintaan', requestsCount, AppTheme.info),
-          ),
-          Tab(
-            child: _buildTabWithBadge('Tugas Saya', myTasksCount, AppTheme.warning),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabWithBadge(String label, int count, Color badgeColor) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Flexible(
-          child: Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        if (count > 0) ...[
-          const SizedBox(width: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: badgeColor,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              count.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
+          Expanded(
+            child: StatsCard(
+              icon: Icons.check_circle_outline,
+              label: 'Selesai',
+              value: (stats['completed'] ?? 0).toString(),
+              color: AppTheme.success,
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 
-  // ==================== TAB 1: PENDING REPORTS ====================
+  // ==================== TASKS OVERVIEW & RECENT ====================
 
-  Widget _buildPendingReportsTab() {
-    final pendingReports = ref.watch(pendingReportsProvider);
-
-    return pendingReports.when(
+  Widget _buildRecentActivity(
+    AsyncValue activeReportsAsync,
+    AsyncValue assignedRequestsAsync,
+  ) {
+    return activeReportsAsync.when(
       data: (reports) {
-        if (reports.isEmpty) {
-          // ✅ FIX: Gunakan EmptyStateWidget.custom
-          return EmptyStateWidget.custom(
-            icon: Icons.inbox_outlined,
-            title: 'Belum ada laporan masuk',
-            subtitle: 'Laporan dari karyawan akan muncul di sini',
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: reports.length,
-          itemBuilder: (context, index) {
-            final report = reports[index];
-            return _buildReportCard(report, index);
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorState(error),
-    );
-  }
-
-  // ==================== TAB 2: AVAILABLE REQUESTS ====================
-
-  Widget _buildAvailableRequestsTab() {
-    final availableRequests = ref.watch(availableRequestsProvider);
-
-    return availableRequests.when(
-      data: (requests) {
-        if (requests.isEmpty) {
-          return EmptyStateWidget.noRequests();
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: requests.length,
-          itemBuilder: (context, index) {
-            final request = requests[index];
-            return RequestCardWidget(
-              request: request, //Passing full request object           
-              animationIndex: index,
-              compact: true,
-              showAssignee: false, //Cleaner tidak perlu lihat assignee
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        RequestDetailScreen(requestId: request.id),
-                  ),
-                );
-              },
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorState(error),
-    );
-  }
-
-  // ==================== TAB 3: MY TASKS ====================
-
-  Widget _buildMyTasksTab() {
-    final activeReports = ref.watch(cleanerActiveReportsProvider);
-    final assignedRequests = ref.watch(cleanerAssignedRequestsProvider);
-
-    return activeReports.when(
-      data: (reports) {
-        return assignedRequests.when(
+        return assignedRequestsAsync.when(
           data: (requests) {
-            if (reports.isEmpty && requests.isEmpty) {
-              return EmptyStateWidget.noTasks();
-            }
-
-            // Combine reports and requests
-            return ListView(
-              padding: const EdgeInsets.all(16),
+            return Column(
               children: [
-                if (reports.isNotEmpty) ...[
-                  _buildSectionHeader('Laporan (${reports.length})'),
-                  const SizedBox(height: 8),
-                  ...reports.asMap().entries.map((entry) {
-                    return _buildReportCard(entry.value, entry.key);
-                  }),
-                  const SizedBox(height: 16),
-                ],
-                if (requests.isNotEmpty) ...[
-                  _buildSectionHeader('Permintaan Layanan (${requests.length})'),
-                  const SizedBox(height: 8),
-                  ...requests.asMap().entries.map((entry) {
-                    final request = entry.value;
-                    return RequestCardWidget(
-                      request: request, //Passing full request object
-                      animationIndex: entry.key,
-                      compact: true,
-                      showAssignee: false, //Clener tidak perlu lihat assignee
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => RequestDetailScreen(
-                              requestId: request.id,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  }),
-                ],
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _buildErrorState(error),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _buildErrorState(error),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.textPrimary,
-        ),
-      ),
-    );
-  }
-
-  // ==================== HELPER: REPORT CARD ====================
-
-  Widget _buildReportCard(Report report, int index) {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.0, end: 1.0),
-      duration: Duration(milliseconds: 300 + (index * 50)),
-      curve: Curves.easeOutCubic,
-      builder: (context, value, child) {
-        return Opacity(
-          opacity: value,
-          child: Transform.translate(
-            offset: Offset(0, 20 * (1 - value)),
-            child: child,
-          ),
-        );
-      },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 2,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: report.isUrgent
-              ? const BorderSide(color: AppTheme.error, width: 2)
-              : BorderSide.none,
-        ),
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) =>
-                    CleanerReportDetailScreen(reportId: report.id),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                // Image thumbnail
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  child: report.imageUrl != null
-                      ? Image.network(
-                          report.imageUrl!,
-                          width: 70,
-                          height: 70,
-                          fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              width: 70,
-                              height: 70,
-                              color: Colors.grey[300],
-                              child: const Icon(Icons.broken_image),
-                            );
-                          },
-                        )
-                      : Container(
-                          width: 70,
-                          height: 70,
-                          color: Colors.grey[300],
-                          child: const Icon(Icons.image, color: Colors.grey),
-                        ),
+                // Tasks Overview
+                TasksOverviewWidget(
+                  reports: reports as List<Report>,
+                  requests: List.from(requests),
                 ),
-                const SizedBox(width: 12),
-                // Content
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              report.location,
-                              style: const TextStyle(
-                                fontSize: 15,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (report.isUrgent)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.error,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'URGENT',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        report.description ?? '',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.textSecondary,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: report.status.color.withAlpha(50),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              report.status.displayName,
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: report.status.color,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                          const Spacer(),
-                          Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: Colors.grey[600],
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            DateFormatter.relativeTime(report.date),
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                
+                // Recent Tasks
+                RecentTasksWidget(
+                  reports: reports,
+                  requests: List.from(requests),
+                  onViewAll: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MyTasksScreen(),
+                    ),
                   ),
                 ),
               ],
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (e, _) => const SizedBox.shrink(),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (e, _) => const SizedBox.shrink(),
+    );
+  }
+
+  // ==================== SPEED DIAL ====================
+
+  Widget _buildSpeedDial() {
+    return CustomSpeedDial(
+      mainButtonColor: AppTheme.primary,
+      actions: [
+        // Inventaris Alat (Blue) - NEW!
+        SpeedDialAction(
+          icon: Icons.inventory_2,
+          label: 'Inventaris Alat',
+          backgroundColor: Colors.blue,
+          onTap: () => Navigator.pushNamed(context, '/inventory'),
+        ),
+        
+        // Tugas Saya (Purple)
+        SpeedDialAction(
+          icon: Icons.task_alt,
+          label: 'Tugas Saya',
+          backgroundColor: SpeedDialColors.purple,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MyTasksScreen()),
+          ),
+        ),
+        
+        // Ambil Permintaan (Green)
+        SpeedDialAction(
+          icon: Icons.room_service,
+          label: 'Ambil Permintaan',
+          backgroundColor: SpeedDialColors.green,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const AvailableRequestsListScreen(),
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  // ==================== ERROR STATE ====================
-
-  Widget _buildErrorState(Object error) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: AppTheme.error),
-          const SizedBox(height: 16),
-          Text('Error: $error'),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              ref.invalidate(pendingReportsProvider);
-              ref.invalidate(availableRequestsProvider);
-            },
-            child: const Text('Coba Lagi'),
+        
+        // Laporan Masuk (Orange)
+        SpeedDialAction(
+          icon: Icons.inbox,
+          label: 'Laporan Masuk',
+          backgroundColor: SpeedDialColors.orange,
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const PendingReportsListScreen(),
+            ),
           ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== FAB ====================
-
-  Widget _buildFAB(BuildContext context) {
-    return ScaleTransition(
-      scale: _fabScaleAnimation,
-      child: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
+        ),
+        
+        // Buat Laporan (Blue)
+        SpeedDialAction(
+          icon: Icons.add,
+          label: 'Buat Laporan',
+          backgroundColor: SpeedDialColors.blue,
+          onTap: () => Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => const CreateCleaningReportScreen(),
             ),
-          );
-        },
-        icon: const Icon(Icons.add),
-        label: const Text('Buat Laporan'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-      ),
+          ),
+        ),
+      ],
     );
   }
 
   // ==================== LOGOUT ====================
 
-  Future<void> _handleLogout(BuildContext context) async {
+  Future<void> _handleLogout() async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(

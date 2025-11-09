@@ -1,5 +1,7 @@
 // lib/services/storage_service.dart
 
+import 'dart:io';
+
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -81,10 +83,44 @@ class StorageService {
     }
   }
 
+  /// Upload inventory image (convenience method)
+  ///
+  /// [imageFile] - File object dari image picker
+  ///
+  /// Returns: Download URL string (throws on error)
+  Future<String> uploadInventoryImage(File imageFile) async {
+    try {
+      // Read file bytes
+      final bytes = await imageFile.readAsBytes();
+
+      // Generate unique filename for inventory
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final fileName = 'inventory_$timestamp.jpg';
+
+      // Upload using the generic method
+      final result = await uploadImage(
+        bytes: bytes,
+        folder: 'inventory',
+        userId: 'inv',
+        fileName: fileName,
+      );
+
+      // Check result and return URL or throw
+      if (result.isSuccess && result.data != null) {
+        return result.data!;
+      } else {
+        throw Exception(result.error ?? 'Upload failed');
+      }
+    } catch (e) {
+      debugPrint('❌ Upload inventory image error: $e');
+      throw Exception('Gagal upload gambar: $e');
+    }
+  }
+
   // ========================================
   // DELETE IMAGE
   // ========================================
-  
+
   /// Delete image dari Firebase Storage
   /// 
   /// [imageUrl] - URL lengkap dari image yang akan dihapus

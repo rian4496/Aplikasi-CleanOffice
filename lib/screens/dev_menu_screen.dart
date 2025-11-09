@@ -13,6 +13,7 @@ import 'package:aplikasi_cleanoffice/screens/shared/reset_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/admin/bulk_receipt_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/dev/seed_data_screen.dart';
 /// Development Menu untuk test UI tanpa Firebase Authentication
 /// HANYA UNTUK DEVELOPMENT - JANGAN DIPAKAI DI PRODUCTION!
 class DevMenuScreen extends StatelessWidget {
@@ -178,6 +179,19 @@ class DevMenuScreen extends StatelessWidget {
               icon: Icons.receipt_long,
               color: Colors.orange,
               screen: const BulkReceiptScreen(),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Database & Sample Data
+            _buildSectionTitle('🌱 Sample Data Generator'),
+            _buildScreenCard(
+              context,
+              title: 'Generate Inventory Data',
+              subtitle: 'Buat sample data inventory untuk testing',
+              icon: Icons.data_object,
+              color: Colors.deepPurple,
+              screen: const SeedDataScreen(),
             ),
 
             const SizedBox(height: 24),

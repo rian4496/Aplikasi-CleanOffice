@@ -57,6 +57,19 @@ dependencies:
 
   # UI Components
   flutter_speed_dial: ^7.0.0
+  
+  # Charts & Visualization
+  fl_chart: ^0.69.0
+  
+  # Export & Reports
+  pdf: ^3.11.1
+  excel: ^4.0.6
+  printing: ^5.13.4
+  
+  # Notifications
+  flutter_local_notifications: ^18.0.1
+  firebase_crashlytics: ^5.0.4
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -72,4 +85,6 @@ flutter:
   assets:
     - assets/images/welcome_illustration.png
     - assets/images/login_illustration.png
+    - .env.development
+    - .env.production
  

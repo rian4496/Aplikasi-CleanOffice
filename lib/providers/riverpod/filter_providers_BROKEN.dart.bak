@@ -1,0 +1,157 @@
+// lib/providers/riverpod/filter_providers.dart
+// Providers for filtering functionality
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../models/filter_model.dart';
+import '../../models/report.dart';
+import 'admin_providers.dart';
+
+// ==================== COMPUTED PROVIDERS ====================
+
+/// Filtered reports based on current filter
+final filteredReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
+  // Use all reports from admin providers
+  final allReportsAsync = ref.watch(needsVerificationReportsProvider);
+  final filter = ref.watch(reportFilterProvider);
+  final quickFilter = ref.watch(quickFilterProvider);
+  
+  return allReportsAsync.when(
+    data: (reports) {
+      var filtered = List<Report>.from(reports);
+      
+      // Apply quick filter first
+      filtered = _applyQuickFilter(filtered, quickFilter);
+      
+      // Apply advanced filters
+      filtered = _applyAdvancedFilter(filtered, filter);
+      
+      return AsyncValue.data(filtered);
+    },
+    loading: () => const AsyncValue.loading(),
+    error: (error, stack) => AsyncValue.error(error, stack),
+  );
+});
+
+/// Count of filtered results
+final filteredCountProvider = Provider<int>((ref) {
+  final filtered = ref.watch(filteredReportsProvider);
+  return filtered.maybeWhen(
+    data: (reports) => reports.length,
+    orElse: () => 0,
+  );
+});
+
+// ==================== HELPER FUNCTIONS ====================
+
+/// Apply quick filter
+List<Report> _applyQuickFilter(List<Report> reports, QuickFilter filter) {
+  final now = DateTime.now();
+  
+  switch (filter) {
+    case QuickFilter.today:
+      return reports.where((r) =>
+        r.date.year == now.year &&
+        r.date.month == now.month &&
+        r.date.day == now.day
+      ).toList();
+      
+    case QuickFilter.thisWeek:
+      final weekStart = now.subtract(Duration(days: now.weekday - 1));
+      return reports.where((r) => r.date.isAfter(weekStart)).toList();
+      
+    case QuickFilter.urgent:
+      return reports.where((r) => r.isUrgent == true).toList();
+      
+    case QuickFilter.overdue:
+      // Reports pending for more than 24 hours
+      final yesterday = now.subtract(const Duration(hours: 24));
+      return reports.where((r) =>
+        r.status == ReportStatus.pending &&
+        r.date.isBefore(yesterday)
+      ).toList();
+      
+    case QuickFilter.all:
+    default:
+      return reports;
+  }
+}
+
+/// Apply advanced filter
+List<Report> _applyAdvancedFilter(List<Report> reports, ReportFilter filter) {
+  var filtered = reports;
+  
+  // 1. Search query (searches location, description, user name)
+  if (filter.searchQuery != null && filter.searchQuery!.isNotEmpty) {
+    final query = filter.searchQuery!.toLowerCase();
+    filtered = filtered.where((r) {
+      final location = r.location?.toLowerCase() ?? '';
+      final description = r.description?.toLowerCase() ?? '';
+      final userName = r.userName?.toLowerCase() ?? '';
+      return location.contains(query) || 
+             description.contains(query) || 
+             userName.contains(query);
+    }).toList();
+  }
+  
+  // 2. Status filter
+  if (filter.statuses != null && filter.statuses!.isNotEmpty) {
+    filtered = filtered.where((r) => 
+      filter.statuses!.contains(r.status.toString())
+    ).toList();
+  }
+  
+  // 3. Location filter
+  if (filter.locations != null && filter.locations!.isNotEmpty) {
+    filtered = filtered.where((r) => 
+      filter.locations!.contains(r.location)
+    ).toList();
+  }
+  
+  // 4. Urgent filter
+  if (filter.isUrgent != null) {
+    filtered = filtered.where((r) => 
+      r.isUrgent == filter.isUrgent
+    ).toList();
+  }
+  
+  // 5. Date range filter
+  if (filter.startDate != null) {
+    filtered = filtered.where((r) => 
+      r.date.isAfter(filter.startDate!) || 
+      r.date.isAtSameMomentAs(filter.startDate!)
+    ).toList();
+  }
+  
+  if (filter.endDate != null) {
+    // Include reports from end date (set time to end of day)
+    final endOfDay = DateTime(
+      filter.endDate!.year,
+      filter.endDate!.month,
+      filter.endDate!.day,
+      23,
+      59,
+      59,
+    );
+    filtered = filtered.where((r) => 
+      r.date.isBefore(endOfDay) ||
+      r.date.isAtSameMomentAs(endOfDay)
+    ).toList();
+  }
+  
+  // 6. Assigned to filter
+  if (filter.assignedTo != null) {
+    filtered = filtered.where((r) => 
+      r.cleanerId == filter.assignedTo
+    ).toList();
+  }
+  
+  return filtered;
+}
+
+// ==================== ACTION PROVIDERS ====================
+
+// ==================== FILTER STATE MANAGEMENT ====================
+// Note: These providers are READ-ONLY.
+// To update filters, use the widgets that modify filter state directly,
+// or implement StateNotifier pattern if dynamic updates are needed.

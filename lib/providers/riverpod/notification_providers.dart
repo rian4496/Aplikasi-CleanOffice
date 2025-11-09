@@ -1,120 +1,85 @@
 // lib/providers/riverpod/notification_providers.dart
+// Notification providers using Riverpod code generation
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import './auth_providers.dart';
+import 'package:riverpod_annotation/riverpod_annotation.dart';
+
 import '../../models/notification_model.dart';
+import '../../services/notification_firestore_service.dart';
+import './auth_providers.dart';
 
-// ==================== NOTIFICATION PROVIDERS ====================
+part 'notification_providers.g.dart';
 
-/// Provider untuk user notifications (filtered by recipientId)
-final userNotificationsProvider = StreamProvider<List<NotificationModel>>((ref) {
-  final userId = ref.watch(currentUserIdProvider);
+final _notificationService = NotificationFirestoreService();
+
+// ==================== USER NOTIFICATIONS ====================
+
+/// Stream of user notifications
+@riverpod
+Stream<List<AppNotification>> userNotifications(Ref ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value([]);
   
-  if (userId == null) {
-    return Stream.value([]);
-  }
+  return _notificationService.streamUserNotifications(user.uid);
+}
 
-  final firestore = ref.watch(firestoreProvider);
+// ==================== UNREAD COUNT ====================
+
+/// Stream of unread notification count
+@riverpod
+Stream<int> unreadNotificationCount(Ref ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return Stream.value(0);
   
-  return firestore
-      .collection('notifications')
-      .where('recipientId', isEqualTo: userId)
-      .orderBy('createdAt', descending: true)
-      .limit(50) // Limit to 50 most recent
-      .snapshots()
-      .map((snapshot) {
-        return snapshot.docs.map((doc) {
-          return NotificationModel.fromFirestore(doc);
-        }).toList();
-      });
-});
+  return _notificationService.streamUnreadCount(user.uid);
+}
 
-/// Provider untuk unread count
-final unreadNotificationCountProvider = Provider<int>((ref) {
-  final notificationsAsync = ref.watch(userNotificationsProvider);
+// ==================== NOTIFICATION SETTINGS ====================
+
+/// Stream of notification settings
+@riverpod
+Stream<NotificationSettings> notificationSettings(Ref ref) {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) {
+    return Stream.value(NotificationSettings(userId: ''));
+  }
   
-  return notificationsAsync.when(
-    data: (notifications) {
-      return notifications.where((n) => !n.isRead).length;
-    },
-    loading: () => 0,
-    error: (error, stackTrace) => 0,
-  );
-});
+  return _notificationService.streamSettings(user.uid);
+}
 
-// ==================== NOTIFICATION ACTIONS ====================
+// ==================== ACTIONS ====================
 
-/// Provider untuk notification actions
-final notificationActionsProvider = Provider<NotificationActions>((ref) {
-  return NotificationActions(ref);
-});
+/// Mark notification as read
+@riverpod
+Future<void> markNotificationAsRead(
+  Ref ref,
+  String notificationId,
+) async {
+  await _notificationService.markAsRead(notificationId);
+}
 
-class NotificationActions {
-  final Ref ref;
+/// Mark all notifications as read
+@riverpod
+Future<void> markAllNotificationsAsRead(Ref ref) async {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) return;
+  
+  await _notificationService.markAllAsRead(user.uid);
+}
 
-  NotificationActions(this.ref);
+/// Delete notification
+@riverpod
+Future<void> deleteNotification(
+  Ref ref,
+  String notificationId,
+) async {
+  await _notificationService.deleteNotification(notificationId);
+}
 
-  FirebaseFirestore get _firestore => ref.read(firestoreProvider);
-
-  /// Mark notification as read
-  Future<void> markAsRead(String notificationId) async {
-    await _firestore
-        .collection('notifications')
-        .doc(notificationId)
-        .update({'isRead': true});
-  }
-
-  /// Mark all notifications as read
-  Future<void> markAllAsRead() async {
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
-
-    final snapshot = await _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: userId)
-        .where('isRead', isEqualTo: false)
-        .get();
-
-    final batch = _firestore.batch();
-    for (var doc in snapshot.docs) {
-      batch.update(doc.reference, {'isRead': true});
-    }
-    await batch.commit();
-  }
-
-  /// Delete notification
-  Future<void> deleteNotification(String notificationId) async {
-    await _firestore
-        .collection('notifications')
-        .doc(notificationId)
-        .delete();
-  }
-
-  /// Create notification
-  Future<void> createNotification({
-    required String recipientId,
-    required String type,
-    required String title,
-    required String message,
-    String? reportId,
-    String? imageUrl,
-    bool? isUrgent,
-    String? status,
-    Map<String, dynamic>? data,
-  }) async {
-    await _firestore.collection('notifications').add({
-      'recipientId': recipientId,
-      'type': type,
-      'title': title,
-      'message': message,
-      'reportId': reportId,
-      'imageUrl': imageUrl,
-      'isUrgent': isUrgent ?? false,
-      'status': status,
-      'data': data,
-      'isRead': false,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
+/// Save notification settings
+@riverpod
+Future<void> saveNotificationSettings(
+  Ref ref,
+  NotificationSettings settings,
+) async {
+  await _notificationService.saveSettings(settings);
 }

@@ -28,6 +28,37 @@ class AppTheme {
   static const Color textHint = Color(0xFFBDBDBD); // Abu-abu muda
   static const Color divider = Color(0xFFE0E0E0);
 
+  // ==================== MODERN DASHBOARD COLORS ====================
+
+  // Header Gradient
+  static const Color headerGradientStart = Color(0xFF5B6FE5);
+  static const Color headerGradientEnd = Color(0xFF4F5FD8);
+
+  // Stat Card Accent Colors
+  static const Color blueAccent = Color(0xFF5B6FE5);
+  static const Color orangeAccent = Color(0xFFFF9800);
+  static const Color greenAccent = Color(0xFF10B981);
+  static const Color purpleAccent = Color(0xFF8B5CF6);
+
+  // Chart Colors (Multi-color bars)
+  static const Color chartPink = Color(0xFFE91E63);
+  static const Color chartPurple = Color(0xFF673AB7);
+  static const Color chartNavy = Color(0xFF283593);
+  static const Color chartMint = Color(0xFF4CAF50);
+  static const Color chartYellow = Color(0xFFFFC107);
+  static const Color chartOrange = Color(0xFFFF9800);
+
+  // Modern Backgrounds
+  static const Color modernBg = Color(0xFFF9FAFB); // Lighter gray
+  static const Color cardBg = Colors.white;
+
+  // Shadow helper
+  static BoxShadow get cardShadow => BoxShadow(
+    color: Colors.black.withValues(alpha: 0.08),
+    blurRadius: 10,
+    offset: const Offset(0, 2),
+  );
+
   // ==================== THEME DATA ====================
 
   static ThemeData get lightTheme {

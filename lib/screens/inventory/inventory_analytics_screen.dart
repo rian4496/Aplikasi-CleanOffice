@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
 import '../../providers/riverpod/inventory_providers.dart';
 
@@ -15,10 +16,46 @@ class InventoryAnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final itemsAsync = ref.watch(allInventoryItemsProvider);
+    final isInDialog = ResponsiveHelper.isDesktop(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Analitik Inventaris'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.analytics, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Analitik Inventaris',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    'Visualisasi data dan laporan',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -30,6 +67,15 @@ class InventoryAnalyticsScreen extends ConsumerWidget {
             ),
           ),
         ),
+        // Sembunyikan back button jika di web/dialog
+        automaticallyImplyLeading: !isInDialog,
+        actions: isInDialog ? [
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+            tooltip: 'Tutup',
+          ),
+        ] : null,
       ),
       body: itemsAsync.when(
         data: (items) {

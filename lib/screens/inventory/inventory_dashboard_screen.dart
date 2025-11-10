@@ -13,8 +13,16 @@ import '../../services/inventory_service.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/admin/admin_sidebar.dart';
+import '../../widgets/inventory/inventory_form_side_panel.dart';
+import '../../widgets/inventory/inventory_detail_dialog.dart';
+import '../../widgets/inventory/stock_requests_dialog.dart';
+import '../../widgets/inventory/inventory_list_dialog.dart';
+import '../../widgets/inventory/inventory_analytics_dialog.dart';
+import '../../widgets/inventory/stock_prediction_dialog.dart';
+import '../../utils/responsive_ui_helper.dart';
 import './inventory_add_edit_screen.dart';
 import './inventory_detail_screen.dart';
+import './inventory_list_screen.dart';
 import './inventory_analytics_screen.dart';
 import './stock_prediction_screen.dart';
 import './stock_requests_screen.dart';
@@ -222,12 +230,15 @@ class _InventoryDashboardScreenState
             if (isAdmin) ...[
               ElevatedButton.icon(
                 onPressed: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const InventoryAddEditScreen(),
-                    ),
+                  final result = await ResponsiveUIHelper.showFormView(
+                    context: context,
+                    mobileScreen: const InventoryAddEditScreen(),
+                    webDialog: const InventoryFormSidePanel(),
                   );
+                  // Refresh data if item was added/edited
+                  if (result == true && mounted) {
+                    setState(() {});
+                  }
                 },
                 icon: const Icon(Icons.add, size: 18),
                 label: const Text('Tambah Item'),
@@ -635,11 +646,10 @@ class _InventoryDashboardScreenState
         'subtitle': 'Buat item baru',
         'color': AppTheme.success,
         'onPressed': () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const InventoryAddEditScreen(),
-            ),
+          await ResponsiveUIHelper.showFormView(
+            context: context,
+            mobileScreen: const InventoryAddEditScreen(),
+            webDialog: const InventoryFormSidePanel(),
           );
         },
       });
@@ -652,11 +662,10 @@ class _InventoryDashboardScreenState
         'subtitle': isAdmin ? 'Atur permintaan stok' : 'Lihat status',
         'color': AppTheme.info,
         'onPressed': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const StockRequestsScreen(),
-            ),
+          ResponsiveUIHelper.showWideDialog(
+            context: context,
+            mobileScreen: const StockRequestsScreen(),
+            webDialog: const StockRequestsDialog(),
           );
         },
       },
@@ -666,7 +675,11 @@ class _InventoryDashboardScreenState
         'subtitle': 'Daftar lengkap',
         'color': AppTheme.primary,
         'onPressed': () {
-          Navigator.pushNamed(context, '/inventory_list');
+          ResponsiveUIHelper.showWideDialog(
+            context: context,
+            mobileScreen: const InventoryListScreen(),
+            webDialog: const InventoryListDialog(),
+          );
         },
       },
       {
@@ -675,11 +688,10 @@ class _InventoryDashboardScreenState
         'subtitle': 'Laporan & grafik',
         'color': Colors.deepPurple,
         'onPressed': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const InventoryAnalyticsScreen(),
-            ),
+          ResponsiveUIHelper.showWideDialog(
+            context: context,
+            mobileScreen: const InventoryAnalyticsScreen(),
+            webDialog: const InventoryAnalyticsDialog(),
           );
         },
       },
@@ -692,11 +704,10 @@ class _InventoryDashboardScreenState
         'subtitle': 'AI prediction (Beta)',
         'color': Colors.teal,
         'onPressed': () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const StockPredictionScreen(),
-            ),
+          ResponsiveUIHelper.showWideDialog(
+            context: context,
+            mobileScreen: const StockPredictionScreen(),
+            webDialog: const StockPredictionDialog(),
           );
         },
       });
@@ -933,11 +944,10 @@ class _InventoryDashboardScreenState
               final item = lowStockItems[index];
               return InkWell(
                 onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => InventoryDetailScreen(itemId: item.id),
-                    ),
+                  ResponsiveUIHelper.showDetailView(
+                    context: context,
+                    mobileScreen: InventoryDetailScreen(itemId: item.id),
+                    webDialog: InventoryDetailDialog(item: item),
                   );
                 },
                 child: Padding(
@@ -1150,11 +1160,10 @@ class _InventoryDashboardScreenState
   Widget _buildFAB(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const InventoryAddEditScreen(),
-          ),
+        await ResponsiveUIHelper.showFormView(
+          context: context,
+          mobileScreen: const InventoryAddEditScreen(),
+          webDialog: const InventoryFormSidePanel(),
         );
       },
       backgroundColor: AppTheme.primary,

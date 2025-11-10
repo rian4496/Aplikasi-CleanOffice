@@ -3,15 +3,53 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/responsive_helper.dart';
 
 class StockPredictionScreen extends StatelessWidget {
   const StockPredictionScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isInDialog = ResponsiveHelper.isDesktop(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Prediksi Stok'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.auto_graph, color: Colors.white, size: 24),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Prediksi Stok',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  Text(
+                    'Prediksi berbasis AI dan ML',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -23,6 +61,15 @@ class StockPredictionScreen extends StatelessWidget {
             ),
           ),
         ),
+        // Sembunyikan back button jika di web/dialog
+        automaticallyImplyLeading: !isInDialog,
+        actions: isInDialog ? [
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.white),
+            onPressed: () => Navigator.pop(context),
+            tooltip: 'Tutup',
+          ),
+        ] : null,
       ),
       body: Center(
         child: SingleChildScrollView(

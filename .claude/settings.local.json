@@ -20,7 +20,8 @@
       "Bash(curl:*)",
       "Bash(nc:*)",
       "Bash(del libscreensadminall_reports_management_screen_UPDATED.dart)",
-      "Bash(timeout 30 flutter analyze:*)"
+      "Bash(timeout 30 flutter analyze:*)",
+      "Bash(dir:*)"
     ],
     "deny": [],
     "ask": []

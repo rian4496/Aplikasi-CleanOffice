@@ -66,6 +66,9 @@ class _StockRequestsScreenState extends ConsumerState<StockRequestsScreen> with 
 
   // ==================== APP BAR ====================
   AppBar _buildAppBar(bool isAdmin) {
+    // Cek apakah dalam dialog atau tidak
+    final isInDialog = ResponsiveHelper.isDesktop(context);
+
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
@@ -78,35 +81,150 @@ class _StockRequestsScreenState extends ConsumerState<StockRequestsScreen> with 
           ),
         ),
       ),
-      leading: IconButton(
+      // Sembunyikan back button jika di web/dialog
+      automaticallyImplyLeading: !isInDialog,
+      leading: isInDialog ? null : IconButton(
         icon: const Icon(Icons.arrow_back, color: Colors.white),
         onPressed: () => Navigator.pop(context),
       ),
-      title: Text(
-        isAdmin ? 'Kelola Permintaan Stok' : 'Permintaan Stok Saya',
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-        ),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.request_page,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  isAdmin ? 'Kelola Permintaan Stok' : 'Permintaan Stok Saya',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  isAdmin ? 'Setujui atau tolak permintaan' : 'Lihat status permintaan Anda',
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.9),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
+      actions: isInDialog ? [
+        // Tambahkan tombol close untuk dialog
+        IconButton(
+          icon: const Icon(Icons.close, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+          tooltip: 'Tutup',
+        ),
+      ] : null,
     );
   }
 
   // ==================== TAB BAR ====================
   Widget _buildTabBar() {
     return Container(
-      color: Colors.white,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: TabBar(
         controller: _tabController,
-        labelColor: AppTheme.primary,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: AppTheme.primary,
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.grey[600],
+        labelStyle: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: 14,
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w500,
+          fontSize: 14,
+        ),
+        indicator: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppTheme.primary, AppTheme.primaryDark],
+          ),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        indicatorPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
         isScrollable: true,
-        tabs: const [
-          Tab(text: 'Pending'),
-          Tab(text: 'Disetujui'),
-          Tab(text: 'Ditolak'),
-          Tab(text: 'Selesai'),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        tabs: [
+          Tab(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.hourglass_empty, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Pending'),
+                ],
+              ),
+            ),
+          ),
+          Tab(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.check_circle_outline, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Disetujui'),
+                ],
+              ),
+            ),
+          ),
+          Tab(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.cancel_outlined, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Ditolak'),
+                ],
+              ),
+            ),
+          ),
+          Tab(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.done_all, size: 18),
+                  const SizedBox(width: 8),
+                  const Text('Selesai'),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );

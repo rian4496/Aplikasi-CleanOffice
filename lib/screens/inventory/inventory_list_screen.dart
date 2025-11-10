@@ -9,7 +9,10 @@ import '../../providers/riverpod/inventory_providers.dart';
 import '../../providers/riverpod/inventory_selection_provider.dart';
 import '../../widgets/inventory/inventory_card.dart';
 import '../../widgets/inventory/batch_action_bar.dart';
+import '../../widgets/inventory/inventory_detail_dialog.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/utils/responsive_helper.dart';
+import '../../utils/responsive_ui_helper.dart';
 import './inventory_detail_screen.dart';
 
 class InventoryListScreen extends ConsumerStatefulWidget {
@@ -30,12 +33,48 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     final itemsAsync = ref.watch(allInventoryItemsProvider);
     final isSelectionMode = ref.watch(selectionModeProvider);
     final selectedIds = ref.watch(inventorySelectionProvider);
+    final isInDialog = ResponsiveHelper.isDesktop(context);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(isSelectionMode
-            ? '${selectedIds.length} dipilih'
-            : 'Inventaris'),
+        title: isSelectionMode
+            ? Text('${selectedIds.length} dipilih')
+            : Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.inventory_2, color: Colors.white, size: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Semua Inventaris',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                        Text(
+                          'Kelola dan pantau semua item',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -47,6 +86,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
             ),
           ),
         ),
+        // Sembunyikan back button jika di web/dialog
+        automaticallyImplyLeading: !isInDialog,
         leading: isSelectionMode
             ? IconButton(
                 icon: const Icon(Icons.close),
@@ -54,7 +95,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                   ref.read(selectionModeProvider.notifier).disable();
                 },
               )
-            : null,
+            : (isInDialog ? null : null),
         actions: [
           if (isSelectionMode)
             TextButton(
@@ -71,7 +112,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 style: TextStyle(color: Colors.white),
               ),
             )
-          else
+          else ...[
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               itemBuilder: (context) => [
@@ -114,13 +155,20 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 }
               },
             ),
+            // Tambahkan tombol close untuk dialog
+            if (isInDialog)
+              IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+                tooltip: 'Tutup',
+              ),
+          ],
         ],
       ),
       body: Column(
         children: [
           _buildSearchBar(),
-          _buildCategoryFilter(),
-          _buildStatusFilter(),
+          _buildCompactFilters(),
           const SizedBox(height: 8),
           Expanded(
             child: itemsAsync.when(
@@ -151,14 +199,11 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                             ref.read(inventorySelectionProvider.notifier)
                                 .toggleItem(item.id);
                           } else {
-                            // Navigate to detail
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => InventoryDetailScreen(
-                                  itemId: item.id,
-                                ),
-                              ),
+                            // Show detail dengan platform-specific UI
+                            ResponsiveUIHelper.showDetailView(
+                              context: context,
+                              mobileScreen: InventoryDetailScreen(itemId: item.id),
+                              webDialog: InventoryDetailDialog(item: item),
                             );
                           }
                         },
@@ -209,71 +254,134 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     );
   }
 
-  Widget _buildCategoryFilter() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  Widget _buildCompactFilters() {
+    return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          _buildCategoryChip('Semua', null),
-          const SizedBox(width: 8),
-          _buildCategoryChip('Alat', 'alat'),
-          const SizedBox(width: 8),
-          _buildCategoryChip('Consumable', 'consumable'),
-          const SizedBox(width: 8),
-          _buildCategoryChip('PPE', 'ppe'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusFilter() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          _buildStatusChip('Semua Status', null, Colors.grey),
-          const SizedBox(width: 8),
-          _buildStatusChip('Stok Cukup', StockStatus.inStock, AppTheme.success),
-          const SizedBox(width: 8),
-          _buildStatusChip('Stok Rendah', StockStatus.lowStock, AppTheme.warning),
-          const SizedBox(width: 8),
-          _buildStatusChip('Habis', StockStatus.outOfStock, AppTheme.error),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip(String label, String? category) {
-    final isSelected = _selectedCategory == category;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _selectedCategory = selected ? category : null);
-      },
-      selectedColor: AppTheme.primary.withValues(alpha: 0.2),
-      checkmarkColor: AppTheme.primary,
-    );
-  }
-
-  Widget _buildStatusChip(String label, StockStatus? status, Color color) {
-    final isSelected = _selectedStatus == status;
-    return FilterChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (selected) {
-        setState(() => _selectedStatus = selected ? status : null);
-      },
-      selectedColor: color.withValues(alpha: 0.2),
-      checkmarkColor: color,
-      avatar: isSelected
-          ? null
-          : CircleAvatar(
-              backgroundColor: color.withValues(alpha: 0.3),
-              radius: 8,
+          // Category Dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String?>(
+                  value: _selectedCategory,
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Row(
+                        children: [
+                          Icon(Icons.grid_view, size: 18, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Semua Kategori'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'alat',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cleaning_services, size: 18, color: Colors.blue),
+                          const SizedBox(width: 8),
+                          const Text('Alat Kebersihan'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'consumable',
+                      child: Row(
+                        children: [
+                          Icon(Icons.water_drop, size: 18, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          const Text('Bahan Habis Pakai'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'ppe',
+                      child: Row(
+                        children: [
+                          Icon(Icons.security, size: 18, color: Colors.green),
+                          const SizedBox(width: 8),
+                          const Text('Alat Pelindung Diri'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                ),
+              ),
             ),
+          ),
+          const SizedBox(width: 12),
+          // Status Dropdown
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<StockStatus?>(
+                  value: _selectedStatus,
+                  isExpanded: true,
+                  icon: const Icon(Icons.arrow_drop_down, size: 20),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 18, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Semua Status'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: StockStatus.inStock,
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, size: 18, color: AppTheme.success),
+                          const SizedBox(width: 8),
+                          const Text('Stok Cukup'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: StockStatus.lowStock,
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning, size: 18, color: AppTheme.warning),
+                          const SizedBox(width: 8),
+                          const Text('Stok Rendah'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: StockStatus.outOfStock,
+                      child: Row(
+                        children: [
+                          Icon(Icons.cancel, size: 18, color: AppTheme.error),
+                          const SizedBox(width: 8),
+                          const Text('Habis'),
+                        ],
+                      ),
+                    ),
+                  ],
+                  onChanged: (value) => setState(() => _selectedStatus = value),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -399,7 +399,7 @@ class _InventoryDashboardScreenState
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.dashboard,
+              Icons.dashboard_rounded,
               color: AppTheme.primary,
               size: 32,
             ),
@@ -451,28 +451,28 @@ class _InventoryDashboardScreenState
       childAspectRatio: isDesktop ? 1.3 : 1.2,
       children: [
         _buildSummaryCard(
-          icon: Icons.inventory_2,
+          icon: Icons.inventory_2_rounded,
           label: 'Total Item',
           value: totalItems.toString(),
           color: AppTheme.primary,
           isDesktop: isDesktop,
         ),
         _buildSummaryCard(
-          icon: Icons.warning_amber,
+          icon: Icons.trending_down_rounded,
           label: 'Stok Menipis',
           value: lowStockItems.toString(),
           color: AppTheme.warning,
           isDesktop: isDesktop,
         ),
         _buildSummaryCard(
-          icon: Icons.cancel,
+          icon: Icons.remove_circle_rounded,
           label: 'Habis',
           value: outOfStockItems.toString(),
           color: AppTheme.error,
           isDesktop: isDesktop,
         ),
         _buildSummaryCard(
-          icon: Icons.functions,
+          icon: Icons.assessment_rounded,
           label: 'Total Stok',
           value: NumberFormat.compact().format(totalStockValue),
           color: AppTheme.info,
@@ -571,7 +571,7 @@ class _InventoryDashboardScreenState
         children: [
           Row(
             children: [
-              Icon(Icons.flash_on, color: AppTheme.primary, size: isDesktop ? 24 : 20),
+              Icon(Icons.bolt_rounded, color: AppTheme.primary, size: isDesktop ? 24 : 20),
               const SizedBox(width: 8),
               Text(
                 'Aksi Cepat',
@@ -641,7 +641,7 @@ class _InventoryDashboardScreenState
 
     if (isAdmin) {
       actions.add({
-        'icon': Icons.add_box,
+        'icon': Icons.add_circle_rounded,
         'label': 'Tambah Item',
         'subtitle': 'Buat item baru',
         'color': AppTheme.success,
@@ -657,7 +657,7 @@ class _InventoryDashboardScreenState
 
     actions.addAll([
       {
-        'icon': Icons.request_page,
+        'icon': Icons.shopping_cart_rounded,
         'label': isAdmin ? 'Kelola Permintaan' : 'Permintaan Saya',
         'subtitle': isAdmin ? 'Atur permintaan stok' : 'Lihat status',
         'color': AppTheme.info,
@@ -670,7 +670,7 @@ class _InventoryDashboardScreenState
         },
       },
       {
-        'icon': Icons.list,
+        'icon': Icons.view_list_rounded,
         'label': 'Semua Item',
         'subtitle': 'Daftar lengkap',
         'color': AppTheme.primary,
@@ -683,7 +683,7 @@ class _InventoryDashboardScreenState
         },
       },
       {
-        'icon': Icons.analytics,
+        'icon': Icons.bar_chart_rounded,
         'label': 'Analitik',
         'subtitle': 'Laporan & grafik',
         'color': Colors.deepPurple,
@@ -699,7 +699,7 @@ class _InventoryDashboardScreenState
 
     if (isAdmin) {
       actions.add({
-        'icon': Icons.auto_graph,
+        'icon': Icons.insights_rounded,
         'label': 'Prediksi Stok',
         'subtitle': 'AI prediction (Beta)',
         'color': Colors.teal,

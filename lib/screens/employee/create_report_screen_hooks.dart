@@ -17,157 +17,25 @@ import '../../services/storage_service.dart';
 
 final _logger = AppLogger('CreateReportScreen');
 
+/// Create Report Screen - Form to report cleanliness issues
+/// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget
 class CreateReportScreen extends HookConsumerWidget {
   const CreateReportScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // ✅ HOOKS: Auto-disposed controllers
+    // ✅ HOOKS: Form key
     final formKey = useMemoized(() => GlobalKey<FormState>());
+
+    // ✅ HOOKS: Auto-disposed controllers
     final locationController = useTextEditingController();
     final descriptionController = useTextEditingController();
 
-    // ✅ HOOKS: State management (replaces setState)
+    // ✅ HOOKS: State management
     final imageBytes = useState<Uint8List?>(null);
     final isUrgent = useState(false);
     final isSubmitting = useState(false);
 
-    // ✅ HELPER: Take picture
-    Future<void> takePicture() async {
-      try {
-        final imagePicker = ImagePicker();
-        final pickedImage = await imagePicker.pickImage(
-          source: ImageSource.gallery,
-          maxWidth: AppConstants.maxImageWidth.toDouble(),
-          imageQuality: AppConstants.imageQuality,
-        );
-
-        if (pickedImage == null) return;
-
-        final bytes = await pickedImage.readAsBytes();
-
-        _logger.info('Image captured: ${bytes.length} bytes');
-
-        if (!AppConstants.isValidFileSize(bytes.length)) {
-          if (!context.mounted) return;
-          showError(
-            context,
-            'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
-          );
-          return;
-        }
-
-        if (bytes.isEmpty) {
-          if (!context.mounted) return;
-          showError(context, 'Foto tidak valid atau kosong');
-          return;
-        }
-
-        imageBytes.value = bytes; // ✅ Update state (no setState needed!)
-
-        _logger.info('Image ready for upload: ${bytes.length} bytes');
-      } catch (e, stackTrace) {
-        _logger.error('Error picking image', e, stackTrace);
-        showError(context, 'Gagal mengambil foto: ${e.toString()}');
-      }
-    }
-
-    // ✅ HELPER: Upload image
-    Future<String?> uploadImage() async {
-      if (imageBytes.value == null) {
-        throw const StorageException(message: 'File foto tidak ditemukan');
-      }
-
-      try {
-        final user = ref.read(firebaseAuthProvider).currentUser;
-        if (user == null) {
-          throw const AuthException(message: 'User not logged in');
-        }
-
-        _logger.info('Uploading report image for user: ${user.uid}');
-
-        final storageService = ref.read(storageServiceProvider);
-        final result = await storageService.uploadImage(
-          bytes: imageBytes.value!,
-          folder: 'reports',
-          userId: user.uid,
-        );
-
-        if (result.isSuccess) {
-          _logger.info('Image uploaded successfully: ${result.data}');
-          return result.data;
-        } else {
-          _logger.error('Upload failed: ${result.error}');
-          throw StorageException(message: result.error ?? 'Upload failed');
-        }
-      } catch (e, stackTrace) {
-        _logger.error('Upload error', e, stackTrace);
-        rethrow;
-      }
-    }
-
-    // ✅ HELPER: Submit report
-    Future<void> submitReport() async {
-      if (!formKey.currentState!.validate()) return;
-
-      if (imageBytes.value == null) {
-        showError(context, 'Mohon ambil foto terlebih dahulu');
-        return;
-      }
-
-      isSubmitting.value = true; // ✅ Update state
-
-      try {
-        _logger.info('Submitting report');
-
-        final imageUrl = await uploadImage();
-
-        if (imageUrl == null) {
-          throw const StorageException(message: 'Failed to upload image');
-        }
-
-        final actions = ref.read(employeeActionsProvider);
-        await actions.createReport(
-          location: locationController.text.trim(),
-          description: descriptionController.text.trim(),
-          imageUrl: imageUrl,
-          isUrgent: isUrgent.value,
-        );
-
-        if (!context.mounted) return;
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text(AppConstants.submitSuccessMessage),
-              ],
-            ),
-            backgroundColor: AppConstants.successColor,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
-        Navigator.pop(context);
-      } on StorageException catch (e) {
-        _logger.error('Storage error', e);
-        showError(context, e.message);
-      } on FirestoreException catch (e) {
-        _logger.error('Firestore error', e);
-        showError(context, e.message);
-      } catch (e, stackTrace) {
-        _logger.error('Unexpected error', e, stackTrace);
-        showError(context, AppConstants.genericErrorMessage);
-      } finally {
-        if (context.mounted) {
-          isSubmitting.value = false; // ✅ Update state
-        }
-      }
-    }
-
-    // ✅ BUILD UI
     return Scaffold(
       appBar: AppBar(title: const Text('Laporkan Masalah Kebersihan')),
       body: Stack(
@@ -179,22 +47,23 @@ class CreateReportScreen extends HookConsumerWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildImageSection(
-                    imageBytes.value,
-                    takePicture,
-                    isSubmitting.value,
-                  ),
+                  _buildImageSection(context, imageBytes, isSubmitting),
                   const SizedBox(height: AppConstants.largePadding),
 
+                  // Location Autocomplete
                   Autocomplete<String>(
                     fieldViewBuilder: (context, controller, focusNode, onSubmit) {
                       locationController.text = controller.text;
                       return TextFormField(
                         controller: controller,
                         focusNode: focusNode,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Lokasi',
                           hintText: 'Ketik atau pilih lokasi',
+                          hintStyle: TextStyle(
+                            color: Colors.grey[400],
+                            fontSize: 14,
+                          ),
                           prefixIcon: Icon(Icons.location_on),
                         ),
                         validator: (value) {
@@ -222,11 +91,16 @@ class CreateReportScreen extends HookConsumerWidget {
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
 
+                  // Description
                   TextFormField(
                     controller: descriptionController,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Deskripsi',
                       hintText: 'Jelaskan masalah singkat...',
+                      hintStyle: TextStyle(
+                        color: Colors.grey[400],
+                        fontSize: 14,
+                      ),
                       prefixIcon: Icon(Icons.description),
                     ),
                     maxLines: 4,
@@ -235,7 +109,8 @@ class CreateReportScreen extends HookConsumerWidget {
                       if (value == null || value.trim().isEmpty) {
                         return AppConstants.requiredFieldMessage;
                       }
-                      if (value.trim().length < AppConstants.minDescriptionLength) {
+                      if (value.trim().length <
+                          AppConstants.minDescriptionLength) {
                         return 'Deskripsi minimal ${AppConstants.minDescriptionLength} karakter';
                       }
                       return null;
@@ -244,6 +119,7 @@ class CreateReportScreen extends HookConsumerWidget {
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
 
+                  // Urgent Toggle
                   SwitchListTile(
                     title: const Text('Tandai sebagai Urgen'),
                     subtitle: const Text('Masalah yang perlu segera ditangani'),
@@ -251,7 +127,7 @@ class CreateReportScreen extends HookConsumerWidget {
                     onChanged: isSubmitting.value
                         ? null
                         : (value) {
-                            isUrgent.value = value; // ✅ Direct update!
+                            isUrgent.value = value;
                           },
                     secondary: Icon(
                       Icons.priority_high,
@@ -260,8 +136,20 @@ class CreateReportScreen extends HookConsumerWidget {
                   ),
                   const SizedBox(height: AppConstants.largePadding),
 
+                  // Submit Button
                   ElevatedButton(
-                    onPressed: isSubmitting.value ? null : submitReport,
+                    onPressed: isSubmitting.value
+                        ? null
+                        : () => _submitReport(
+                              context,
+                              ref,
+                              formKey,
+                              locationController,
+                              descriptionController,
+                              imageBytes,
+                              isUrgent,
+                              isSubmitting,
+                            ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppConstants.primaryColor,
                       foregroundColor: Colors.white,
@@ -273,12 +161,14 @@ class CreateReportScreen extends HookConsumerWidget {
                             width: 20,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
                             ),
                           )
-                        : const Row(
+                        : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
+                            children: const [
                               Icon(Icons.send),
                               SizedBox(width: 8),
                               Text(
@@ -295,6 +185,8 @@ class CreateReportScreen extends HookConsumerWidget {
               ),
             ),
           ),
+
+          // Loading Overlay
           if (isSubmitting.value)
             Container(
               color: Colors.black.withValues(alpha: 0.5),
@@ -319,29 +211,12 @@ class CreateReportScreen extends HookConsumerWidget {
     );
   }
 
-  // ✅ STATIC HELPER: Show error
-  static void showError(BuildContext context, String message) {
-    if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error, color: Colors.white),
-            const SizedBox(width: 8),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: AppConstants.errorColor,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
+  // ==================== STATIC HELPERS: UI BUILDERS ====================
 
-  // ✅ STATIC HELPER: Build image section
   static Widget _buildImageSection(
-    Uint8List? imageBytes,
-    VoidCallback onTakePicture,
-    bool isSubmitting,
+    BuildContext context,
+    ValueNotifier<Uint8List?> imageBytes,
+    ValueNotifier<bool> isSubmitting,
   ) {
     return Card(
       elevation: 2,
@@ -350,8 +225,8 @@ class CreateReportScreen extends HookConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
-              children: [
+            Row(
+              children: const [
                 Text(
                   'Foto Masalah',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -368,21 +243,25 @@ class CreateReportScreen extends HookConsumerWidget {
             ),
             const SizedBox(height: AppConstants.smallPadding),
             GestureDetector(
-              onTap: isSubmitting ? null : onTakePicture,
+              onTap: isSubmitting.value
+                  ? null
+                  : () => _takePicture(context, imageBytes),
               child: Container(
                 height: 200,
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(AppConstants.defaultRadius),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.defaultRadius,
+                  ),
                   border: Border.all(
-                    color: imageBytes == null
+                    color: imageBytes.value == null
                         ? Colors.red.shade400
                         : Colors.grey.shade400,
                     width: 2,
                   ),
                 ),
-                child: imageBytes != null
+                child: imageBytes.value != null
                     ? Stack(
                         children: [
                           ClipRRect(
@@ -390,7 +269,7 @@ class CreateReportScreen extends HookConsumerWidget {
                               AppConstants.defaultRadius - 2,
                             ),
                             child: Image.memory(
-                              imageBytes,
+                              imageBytes.value!,
                               fit: BoxFit.cover,
                               width: double.infinity,
                               height: double.infinity,
@@ -400,13 +279,17 @@ class CreateReportScreen extends HookConsumerWidget {
                             right: 8,
                             top: 8,
                             child: CircleAvatar(
-                              backgroundColor: Colors.black.withValues(alpha: 0.5),
+                              backgroundColor: Colors.black.withValues(
+                                alpha: 0.5,
+                              ),
                               child: IconButton(
                                 icon: const Icon(
                                   Icons.refresh,
                                   color: Colors.white,
                                 ),
-                                onPressed: isSubmitting ? null : onTakePicture,
+                                onPressed: isSubmitting.value
+                                    ? null
+                                    : () => _takePicture(context, imageBytes),
                               ),
                             ),
                           ),
@@ -415,19 +298,20 @@ class CreateReportScreen extends HookConsumerWidget {
                     : Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.camera_alt, size: 60, color: Colors.red.shade300),
+                          Icon(Icons.camera_alt,
+                              size: 60, color: Colors.red.shade300),
                           const SizedBox(height: 8),
                           Text(
                             'Ketuk untuk mengambil foto',
                             style: TextStyle(
-                              color: Colors.red.shade700,
-                              fontWeight: FontWeight.bold,
-                            ),
+                                color: Colors.red.shade700,
+                                fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(
                             '(Foto masalah kebersihan wajib)',
-                            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            style: TextStyle(
+                                color: Colors.grey[600], fontSize: 12),
                           ),
                         ],
                       ),
@@ -435,6 +319,180 @@ class CreateReportScreen extends HookConsumerWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // ==================== ACTION HANDLERS ====================
+
+  /// Handle image picking (gallery)
+  /// ⚠️ BUSINESS LOGIC: Photo required for report submission
+  /// TODO (Phase 4): Add permission checks before camera/gallery access
+  static Future<void> _takePicture(
+    BuildContext context,
+    ValueNotifier<Uint8List?> imageBytes,
+  ) async {
+    try {
+      final imagePicker = ImagePicker();
+      final pickedImage = await imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: AppConstants.maxImageWidth.toDouble(),
+        imageQuality: AppConstants.imageQuality,
+      );
+
+      if (pickedImage == null) return;
+
+      final bytes = await pickedImage.readAsBytes();
+
+      _logger.info('Image captured: ${bytes.length} bytes');
+
+      if (!AppConstants.isValidFileSize(bytes.length)) {
+        if (!context.mounted) return;
+        _showError(
+          context,
+          'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
+        );
+        return;
+      }
+
+      if (bytes.isEmpty) {
+        if (!context.mounted) return;
+        _showError(context, 'Foto tidak valid atau kosong');
+        return;
+      }
+
+      imageBytes.value = bytes;
+
+      _logger.info('Image ready for upload: ${bytes.length} bytes');
+    } catch (e, stackTrace) {
+      _logger.error('Error picking image', e, stackTrace);
+      if (context.mounted) {
+        _showError(context, 'Gagal mengambil foto: ${e.toString()}');
+      }
+    }
+  }
+
+  /// Upload image to Firebase Storage
+  static Future<String?> _uploadImage(
+    WidgetRef ref,
+    Uint8List imageBytes,
+  ) async {
+    try {
+      final user = ref.read(firebaseAuthProvider).currentUser;
+      if (user == null) {
+        throw const AuthException(message: 'User not logged in');
+      }
+
+      _logger.info('Uploading report image for user: ${user.uid}');
+
+      final storageService = ref.read(storageServiceProvider);
+      final result = await storageService.uploadImage(
+        bytes: imageBytes,
+        folder: 'reports',
+        userId: user.uid,
+      );
+
+      if (result.isSuccess) {
+        _logger.info('Image uploaded successfully: ${result.data}');
+        return result.data;
+      } else {
+        _logger.error('Upload failed: ${result.error}');
+        throw StorageException(message: result.error ?? 'Upload failed');
+      }
+    } catch (e, stackTrace) {
+      _logger.error('Upload error', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Submit report with validation
+  /// ⚠️ BUSINESS LOGIC: Photo is mandatory for report submission
+  static Future<void> _submitReport(
+    BuildContext context,
+    WidgetRef ref,
+    GlobalKey<FormState> formKey,
+    TextEditingController locationController,
+    TextEditingController descriptionController,
+    ValueNotifier<Uint8List?> imageBytes,
+    ValueNotifier<bool> isUrgent,
+    ValueNotifier<bool> isSubmitting,
+  ) async {
+    if (!formKey.currentState!.validate()) return;
+
+    if (imageBytes.value == null) {
+      _showError(context, 'Mohon ambil foto terlebih dahulu');
+      return;
+    }
+
+    isSubmitting.value = true;
+
+    try {
+      _logger.info('Submitting report');
+
+      final imageUrl = await _uploadImage(ref, imageBytes.value!);
+
+      if (imageUrl == null) {
+        throw const StorageException(message: 'Failed to upload image');
+      }
+
+      final actions = ref.read(employeeActionsProvider);
+      await actions.createReport(
+        location: locationController.text.trim(),
+        description: descriptionController.text.trim(),
+        imageUrl: imageUrl,
+        isUrgent: isUrgent.value,
+      );
+
+      if (!context.mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 8),
+              Text(AppConstants.submitSuccessMessage),
+            ],
+          ),
+          backgroundColor: AppConstants.successColor,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+      Navigator.pop(context);
+    } on StorageException catch (e) {
+      _logger.error('Storage error', e);
+      if (context.mounted) {
+        _showError(context, e.message);
+      }
+    } on FirestoreException catch (e) {
+      _logger.error('Firestore error', e);
+      if (context.mounted) {
+        _showError(context, e.message);
+      }
+    } catch (e, stackTrace) {
+      _logger.error('Unexpected error', e, stackTrace);
+      if (context.mounted) {
+        _showError(context, AppConstants.genericErrorMessage);
+      }
+    } finally {
+      isSubmitting.value = false;
+    }
+  }
+
+  static void _showError(BuildContext context, String message) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error, color: Colors.white),
+            const SizedBox(width: 8),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppConstants.errorColor,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }

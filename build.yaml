@@ -1,0 +1,41 @@
+# Build configuration for code generation
+# This file configures freezed and json_serializable
+
+targets:
+  $default:
+    builders:
+      # Freezed configuration
+      freezed:
+        generate_for:
+          - lib/models/*.dart
+        options:
+          # Generate copyWith method
+          copy_with: true
+          # Generate == and hashCode
+          equal: true
+          # Generate toString
+          to_string: true
+          # Generate Map fromJson/toJson
+          map: true
+          # Make classes immutable
+          immutable: true
+          # Union types support
+          union: true
+          # Custom JSON key conversion
+          json_converter: true
+
+      # JSON Serializable configuration
+      json_serializable:
+        generate_for:
+          - lib/models/*.dart
+        options:
+          # Explicit toJson method
+          explicit_to_json: true
+          # Checked mode (runtime type checking)
+          checked: true
+          # Include if null
+          include_if_null: false
+          # Field rename (snake_case to camelCase)
+          field_rename: none
+          # Any map support
+          any_map: true

@@ -45,5 +45,15 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- Permission Handler - iOS Permission Descriptions -->
+	<key>NSCameraUsageDescription</key>
+	<string>Aplikasi memerlukan akses kamera untuk mengambil foto laporan kebersihan dan foto profil</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Aplikasi memerlukan akses galeri untuk memilih foto laporan kebersihan dan foto profil</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Aplikasi memerlukan akses untuk menyimpan foto ke galeri Anda</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>Data ini digunakan untuk memberikan pengalaman yang lebih baik dalam aplikasi</string>
 </dict>
 </plist>

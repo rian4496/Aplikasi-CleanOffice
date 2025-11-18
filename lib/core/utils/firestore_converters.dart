@@ -1,6 +1,7 @@
 // lib/core/utils/firestore_converters.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 /// Timestamp Converter untuk Freezed + Firestore
@@ -78,6 +79,83 @@ class NullableTimestampConverter implements JsonConverter<DateTime?, dynamic> {
   dynamic toJson(DateTime? object) {
     if (object == null) return null;
     return Timestamp.fromDate(object);
+  }
+}
+
+/// ISO DateTime Converter
+///
+/// Converts DateTime to/from ISO 8601 String (for models using ISO strings instead of Timestamp)
+///
+/// Usage:
+/// ```dart
+/// @freezed
+/// class InventoryItem with _$InventoryItem {
+///   const factory InventoryItem({
+///     @ISODateTimeConverter() required DateTime createdAt,
+///   }) = _InventoryItem;
+/// }
+/// ```
+class ISODateTimeConverter implements JsonConverter<DateTime, String> {
+  const ISODateTimeConverter();
+
+  @override
+  DateTime fromJson(String json) {
+    return DateTime.parse(json);
+  }
+
+  @override
+  String toJson(DateTime object) {
+    return object.toIso8601String();
+  }
+}
+
+/// Nullable ISO DateTime Converter
+///
+/// Same as ISODateTimeConverter but supports null values
+class NullableISODateTimeConverter implements JsonConverter<DateTime?, String?> {
+  const NullableISODateTimeConverter();
+
+  @override
+  DateTime? fromJson(String? json) {
+    if (json == null) return null;
+    return DateTime.parse(json);
+  }
+
+  @override
+  String? toJson(DateTime? object) {
+    if (object == null) return null;
+    return object.toIso8601String();
+  }
+}
+
+/// TimeOfDay Converter
+///
+/// Converts Flutter TimeOfDay to/from String (format: "HH:mm")
+///
+/// Usage:
+/// ```dart
+/// @freezed
+/// class WorkSchedule with _$WorkSchedule {
+///   const factory WorkSchedule({
+///     @TimeOfDayConverter() required TimeOfDay shiftStart,
+///   }) = _WorkSchedule;
+/// }
+/// ```
+class TimeOfDayConverter implements JsonConverter<TimeOfDay, String> {
+  const TimeOfDayConverter();
+
+  @override
+  TimeOfDay fromJson(String json) {
+    final parts = json.split(':');
+    return TimeOfDay(
+      hour: int.parse(parts[0]),
+      minute: int.parse(parts[1]),
+    );
+  }
+
+  @override
+  String toJson(TimeOfDay object) {
+    return '${object.hour}:${object.minute}';
   }
 }
 

@@ -58,8 +58,8 @@ dependencies:
   image_cropper: ^11.0.0
   cached_network_image: ^3.4.1
   flutter_image_compress: ^2.3.0
- 
- # QR Scanner
+
+  # QR Scanner
   mobile_scanner: ^7.1.2
 
   # Feature: Bulk Receipt

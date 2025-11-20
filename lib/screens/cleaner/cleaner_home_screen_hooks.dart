@@ -24,6 +24,7 @@ import './pending_reports_list_screen.dart';
 import './available_requests_list_screen.dart';
 import './my_tasks_screen.dart';
 import './create_cleaning_report_screen.dart';
+import './cleaner_more_screen.dart';
 
 /// Cleaner Home Screen - Dashboard for cleaner role
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget
@@ -401,11 +402,12 @@ class CleanerHomeScreen extends HookConsumerWidget {
         break;
       case 3:
         // More - Navigate to more menu screen
-        // TODO: Create CleanerMoreScreen with: My Tasks, Available Requests, Inventory
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => const MyTasksScreen()),
-        ); // Temporary
+          MaterialPageRoute(
+            builder: (context) => const CleanerMoreScreen(),
+          ),
+        );
         break;
     }
   }

@@ -15,6 +15,7 @@ import '../../widgets/shared/recent_requests_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/navigation/employee_bottom_nav.dart';
+import './employee_more_screen.dart';
 
 /// Employee Home Screen - Clean dashboard with stats and quick actions
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget
@@ -341,8 +342,12 @@ class EmployeeHomeScreen extends HookConsumerWidget {
         break;
       case 3:
         // More - Navigate to more menu screen
-        // TODO: Create EmployeeMoreScreen
-        Navigator.pushNamed(context, '/all_reports'); // Temporary
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const EmployeeMoreScreen(),
+          ),
+        );
         break;
     }
   }

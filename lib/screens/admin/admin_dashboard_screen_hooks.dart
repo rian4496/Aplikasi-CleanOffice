@@ -33,6 +33,7 @@ import '../../widgets/admin/advanced_filter_dialog.dart';
 import './all_reports_management_screen.dart';
 import './all_requests_management_screen.dart';
 import './cleaner_management_screen.dart';
+import './admin_more_screen.dart';
 import '../dev/seed_data_screen.dart';
 
 // 🎨 NEW: Modern Dashboard Widgets
@@ -775,13 +776,13 @@ class AdminDashboardScreen extends HookConsumerWidget {
         );
         break;
       case 3:
-        // More - Navigate to more menu screen (TODO: create AdminMoreScreen)
+        // More - Navigate to more menu screen
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const AllReportsManagementScreen(),
+            builder: (context) => const AdminMoreScreen(),
           ),
-        ); // Temporary
+        );
         break;
     }
   }

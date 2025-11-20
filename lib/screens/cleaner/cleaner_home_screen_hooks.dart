@@ -18,7 +18,7 @@ import '../../widgets/cleaner/stats_card_widget.dart';
 import '../../widgets/cleaner/tasks_overview_widget.dart';
 import '../../widgets/cleaner/recent_tasks_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/shared/custom_speed_dial.dart';
+import '../../widgets/navigation/cleaner_bottom_nav.dart';
 
 import './pending_reports_list_screen.dart';
 import './available_requests_list_screen.dart';
@@ -102,7 +102,11 @@ class CleanerHomeScreen extends HookConsumerWidget {
       ),
 
       // ==================== SPEED DIAL FAB ====================
-      floatingActionButton: _buildSpeedDial(context),
+      // ==================== BOTTOM NAVIGATION ====================
+      bottomNavigationBar: CleanerBottomNav(
+        currentIndex: 0, // Home screen
+        onTap: (index) => _handleBottomNavTap(context, index),
+      ),
     );
   }
 
@@ -369,70 +373,41 @@ class CleanerHomeScreen extends HookConsumerWidget {
     );
   }
 
-  /// Build speed dial FAB with cleaner quick actions
-  static Widget _buildSpeedDial(BuildContext context) {
-    return CustomSpeedDial(
-      mainButtonColor: AppTheme.primary,
-      actions: [
-        // Inventaris Alat (Blue)
-        SpeedDialAction(
-          icon: Icons.inventory_2,
-          label: 'Inventaris Alat',
-          backgroundColor: Colors.blue,
-          onTap: () => Navigator.pushNamed(context, '/inventory'),
-        ),
+  // ==================== NAVIGATION HANDLERS ====================
 
-        // Tugas Saya (Purple)
-        SpeedDialAction(
-          icon: Icons.task_alt,
-          label: 'Tugas Saya',
-          backgroundColor: SpeedDialColors.purple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const MyTasksScreen()),
+  /// Handle bottom navigation tap
+  static void _handleBottomNavTap(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        // Already on Home - do nothing
+        break;
+      case 1:
+        // Laporan - Navigate to create cleaning report
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const CreateCleaningReportScreen(),
           ),
-        ),
-
-        // Ambil Permintaan (Green)
-        SpeedDialAction(
-          icon: Icons.room_service,
-          label: 'Ambil Permintaan',
-          backgroundColor: SpeedDialColors.green,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AvailableRequestsListScreen(),
-            ),
+        );
+        break;
+      case 2:
+        // Inbox - Navigate to inbox (pending reports + available requests)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const PendingReportsListScreen(),
           ),
-        ),
-
-        // Laporan Masuk (Orange)
-        SpeedDialAction(
-          icon: Icons.inbox,
-          label: 'Laporan Masuk',
-          backgroundColor: SpeedDialColors.orange,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const PendingReportsListScreen(),
-            ),
-          ),
-        ),
-
-        // Buat Laporan (Blue)
-        SpeedDialAction(
-          icon: Icons.add,
-          label: 'Buat Laporan',
-          backgroundColor: SpeedDialColors.blue,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CreateCleaningReportScreen(),
-            ),
-          ),
-        ),
-      ],
-    );
+        );
+        break;
+      case 3:
+        // More - Navigate to more menu screen
+        // TODO: Create CleanerMoreScreen with: My Tasks, Available Requests, Inventory
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MyTasksScreen()),
+        ); // Temporary
+        break;
+    }
   }
 
   // ==================== ACTION HANDLERS ====================

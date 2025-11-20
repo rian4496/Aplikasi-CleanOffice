@@ -18,7 +18,7 @@ import '../../providers/riverpod/notification_providers.dart';
 import '../../providers/riverpod/request_providers.dart';
 
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/shared/custom_speed_dial.dart';
+import '../../widgets/navigation/admin_bottom_nav.dart';
 import '../../widgets/admin/admin_overview_widget.dart';
 import '../../widgets/admin/recent_activities_widget.dart';
 import '../../widgets/admin/admin_sidebar.dart';
@@ -86,8 +86,11 @@ class AdminDashboardScreen extends HookConsumerWidget {
       // ==================== BODY ====================
       body: isDesktop ? _buildDesktopLayout(context, ref) : _buildMobileLayout(context, ref),
 
-      // ==================== SPEED DIAL (Mobile/Tablet Only) ====================
-      floatingActionButton: isMobile ? _buildSpeedDial(context) : null,
+      // ==================== BOTTOM NAVIGATION ====================
+      bottomNavigationBar: !isDesktop ? AdminBottomNav(
+        currentIndex: 0, // Home screen
+        onTap: (index) => _handleBottomNavTap(context, index),
+      ) : null,
     );
   }
 
@@ -513,9 +516,9 @@ class AdminDashboardScreen extends HookConsumerWidget {
             ),
           ),
 
-          // Bottom padding for FAB
+          // Bottom padding for bottom nav
           const SliverToBoxAdapter(
-            child: SizedBox(height: 80),
+            child: SizedBox(height: 20),
           ),
         ],
       ),
@@ -748,68 +751,39 @@ class AdminDashboardScreen extends HookConsumerWidget {
     );
   }
 
-  // ==================== SPEED DIAL ====================
-  Widget _buildSpeedDial(BuildContext context) {
-    return CustomSpeedDial(
-      mainButtonColor: AppTheme.primary,
-      actions: [
-        SpeedDialAction(
-          icon: Icons.verified_user,
-          label: 'Verifikasi',
-          backgroundColor: SpeedDialColors.red,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllReportsManagementScreen(),
-            ),
+  // ==================== NAVIGATION HANDLERS ====================
+
+  /// Handle bottom navigation tap
+  static void _handleBottomNavTap(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        // Already on Home - do nothing
+        break;
+      case 1:
+        // Laporan - Navigate to all reports management
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AllReportsManagementScreen(),
           ),
-        ),
-        SpeedDialAction(
-          icon: Icons.assignment,
-          label: 'Kelola Laporan',
-          backgroundColor: SpeedDialColors.orange,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllReportsManagementScreen(),
-            ),
+        );
+        break;
+      case 2:
+        // Chat - Navigate to chat screen (TODO: implement chat screen)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fitur chat segera hadir')),
+        );
+        break;
+      case 3:
+        // More - Navigate to more menu screen (TODO: create AdminMoreScreen)
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AllReportsManagementScreen(),
           ),
-        ),
-        SpeedDialAction(
-          icon: Icons.room_service,
-          label: 'Kelola Permintaan',
-          backgroundColor: SpeedDialColors.green,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllRequestsManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.people,
-          label: 'Kelola Petugas',
-          backgroundColor: SpeedDialColors.purple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CleanerManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.data_object,
-          label: 'Generate Data',
-          backgroundColor: Colors.deepPurple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SeedDataScreen(),
-            ),
-          ),
-        ),
-      ],
-    );
+        ); // Temporary
+        break;
+    }
   }
 
   // ==================== NAVIGATION HELPER ====================

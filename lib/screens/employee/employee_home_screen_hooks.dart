@@ -12,9 +12,9 @@ import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
 import '../../widgets/shared/request_overview_widget.dart';
 import '../../widgets/shared/recent_requests_widget.dart';
-import '../../widgets/shared/custom_speed_dial.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
+import '../../widgets/navigation/employee_bottom_nav.dart';
 
 /// Employee Home Screen - Clean dashboard with stats and quick actions
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget
@@ -138,9 +138,9 @@ class EmployeeHomeScreen extends HookConsumerWidget {
                   ),
                 ),
 
-                // Bottom padding for FAB
+                // Bottom padding for bottom nav
                 const SliverToBoxAdapter(
-                  child: SizedBox(height: 80),
+                  child: SizedBox(height: 20),
                 ),
               ],
             );
@@ -148,8 +148,11 @@ class EmployeeHomeScreen extends HookConsumerWidget {
         ),
       ),
 
-      // ==================== SPEED DIAL FAB ====================
-      floatingActionButton: _buildSpeedDial(context, ref),
+      // ==================== BOTTOM NAVIGATION ====================
+      bottomNavigationBar: EmployeeBottomNav(
+        currentIndex: 0, // Home screen
+        onTap: (index) => _handleBottomNavTap(context, index),
+      ),
     );
   }
 
@@ -320,54 +323,28 @@ class EmployeeHomeScreen extends HookConsumerWidget {
     );
   }
 
-  /// Build speed dial FAB with quick actions
-  static Widget _buildSpeedDial(BuildContext context, WidgetRef ref) {
-    final pendingReports =
-        ref.watch(employeeReportsByStatusProvider(ReportStatus.pending));
+  // ==================== NAVIGATION HANDLERS ====================
 
-    return CustomSpeedDial(
-      mainButtonColor: AppTheme.primary,
-      actions: [
-        // Semua Laporan (Ungu/Purple)
-        SpeedDialAction(
-          icon: Icons.view_list,
-          label: 'Semua Laporan',
-          backgroundColor: SpeedDialColors.purple,
-          onTap: () => Navigator.pushNamed(context, '/all_reports'),
-        ),
-
-        // Pending (Orange)
-        SpeedDialAction(
-          icon: Icons.schedule,
-          label:
-              'Pending${pendingReports.isNotEmpty ? ' (${pendingReports.length})' : ''}',
-          backgroundColor: SpeedDialColors.orange,
-          onTap: () => Navigator.pushNamed(
-            context,
-            '/all_reports',
-            arguments: {'filterStatus': ReportStatus.pending},
-          ),
-        ),
-
-        // Minta Layanan (Hijau/Green)
-        SpeedDialAction(
-          icon: Icons.room_service,
-          label: 'Minta Layanan',
-          backgroundColor: SpeedDialColors.green,
-          onTap: () {
-            Navigator.pushNamed(context, '/create_request');
-          },
-        ),
-
-        // Buat Laporan (Biru/Blue)
-        SpeedDialAction(
-          icon: Icons.add,
-          label: 'Buat Laporan',
-          backgroundColor: SpeedDialColors.blue,
-          onTap: () => Navigator.pushNamed(context, '/create_report'),
-        ),
-      ],
-    );
+  /// Handle bottom navigation tap
+  static void _handleBottomNavTap(BuildContext context, int index) {
+    switch (index) {
+      case 0:
+        // Already on Home - do nothing
+        break;
+      case 1:
+        // Laporan - Navigate to all reports
+        Navigator.pushNamed(context, '/all_reports');
+        break;
+      case 2:
+        // Layanan - Navigate to create request (minta layanan personal)
+        Navigator.pushNamed(context, '/create_request');
+        break;
+      case 3:
+        // More - Navigate to more menu screen
+        // TODO: Create EmployeeMoreScreen
+        Navigator.pushNamed(context, '/all_reports'); // Temporary
+        break;
+    }
   }
 
   // ==================== ACTION HANDLERS ====================

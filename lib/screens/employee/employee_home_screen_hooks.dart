@@ -15,7 +15,7 @@ import '../../widgets/shared/recent_requests_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/navigation/employee_bottom_nav.dart';
-import './employee_more_screen.dart';
+import '../../widgets/navigation/employee_more_bottom_sheet.dart';
 
 /// Employee Home Screen - Clean dashboard with stats and quick actions
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget
@@ -341,13 +341,8 @@ class EmployeeHomeScreen extends HookConsumerWidget {
         Navigator.pushNamed(context, '/create_request');
         break;
       case 3:
-        // More - Navigate to more menu screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const EmployeeMoreScreen(),
-          ),
-        );
+        // More - Show bottom sheet with more menu options
+        EmployeeMoreBottomSheet.show(context);
         break;
     }
   }

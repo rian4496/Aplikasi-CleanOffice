@@ -1,0 +1,168 @@
+================================================
+COPY TEXT BELOW AND PASTE TO CLAUDE DESKTOP
+================================================
+
+Hi! I need your help to setup Appwrite database and storage buckets for my CleanOffice Flutter project using MCP Appwrite tools.
+
+Project Details:
+- Endpoint: https://sgp.cloud.appwrite.io/v1
+- Project ID: 690dc074000d8971b247
+- Database ID: cleanoffice_db
+
+Please create the following:
+
+## DATABASE: cleanoffice_db
+
+### COLLECTION 1: users
+Attributes:
+- userId (string, 36, required)
+- email (string, 255, required)
+- name (string, 255, required)
+- role (string, 50, required)
+- departmentId (string, 36, optional)
+- departmentName (string, 255, optional)
+- phoneNumber (string, 20, optional)
+- profileImageUrl (string, 2000, optional)
+- isActive (boolean, required, default: true)
+- createdAt (datetime, required)
+- updatedAt (datetime, optional)
+- location (string, 255, optional)
+
+Indexes: email (unique), role, departmentId
+
+### COLLECTION 2: reports
+Attributes:
+- reportId (string, 36, required)
+- userId (string, 36, required)
+- userName (string, 255, required)
+- userEmail (string, 255, optional)
+- departmentId (string, 36, optional)
+- departmentName (string, 255, optional)
+- location (string, 255, required)
+- title (string, 255, required)
+- description (string, 5000, required)
+- imageUrl (string, 2000, optional)
+- status (string, 50, required)
+- priority (string, 50, optional)
+- cleanerId (string, 36, optional)
+- cleanerName (string, 255, optional)
+- completionImageUrl (string, 2000, optional)
+- verifiedBy (string, 36, optional)
+- verifiedByName (string, 255, optional)
+- verificationNotes (string, 2000, optional)
+- isUrgent (boolean, optional, default: false)
+- date (datetime, required)
+- assignedAt (datetime, optional)
+- startedAt (datetime, optional)
+- completedAt (datetime, optional)
+- verifiedAt (datetime, optional)
+- deletedAt (datetime, optional)
+- deletedBy (string, 36, optional)
+
+Indexes: userId, cleanerId, status, date (desc), departmentId, deletedAt
+
+### COLLECTION 3: inventory
+Attributes:
+- itemId (string, 36, required)
+- name (string, 255, required)
+- category (string, 100, required)
+- quantity (integer, required, min: 0)
+- unit (string, 50, required)
+- minStock (integer, required, min: 0)
+- location (string, 255, optional)
+- imageUrl (string, 2000, optional)
+- description (string, 2000, optional)
+- lastRestocked (datetime, optional)
+- createdAt (datetime, required)
+- updatedAt (datetime, optional)
+- deletedAt (datetime, optional)
+
+Indexes: category, quantity, deletedAt
+
+### COLLECTION 4: requests
+Attributes:
+- requestId (string, 36, required)
+- itemId (string, 36, required)
+- itemName (string, 255, required)
+- requestedBy (string, 36, required)
+- requestedByName (string, 255, required)
+- quantity (integer, required, min: 1)
+- reason (string, 2000, required)
+- status (string, 50, required)
+- approvedBy (string, 36, optional)
+- approvedByName (string, 255, optional)
+- approvalNotes (string, 2000, optional)
+- requestDate (datetime, required)
+- approvedAt (datetime, optional)
+- fulfilledAt (datetime, optional)
+
+Indexes: itemId, requestedBy, status, requestDate (desc)
+
+### COLLECTION 5: notifications
+Attributes:
+- notificationId (string, 36, required)
+- userId (string, 36, required)
+- title (string, 255, required)
+- body (string, 2000, required)
+- type (string, 50, required)
+- data (string, 5000, optional)
+- isRead (boolean, required, default: false)
+- createdAt (datetime, required)
+
+Indexes: userId, type, isRead, createdAt (desc)
+
+### COLLECTION 6: departments
+Attributes:
+- departmentId (string, 36, required)
+- name (string, 255, required)
+- description (string, 2000, optional)
+- headId (string, 36, optional)
+- headName (string, 255, optional)
+- isActive (boolean, required, default: true)
+- createdAt (datetime, required)
+
+Indexes: name (unique), isActive
+
+### COLLECTION 7: stock_history
+Attributes:
+- historyId (string, 36, required)
+- itemId (string, 36, required)
+- itemName (string, 255, required)
+- action (string, 50, required)
+- quantityChange (integer, required)
+- quantityBefore (integer, required)
+- quantityAfter (integer, required)
+- userId (string, 36, required)
+- userName (string, 255, required)
+- notes (string, 2000, optional)
+- createdAt (datetime, required)
+
+Indexes: itemId, action, createdAt (desc)
+
+## STORAGE BUCKETS
+
+### BUCKET 1: reports
+- Max file size: 5MB (5242880 bytes)
+- Allowed: jpg, jpeg, png, webp
+- Compression: gzip
+- Encryption: true
+
+### BUCKET 2: profiles
+- Max file size: 2MB (2097152 bytes)
+- Allowed: jpg, jpeg, png, webp
+- Compression: gzip
+- Encryption: true
+
+### BUCKET 3: inventory
+- Max file size: 5MB (5242880 bytes)
+- Allowed: jpg, jpeg, png, webp
+- Compression: gzip
+- Encryption: true
+
+Please create all of these using MCP Appwrite tools. Set permissions to allow all authenticated users (role:all) to read and write.
+
+After completion, please confirm that all collections and buckets are created successfully.
+
+================================================
+END OF PROMPT
+================================================

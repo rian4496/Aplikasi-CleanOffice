@@ -3,8 +3,7 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../screens/shared/all_reports_screen.dart';
-import '../../screens/employee/request_history_screen_hooks.dart';
+import '../../screens/employee/all_reports_screen.dart';
 
 class EmployeeMoreBottomSheet extends StatelessWidget {
   const EmployeeMoreBottomSheet({super.key});
@@ -93,11 +92,9 @@ class EmployeeMoreBottomSheet extends StatelessWidget {
                   color: AppTheme.info,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const RequestHistoryScreen(),
-                      ),
+                    // TODO: Navigate to request history screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Fitur segera hadir')),
                     );
                   },
                 ),

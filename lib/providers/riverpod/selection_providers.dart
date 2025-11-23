@@ -1,23 +1,68 @@
-// lib/providers/riverpod/selection_providers.dart
-// SIMPLIFIED - Providers for batch selection (read-only)
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+// 1. Selection Mode Notifier
+class SelectionModeNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
 
-// ==================== SELECTION STATE (Read-only) ====================
-// Note: For now, these are read-only providers
-// Widgets will manage selection state locally using StatefulWidget
+  void set(bool value) => state = value;
+  void toggle() => state = !state;
+}
 
-/// Selected report IDs (read-only - returns empty by default)
-final selectedReportIdsProvider = Provider<Set<String>>((ref) {
-  return {};
+final selectionModeProvider = NotifierProvider<SelectionModeNotifier, bool>(() {
+  return SelectionModeNotifier();
 });
 
-/// Selection mode (read-only - returns false by default)
-final selectionModeProvider = Provider<bool>((ref) {
-  return false;
+// 2. Selected Report IDs Notifier
+class SelectedReportIdsNotifier extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => {};
+
+  void toggle(String id) {
+    final newState = Set<String>.from(state);
+    if (newState.contains(id)) {
+      newState.remove(id);
+    } else {
+      newState.add(id);
+    }
+    state = newState;
+  }
+
+  void selectAll(List<String> ids) {
+    state = Set.from(ids);
+  }
+
+  void clear() {
+    state = {};
+  }
+}
+
+final selectedReportIdsProvider = NotifierProvider<SelectedReportIdsNotifier, Set<String>>(() {
+  return SelectedReportIdsNotifier();
 });
 
-/// Count of selected items
+// 3. Computed Selection Count
 final selectedCountProvider = Provider<int>((ref) {
   return ref.watch(selectedReportIdsProvider).length;
 });
+
+// Helper methods (updated to use Notifier)
+void toggleReportSelection(WidgetRef ref, String reportId) {
+  ref.read(selectedReportIdsProvider.notifier).toggle(reportId);
+  
+  // Auto-exit if empty
+  final currentSelection = ref.read(selectedReportIdsProvider);
+  if (currentSelection.isEmpty) {
+    ref.read(selectionModeProvider.notifier).set(false);
+  }
+}
+
+void selectAllReports(WidgetRef ref, List<String> allIds) {
+  ref.read(selectedReportIdsProvider.notifier).selectAll(allIds);
+  ref.read(selectionModeProvider.notifier).set(true);
+}
+
+void clearSelection(WidgetRef ref) {
+  ref.read(selectedReportIdsProvider.notifier).clear();
+  ref.read(selectionModeProvider.notifier).set(false);
+}

@@ -1,36 +1,27 @@
+// lib/providers/riverpod/admin_providers.dart
+// ✅ ADMIN PROVIDERS - Migrated to Appwrite
+//
+// FEATURES:
+// - Dashboard summary providers
+// - Report verification actions
+// - Urgent reports tracking
+// - Department-based filtering
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/report.dart';
-import '../../models/user_profile.dart';
-import './report_providers.dart';
+import '../../services/appwrite_database_service.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import './auth_providers.dart';
+import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
+import './report_providers.dart' hide appwriteDatabaseServiceProvider;
+
+final _logger = AppLogger('AdminProviders');
 
 // ==================== AUTH PROVIDERS ====================
-
-/// Provider untuk current Firebase user
-final currentUserProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
-
-/// Provider untuk current user profile
-final currentUserProfileProvider = StreamProvider<UserProfile?>((ref) {
-  return FirebaseAuth.instance.authStateChanges().asyncMap((user) async {
-    if (user == null) {
-      return null;
-    } else {
-      final docSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-
-      if (docSnapshot.exists) {
-        return UserProfile.fromMap(docSnapshot.data()!..['uid'] = user.uid);
-      } else {
-        return null;
-      }
-    }
-  });
-});
+// Note: Auth providers are now in auth_providers.dart
+// Re-export for backward compatibility
+// - currentUserProfileProvider is in auth_providers.dart
 
 /// Provider untuk department ID dari current user
 final currentUserDepartmentProvider = Provider<String?>((ref) {
@@ -169,32 +160,59 @@ class VerificationActions {
 
   VerificationActions(this.ref);
 
-  Future<void> approveReport(Report report, {String? notes}) async {
-    final userProfile = await ref.read(currentUserProfileProvider.future);
-    if (userProfile == null) throw Exception('User not logged in');
+  AppwriteDatabaseService get _service =>
+      ref.read(appwriteDatabaseServiceProvider);
 
-    final service = ref.read(firestoreServiceProvider);
-    await service.verifyReport(
-      report.id,
-      userProfile.uid,
-      userProfile.displayName,
-      notes: notes,
-      approved: true,
-    );
+  Future<void> approveReport(Report report, {String? notes}) async {
+    try {
+      final userProfile = await ref.read(currentUserProfileProvider.future);
+      if (userProfile == null) {
+        throw const ValidationException(message: 'User not logged in');
+      }
+
+      await _service.verifyReport(
+        report.id,
+        userProfile.uid,
+        userProfile.displayName,
+        notes: notes,
+        approved: true,
+      );
+
+      _logger.info('Report approved: ${report.id}');
+    } on ValidationException {
+      rethrow;
+    } catch (e) {
+      _logger.error('Error approving report', e);
+      throw const FirestoreException(
+        message: 'Gagal menyetujui laporan. Silakan coba lagi.',
+      );
+    }
   }
 
   Future<void> rejectReport(Report report, {required String reason}) async {
-    final userProfile = await ref.read(currentUserProfileProvider.future);
-    if (userProfile == null) throw Exception('User not logged in');
+    try {
+      final userProfile = await ref.read(currentUserProfileProvider.future);
+      if (userProfile == null) {
+        throw const ValidationException(message: 'User not logged in');
+      }
 
-    final service = ref.read(firestoreServiceProvider);
-    await service.verifyReport(
-      report.id,
-      userProfile.uid,
-      userProfile.displayName,
-      notes: reason,
-      approved: false,
-    );
+      await _service.verifyReport(
+        report.id,
+        userProfile.uid,
+        userProfile.displayName,
+        notes: reason,
+        approved: false,
+      );
+
+      _logger.info('Report rejected: ${report.id}');
+    } on ValidationException {
+      rethrow;
+    } catch (e) {
+      _logger.error('Error rejecting report', e);
+      throw const FirestoreException(
+        message: 'Gagal menolak laporan. Silakan coba lagi.',
+      );
+    }
   }
 
   Future<void> assignToCleaner(
@@ -202,8 +220,15 @@ class VerificationActions {
     String cleanerId,
     String cleanerName,
   ) async {
-    final service = ref.read(firestoreServiceProvider);
-    await service.assignReportToCleaner(report.id, cleanerId, cleanerName);
+    try {
+      await _service.assignReportToCleaner(report.id, cleanerId, cleanerName);
+      _logger.info('Report assigned to cleaner: ${report.id} -> $cleanerName');
+    } catch (e) {
+      _logger.error('Error assigning report to cleaner', e);
+      throw const FirestoreException(
+        message: 'Gagal menugaskan laporan ke cleaner. Silakan coba lagi.',
+      );
+    }
   }
 }
 

@@ -1,7 +1,9 @@
+// lib/screens/auth/login_screen.dart
+// ✅ MIGRATED TO APPWRITE
+
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../models/user_profile.dart';
+import 'package:appwrite/appwrite.dart';
+import '../../services/appwrite_auth_service.dart';
 import '../../core/constants/app_constants.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -15,6 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _authService = AppwriteAuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -25,39 +28,12 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _ensureUserProfile(User user) async {
-    try {
-      final firestore = FirebaseFirestore.instance;
-      final userDoc = await firestore.collection('users').doc(user.uid).get();
-
-      if (!userDoc.exists) {
-        debugPrint('Creating user profile for ${user.email}');
-
-        String role = 'employee';
-        if (user.email?.contains('admin') == true) {
-          role = 'admin';
-        } else if (user.email?.contains('cleaner') == true ||
-            user.email?.contains('petugas') == true) {
-          role = 'cleaner';
-        }
-
-        final profile = UserProfile(
-          uid: user.uid,
-          displayName: user.displayName ?? user.email?.split('@')[0] ?? 'User',
-          email: user.email ?? '',
-          role: role,
-          joinDate: DateTime.now(),
-          status: 'active',
-        );
-
-        await firestore.collection('users').doc(user.uid).set(profile.toMap());
-        debugPrint('User profile created successfully with role: $role');
-      }
-    } catch (e) {
-      debugPrint('Error ensuring user profile: $e');
-      rethrow;
-    }
-  }
+  /// Ensure user profile exists in database (same logic as Firebase version)
+  /// This is now handled by AppwriteAuthService.signInWithEmailAndPassword()
+  /// which fetches the profile from Appwrite database after authentication
+  ///
+  /// If profile doesn't exist, the service will throw an error
+  /// User must be registered first via sign_up_screen.dart
 
   Future<void> _login() async {
     if (_isLoading) return;
@@ -71,34 +47,19 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final userCredential = await FirebaseAuth.instance
-          .signInWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+      debugPrint('Attempting login with Appwrite...');
 
-      if (userCredential.user == null) {
-        throw Exception('Login failed: No user returned');
-      }
-
-      await _ensureUserProfile(userCredential.user!);
-
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(userCredential.user!.uid)
-          .get();
+      final userProfile = await _authService.signInWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
       if (!mounted) return;
 
-      if (!userDoc.exists) {
-        throw Exception('User profile not found');
-      }
-
-      final userData = userDoc.data()!;
-      final userRole = userData['role'] as String?;
+      debugPrint('Login successful! Role: ${userProfile.role}');
 
       String route;
-      switch (userRole) {
+      switch (userProfile.role) {
         case 'admin':
           route = AppConstants.homeAdminRoute;
           break;
@@ -113,9 +74,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, route);
-    } on FirebaseAuthException catch (e) {
+    } on AppwriteException catch (e) {
       if (!mounted) return;
-      _handleAuthError(e);
+      _handleAppwriteError(e);
     } catch (e) {
       if (!mounted) return;
 
@@ -137,13 +98,29 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _handleAuthError(FirebaseAuthException e) {
+  /// Handle Appwrite authentication errors
+  /// Maps Appwrite error codes to user-friendly Indonesian messages
+  /// Similar to Firebase error handling but with Appwrite codes:
+  /// - 401: Invalid credentials (user-not-found or wrong-password equivalent)
+  /// - 404: User not found
+  /// - 429: Too many requests (too-many-requests equivalent)
+  /// - 400: Invalid data (invalid-email equivalent)
+  /// - 0/null: Network error (network-request-failed equivalent)
+  void _handleAppwriteError(AppwriteException e) {
     String errorMessage;
     String actionLabel = 'OK';
     VoidCallback? actionCallback;
 
+    debugPrint('Appwrite error code: ${e.code}, message: ${e.message}');
+
     switch (e.code) {
-      case 'user-not-found':
+      case 401:
+        // Equivalent to Firebase 'user-not-found' or 'wrong-password'
+        errorMessage = 'Email atau password salah';
+        break;
+
+      case 404:
+        // Equivalent to Firebase 'user-not-found'
         errorMessage = 'Email belum terdaftar';
         actionLabel = 'DAFTAR';
         actionCallback = () {
@@ -153,33 +130,25 @@ class _LoginScreenState extends State<LoginScreen> {
         };
         break;
 
-      case 'wrong-password':
-        errorMessage = 'Password salah. Silakan coba lagi';
-        actionLabel = 'RESET';
-        actionCallback = () {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          Navigator.pushNamed(
-            context,
-            AppConstants.resetPasswordRoute,
-            arguments: _emailController.text,
-          );
-        };
-        break;
-
-      case 'invalid-email':
-        errorMessage = 'Format email tidak valid';
-        break;
-
-      case 'user-disabled':
-        errorMessage = 'Akun ini telah dinonaktifkan';
-        break;
-
-      case 'too-many-requests':
+      case 429:
+        // Equivalent to Firebase 'too-many-requests'
         errorMessage = 'Terlalu banyak percobaan. Tunggu sebentar';
         break;
 
-      case 'network-request-failed':
+      case 400:
+        // Equivalent to Firebase 'invalid-email' or validation errors
+        if (e.message?.contains('password') ?? false) {
+          errorMessage = 'Password tidak valid';
+        } else if (e.message?.contains('email') ?? false) {
+          errorMessage = 'Format email tidak valid';
+        } else {
+          errorMessage = 'Data tidak valid';
+        }
+        break;
+
+      case 0:
+      case null:
+        // Equivalent to Firebase 'network-request-failed'
         errorMessage = 'Koneksi internet bermasalah';
         break;
 
@@ -247,12 +216,23 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _emailController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Email',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.email),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.email, color: Colors.black),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
@@ -274,17 +254,29 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _passwordController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Password',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.lock),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.lock, color: Colors.black),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
+                            color: Colors.black,
                           ),
                           onPressed: () {
                             setState(() {
@@ -311,11 +303,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: Align(
                       alignment: Alignment.centerRight,
                       child: TextButton(
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          AppConstants.resetPasswordRoute,
-                          arguments: _emailController.text,
-                        ),
+                        onPressed: () {
+                          // TODO: Implement forgot password with Appwrite
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Fitur reset password akan segera tersedia'),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
+                        },
                         child: Text(
                           'Lupa Password?',
                           style: TextStyle(

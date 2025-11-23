@@ -1,8 +1,8 @@
 // lib/widgets/shared/drawer_menu_widget.dart
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/theme/app_theme.dart';
+import '../../models/user_profile.dart';
 
 /// Drawer Menu Widget - Reusable untuk semua role
 /// Bisa dipakai di Employee, Cleaner, bahkan Admin
@@ -22,13 +22,13 @@ import '../../core/theme/app_theme.dart';
 class DrawerMenuWidget extends StatelessWidget {
   /// List menu items yang akan ditampilkan
   final List<DrawerMenuItem> menuItems;
-  
+
   /// Callback ketika logout di-tap
   final VoidCallback onLogout;
-  
-  /// Custom user (optional, kalau null akan ambil dari Firebase)
-  final User? user;
-  
+
+  /// Custom user profile (optional)
+  final UserProfile? userProfile;
+
   /// Judul role (optional, contoh: "Petugas Kebersihan", "Employee")
   final String? roleTitle;
 
@@ -36,21 +36,19 @@ class DrawerMenuWidget extends StatelessWidget {
     super.key,
     required this.menuItems,
     required this.onLogout,
-    this.user,
+    this.userProfile,
     this.roleTitle,
   });
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = user ?? FirebaseAuth.instance.currentUser;
-
     return Container(
       color: Colors.white,
       child: Column(
         children: [
           // Header dengan avatar, nama, email
-          _buildHeader(currentUser),
-          
+          _buildHeader(userProfile),
+
           // Menu items
           Expanded(
             child: ListView(
@@ -58,10 +56,10 @@ class DrawerMenuWidget extends StatelessWidget {
               children: [
                 // Render semua menu items
                 ...menuItems.map((item) => _buildMenuItem(item)),
-                
+
                 // Divider sebelum logout
                 const Divider(),
-                
+
                 // Logout button
                 _buildMenuItem(
                   DrawerMenuItem(
@@ -79,7 +77,7 @@ class DrawerMenuWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(User? user) {
+  Widget _buildHeader(UserProfile? profile) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -93,10 +91,10 @@ class DrawerMenuWidget extends StatelessWidget {
           CircleAvatar(
             radius: 32,
             backgroundColor: Colors.grey[300],
-            backgroundImage: user?.photoURL != null
-                ? NetworkImage(user!.photoURL!)
+            backgroundImage: profile?.photoURL != null
+                ? NetworkImage(profile!.photoURL!)
                 : null,
-            child: user?.photoURL == null
+            child: profile?.photoURL == null
                 ? Icon(
                     Icons.person,
                     size: 36,
@@ -105,10 +103,10 @@ class DrawerMenuWidget extends StatelessWidget {
                 : null,
           ),
           const SizedBox(height: 12),
-          
+
           // Nama
           Text(
-            user?.displayName ?? roleTitle ?? 'User',
+            profile?.displayName ?? roleTitle ?? 'User',
             style: const TextStyle(
               color: Colors.black,
               fontSize: 18,
@@ -118,11 +116,11 @@ class DrawerMenuWidget extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 4),
-          
+
           // Email
-          if (user?.email != null)
+          if (profile != null)
             Text(
-              user!.email!,
+              profile.email,
               style: TextStyle(
                 color: Colors.grey[600],
                 fontSize: 14,

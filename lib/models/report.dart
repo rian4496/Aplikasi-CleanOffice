@@ -1,22 +1,11 @@
 // lib/models/report.dart
-// ✅ UNIFIED: Report model + ReportStatus enum dalam 1 file
-// ✅ UPDATED: Added soft delete support with deletedAt & deletedBy fields
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 
 // ==================== REPORT STATUS ENUM ====================
 
-/// Enum untuk status laporan kebersihan
-///
-/// Flow status:
-/// 1. pending - Laporan baru dibuat oleh employee, menunggu petugas
-/// 2. assigned - Sudah ditugaskan ke petugas tertentu
-/// 3. inProgress - Petugas sedang mengerjakan
-/// 4. completed - Petugas selesai, menunggu verifikasi admin
-/// 5. verified - Admin sudah memverifikasi dan menyetujui
-/// 6. rejected - Ditolak oleh admin, perlu dikerjakan ulang
 enum ReportStatus {
   pending,
   assigned,
@@ -25,7 +14,6 @@ enum ReportStatus {
   verified,
   rejected;
 
-  /// Mengkonversi string dari Firestore ke enum
   static ReportStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -46,8 +34,7 @@ enum ReportStatus {
     }
   }
 
-  /// Mengkonversi enum ke string untuk Firestore
-  String toFirestore() {
+  String toDatabase() {
     switch (this) {
       case ReportStatus.pending:
         return 'pending';
@@ -64,7 +51,9 @@ enum ReportStatus {
     }
   }
 
-  /// Display name untuk UI dalam Bahasa Indonesia
+  // Keep for compatibility
+  String toFirestore() => toDatabase();
+
   String get displayName {
     switch (this) {
       case ReportStatus.pending:
@@ -82,7 +71,9 @@ enum ReportStatus {
     }
   }
 
-  /// Warna untuk UI berdasarkan status
+  // Alias for displayName
+  String get label => displayName;
+
   Color get color {
     switch (this) {
       case ReportStatus.pending:
@@ -100,7 +91,6 @@ enum ReportStatus {
     }
   }
 
-  /// Icon untuk UI berdasarkan status
   IconData get icon {
     switch (this) {
       case ReportStatus.pending:
@@ -118,17 +108,8 @@ enum ReportStatus {
     }
   }
 
-  /// Check apakah status ini memerlukan action dari admin
-  bool get needsAdminAction {
-    return this == ReportStatus.completed;
-  }
-
-  /// Check apakah status ini sudah final (tidak bisa diubah lagi)
-  bool get isFinal {
-    return this == ReportStatus.verified;
-  }
-
-  /// Check apakah laporan masih aktif (belum selesai)
+  bool get needsAdminAction => this == ReportStatus.completed;
+  bool get isFinal => this == ReportStatus.verified;
   bool get isActive {
     return this == ReportStatus.pending ||
         this == ReportStatus.assigned ||
@@ -139,45 +120,29 @@ enum ReportStatus {
 
 // ==================== REPORT MODEL ====================
 
-/// Model untuk laporan kebersihan yang diperluas dengan field-field tambahan
-/// untuk mendukung workflow lengkap dari pembuatan hingga verifikasi
 class Report {
   final String id;
   final String title;
   final String location;
   final DateTime date;
   final ReportStatus status;
-
-  // Informasi Pembuat Laporan (Employee)
   final String userId;
   final String userName;
   final String? userEmail;
-
-  // Informasi Petugas Kebersihan (Cleaner)
   final String? cleanerId;
   final String? cleanerName;
-
-  // Informasi Supervisor
   final String? verifiedBy;
   final String? verifiedByName;
   final DateTime? verifiedAt;
   final String? verificationNotes;
-
-  // Detail Laporan
-  final String? imageUrl;              // ← Foto laporan awal (dari employee)
-  final String? completionImageUrl;    // ← Foto bukti selesai (dari cleaner)
+  final String? imageUrl;
+  final String? completionImageUrl;
   final String? description;
   final bool isUrgent;
-
-  // Timestamp
   final DateTime? assignedAt;
   final DateTime? startedAt;
   final DateTime? completedAt;
-
-  // Department (untuk filtering supervisor)
   final String? departmentId;
-
-  // 🆕 Soft Delete Support
   final DateTime? deletedAt;
   final String? deletedBy;
 
@@ -204,57 +169,25 @@ class Report {
     this.startedAt,
     this.completedAt,
     this.departmentId,
-    this.deletedAt,                   // 🆕 SOFT DELETE
-    this.deletedBy,                   // 🆕 SOFT DELETE
+    this.deletedAt,
+    this.deletedBy,
   });
 
-  /// Convert dari Firestore document ke Report object
-  factory Report.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-
-    return Report(
-      id: doc.id,
-      title: data['title'] as String? ?? '',
-      location: data['location'] as String? ?? '',
-      date: (data['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
-      userId: data['userId'] as String? ?? '',
-      userName: data['userName'] as String? ?? '',
-      userEmail: data['userEmail'] as String?,
-      cleanerId: data['cleanerId'] as String?,
-      cleanerName: data['cleanerName'] as String?,
-      verifiedBy: data['verifiedBy'] as String?,
-      verifiedByName: data['verifiedByName'] as String?,
-      verifiedAt: (data['verifiedAt'] as Timestamp?)?.toDate(),
-      verificationNotes: data['verificationNotes'] as String?,
-      imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,
-      description: data['description'] as String?,
-      isUrgent: data['isUrgent'] as bool? ?? false,
-      assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
-      startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-      departmentId: data['departmentId'] as String?,
-      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),       // 🆕
-      deletedBy: data['deletedBy'] as String?,                      // 🆕
-    );
+  // Helper to parse dates from various formats
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
-  /// Convert dari Map ke Report object (untuk compatibility)
+  /// Convert dari Map ke Report object (Appwrite compatible)
   factory Report.fromMap(String id, Map<String, dynamic> data) {
-    // Handle both Firestore Timestamp and ISO String formats
-    DateTime parseDate(dynamic value) {
-      if (value == null) return DateTime.now();
-      if (value is Timestamp) return value.toDate();
-      if (value is String) return DateTime.parse(value);
-      return DateTime.now();
-    }
-
     return Report(
       id: id,
       title: data['title'] as String? ?? '',
       location: data['location'] as String? ?? '',
-      date: parseDate(data['date']),
+      date: _parseDate(data['date']) ?? DateTime.now(),
       status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
       userId: data['userId'] as String? ?? '',
       userName: data['userName'] as String? ?? '',
@@ -263,29 +196,59 @@ class Report {
       cleanerName: data['cleanerName'] as String?,
       verifiedBy: data['verifiedBy'] as String?,
       verifiedByName: data['verifiedByName'] as String?,
-      verifiedAt: data['verifiedAt'] != null ? parseDate(data['verifiedAt']) : null,
+      verifiedAt: _parseDate(data['verifiedAt']),
       verificationNotes: data['verificationNotes'] as String?,
       imageUrl: data['imageUrl'] as String?,
       completionImageUrl: data['completionImageUrl'] as String?,
       description: data['description'] as String?,
       isUrgent: data['isUrgent'] as bool? ?? false,
-      assignedAt: data['assignedAt'] != null ? parseDate(data['assignedAt']) : null,
-      startedAt: data['startedAt'] != null ? parseDate(data['startedAt']) : null,
-      completedAt: data['completedAt'] != null ? parseDate(data['completedAt']) : null,
+      assignedAt: _parseDate(data['assignedAt']),
+      startedAt: _parseDate(data['startedAt']),
+      completedAt: _parseDate(data['completedAt']),
       departmentId: data['departmentId'] as String?,
-      deletedAt: data['deletedAt'] != null ? parseDate(data['deletedAt']) : null,
+      deletedAt: _parseDate(data['deletedAt']),
       deletedBy: data['deletedBy'] as String?,
     );
   }
 
-  /// Convert Report object ke Map (for cache/JSON)
+  /// Convert dari Appwrite document ke Report object
+  factory Report.fromAppwrite(Map<String, dynamic> data) {
+    return Report(
+      id: data['\$id'] as String? ?? data['id'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      location: data['location'] as String? ?? '',
+      date: _parseDate(data['date']) ?? DateTime.now(),
+      status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
+      userId: data['userId'] as String? ?? '',
+      userName: data['userName'] as String? ?? '',
+      userEmail: data['userEmail'] as String?,
+      cleanerId: data['cleanerId'] as String?,
+      cleanerName: data['cleanerName'] as String?,
+      verifiedBy: data['verifiedBy'] as String?,
+      verifiedByName: data['verifiedByName'] as String?,
+      verifiedAt: _parseDate(data['verifiedAt']),
+      verificationNotes: data['verificationNotes'] as String?,
+      imageUrl: data['imageUrl'] as String?,
+      completionImageUrl: data['completionImageUrl'] as String?,
+      description: data['description'] as String?,
+      isUrgent: data['isUrgent'] as bool? ?? false,
+      assignedAt: _parseDate(data['assignedAt']),
+      startedAt: _parseDate(data['startedAt']),
+      completedAt: _parseDate(data['completedAt']),
+      departmentId: data['departmentId'] as String?,
+      deletedAt: _parseDate(data['deletedAt']),
+      deletedBy: data['deletedBy'] as String?,
+    );
+  }
+
+  /// Convert Report object ke Map
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'location': location,
       'date': date.toIso8601String(),
-      'status': status.name,
+      'status': status.toDatabase(),
       'userId': userId,
       'userName': userName,
       'userEmail': userEmail,
@@ -308,13 +271,13 @@ class Report {
     };
   }
 
-  /// Convert Report object ke Map untuk Firestore
-  Map<String, dynamic> toFirestore() {
+  /// Convert Report object ke Map untuk Appwrite
+  Map<String, dynamic> toAppwrite() {
     return {
       'title': title,
       'location': location,
-      'date': Timestamp.fromDate(date),
-      'status': status.toFirestore(),
+      'date': date.toIso8601String(),
+      'status': status.toDatabase(),
       'userId': userId,
       'userName': userName,
       'userEmail': userEmail,
@@ -322,24 +285,24 @@ class Report {
       'cleanerName': cleanerName,
       'verifiedBy': verifiedBy,
       'verifiedByName': verifiedByName,
-      'verifiedAt': verifiedAt != null ? Timestamp.fromDate(verifiedAt!) : null,
+      'verifiedAt': verifiedAt?.toIso8601String(),
       'verificationNotes': verificationNotes,
       'imageUrl': imageUrl,
       'completionImageUrl': completionImageUrl,
       'description': description,
       'isUrgent': isUrgent,
-      'assignedAt': assignedAt != null ? Timestamp.fromDate(assignedAt!) : null,
-      'startedAt': startedAt != null ? Timestamp.fromDate(startedAt!) : null,
-      'completedAt': completedAt != null
-          ? Timestamp.fromDate(completedAt!)
-          : null,
+      'assignedAt': assignedAt?.toIso8601String(),
+      'startedAt': startedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'departmentId': departmentId,
-      'deletedAt': deletedAt != null ? Timestamp.fromDate(deletedAt!) : null,  // 🆕
-      'deletedBy': deletedBy,                                                   // 🆕
+      'deletedAt': deletedAt?.toIso8601String(),
+      'deletedBy': deletedBy,
     };
   }
 
-  /// Copy with method untuk immutability
+  // Keep for compatibility
+  Map<String, dynamic> toFirestore() => toAppwrite();
+
   Report copyWith({
     String? id,
     String? title,
@@ -363,8 +326,8 @@ class Report {
     DateTime? startedAt,
     DateTime? completedAt,
     String? departmentId,
-    DateTime? deletedAt,              // 🆕
-    String? deletedBy,                // 🆕
+    DateTime? deletedAt,
+    String? deletedBy,
   }) {
     return Report(
       id: id ?? this.id,
@@ -389,18 +352,16 @@ class Report {
       startedAt: startedAt ?? this.startedAt,
       completedAt: completedAt ?? this.completedAt,
       departmentId: departmentId ?? this.departmentId,
-      deletedAt: deletedAt ?? this.deletedAt,                      // 🆕
-      deletedBy: deletedBy ?? this.deletedBy,                      // 🆕
+      deletedAt: deletedAt ?? this.deletedAt,
+      deletedBy: deletedBy ?? this.deletedBy,
     );
   }
 
-  /// Helper methods
   bool get isAssigned => cleanerId != null;
   bool get isVerified => status == ReportStatus.verified;
   bool get needsVerification => status == ReportStatus.completed;
-  bool get isDeleted => deletedAt != null;                        // 🆕 Helper untuk check soft delete
+  bool get isDeleted => deletedAt != null;
 
-  /// Durasi pengerjaan (jika ada)
   Duration? get workDuration {
     if (startedAt != null && completedAt != null) {
       return completedAt!.difference(startedAt!);
@@ -408,7 +369,6 @@ class Report {
     return null;
   }
 
-  /// Response time (dari dibuat hingga ditugaskan)
   Duration? get responseTime {
     if (assignedAt != null) {
       return assignedAt!.difference(date);

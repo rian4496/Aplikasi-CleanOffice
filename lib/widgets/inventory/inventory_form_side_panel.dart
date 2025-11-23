@@ -2,15 +2,16 @@
 // Side panel untuk form tambah/edit inventory (desktop mode)
 
 import 'package:flutter/material.dart';
+import '../../models/inventory_item.dart';
 import '../../screens/inventory/inventory_add_edit_screen.dart';
 
 /// Side panel untuk menampilkan form inventory di desktop
 class InventoryFormSidePanel extends StatelessWidget {
-  final String? itemId;
+  final InventoryItem? item;
 
   const InventoryFormSidePanel({
     super.key,
-    this.itemId,
+    this.item,
   });
 
   @override
@@ -34,7 +35,7 @@ class InventoryFormSidePanel extends StatelessWidget {
             topLeft: Radius.circular(16),
             bottomLeft: Radius.circular(16),
           ),
-          child: InventoryAddEditScreen(itemId: itemId),
+          child: InventoryAddEditScreen(item: item),
         ),
       ),
     );

@@ -1,4 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// lib/models/user_profile.dart
+// MIGRATED TO APPWRITE - No Firebase dependencies
+
 import 'user_role.dart';
 
 class UserProfile {
@@ -10,8 +12,8 @@ class UserProfile {
   final String role;
   final DateTime joinDate;
   final String? departmentId;
-  final String? employeeId;
-  final String status; // 'active', 'inactive'
+  final String? staffId;
+  final String status; // 'active', 'inactive', 'deleted'
   final String? location; // Lokasi kerja/ruangan
 
   UserProfile({
@@ -23,7 +25,7 @@ class UserProfile {
     required this.role,
     required this.joinDate,
     this.departmentId,
-    this.employeeId,
+    this.staffId,
     this.status = 'active',
     this.location,
   });
@@ -36,28 +38,70 @@ class UserProfile {
       'photoURL': photoURL,
       'phoneNumber': phoneNumber,
       'role': role,
-      'joinDate': joinDate,
+      'joinDate': joinDate.toIso8601String(),
       'departmentId': departmentId,
-      'employeeId': employeeId,
+      'staffId': staffId,
       'status': status,
       'location': location,
     };
   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
+    // Handle joinDate from Appwrite (String ISO8601)
+    DateTime parseJoinDate(dynamic value) {
+      if (value == null) return DateTime.now();
+      if (value is DateTime) return value;
+      if (value is String) return DateTime.tryParse(value) ?? DateTime.now();
+      return DateTime.now();
+    }
+
     return UserProfile(
-      uid: map['uid'] ?? '',
+      uid: map['uid'] ?? map['\$id'] ?? '',
       displayName: map['displayName'] ?? '',
       email: map['email'] ?? '',
       photoURL: map['photoURL'],
       phoneNumber: map['phoneNumber'],
       role: map['role'] ?? UserRole.employee,
-      joinDate: (map['joinDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      joinDate: parseJoinDate(map['joinDate']),
       departmentId: map['departmentId'],
-      employeeId: map['employeeId'],
+      staffId: map['staffId'],
       status: map['status'] ?? 'active',
       location: map['location'],
     );
+  }
+
+  /// Factory constructor for Appwrite document
+  factory UserProfile.fromAppwrite(Map<String, dynamic> data) {
+    return UserProfile(
+      uid: data['\$id'] as String? ?? data['uid'] as String? ?? '',
+      displayName: data['displayName'] as String? ?? data['name'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      photoURL: data['photoURL'] as String? ?? data['photoUrl'] as String?,
+      phoneNumber: data['phoneNumber'] as String? ?? data['phone'] as String?,
+      role: data['role'] as String? ?? UserRole.employee,
+      joinDate: DateTime.tryParse(data['\$createdAt'] as String? ?? '') ??
+          DateTime.tryParse(data['joinDate'] as String? ?? '') ??
+          DateTime.now(),
+      departmentId: data['departmentId'] as String?,
+      staffId: data['staffId'] as String?,
+      status: data['status'] as String? ?? 'active',
+      location: data['location'] as String?,
+    );
+  }
+
+  /// Convert to Appwrite document format
+  Map<String, dynamic> toAppwrite() {
+    return {
+      'displayName': displayName,
+      'email': email,
+      'photoURL': photoURL,
+      'phoneNumber': phoneNumber,
+      'role': role,
+      'departmentId': departmentId,
+      'staffId': staffId,
+      'status': status,
+      'location': location,
+    };
   }
 
   UserProfile copyWith({
@@ -65,7 +109,7 @@ class UserProfile {
     String? photoURL,
     String? phoneNumber,
     String? departmentId,
-    String? employeeId,
+    String? staffId,
     String? status,
     String? location,
   }) {
@@ -78,7 +122,7 @@ class UserProfile {
       role: role,
       joinDate: joinDate,
       departmentId: departmentId ?? this.departmentId,
-      employeeId: employeeId ?? this.employeeId,
+      staffId: staffId ?? this.staffId,
       status: status ?? this.status,
       location: location ?? this.location,
     );
@@ -88,7 +132,7 @@ class UserProfile {
   bool get isCleaner => role == UserRole.cleaner;
   bool get isEmployee => role == UserRole.employee;
 
-  static List<String> get allStatuses => ['active', 'inactive'];
+  static List<String> get allStatuses => ['active', 'inactive', 'deleted'];
 
   static String getStatusDisplayName(String status) {
     switch (status) {
@@ -96,6 +140,8 @@ class UserProfile {
         return 'Aktif';
       case 'inactive':
         return 'Tidak Aktif';
+      case 'deleted':
+        return 'Dihapus';
       default:
         return status;
     }

@@ -1,12 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
-import '../../services/firestore_service.dart';
+import '../../services/appwrite_database_service.dart';
 
 // ==================== SERVICE PROVIDER ====================
 
-/// Provider untuk FirestoreService singleton instance
-final firestoreServiceProvider = Provider<FirestoreService>((ref) {
-  return FirestoreService();
+/// Provider untuk AppwriteDatabaseService singleton instance
+final appwriteDatabaseServiceProvider = Provider<AppwriteDatabaseService>((ref) {
+  return AppwriteDatabaseService();
 });
 
 // ==================== STREAM PROVIDERS ====================
@@ -20,7 +20,7 @@ final allReportsProvider = StreamProvider.family<List<Report>, String?>((
   // Keep provider alive for caching
   ref.keepAlive();
 
-  final service = ref.watch(firestoreServiceProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
   return service.getAllReports(departmentId: departmentId);
 });
 
@@ -29,7 +29,7 @@ final userReportsProvider = StreamProvider.autoDispose.family<List<Report>, Stri
   ref,
   userId,
 ) {
-  final service = ref.watch(firestoreServiceProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
   return service.getReportsByUser(userId);
 });
 
@@ -38,14 +38,14 @@ final cleanerReportsProvider = StreamProvider.autoDispose.family<List<Report>, S
   ref,
   cleanerId,
 ) {
-  final service = ref.watch(firestoreServiceProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
   return service.getReportsByCleaner(cleanerId);
 });
 
 /// Provider untuk stream laporan berdasarkan status
 final reportsByStatusProvider =
     StreamProvider.autoDispose.family<List<Report>, ReportStatusQuery>((ref, query) {
-      final service = ref.watch(firestoreServiceProvider);
+      final service = ref.watch(appwriteDatabaseServiceProvider);
       return service.getReportsByStatus(
         query.status,
         departmentId: query.departmentId,
@@ -74,14 +74,14 @@ class ReportStatusQuery {
 /// Provider untuk summary report berdasarkan status
 final reportSummaryProvider =
     StreamProvider.autoDispose.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
-      final service = ref.watch(firestoreServiceProvider);
+      final service = ref.watch(appwriteDatabaseServiceProvider);
       return service.getReportSummary(departmentId: departmentId);
     });
 
 /// Provider untuk laporan yang selesai hari ini
 final todayCompletedReportsProvider =
     StreamProvider.autoDispose.family<List<Report>, String?>((ref, departmentId) {
-      final service = ref.watch(firestoreServiceProvider);
+      final service = ref.watch(appwriteDatabaseServiceProvider);
       return service.getTodayCompletedReports(departmentId: departmentId);
     });
 
@@ -92,14 +92,14 @@ final reportByIdProvider = FutureProvider.family<Report?, String>((
   ref,
   reportId,
 ) async {
-  final service = ref.watch(firestoreServiceProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
   return service.getReportById(reportId);
 });
 
 /// Provider untuk average completion time
 final averageCompletionTimeProvider = FutureProvider.family<Duration?, String?>(
   (ref, departmentId) async {
-    final service = ref.watch(firestoreServiceProvider);
+    final service = ref.watch(appwriteDatabaseServiceProvider);
     return service.getAverageCompletionTime(departmentId: departmentId);
   },
 );
@@ -107,7 +107,7 @@ final averageCompletionTimeProvider = FutureProvider.family<Duration?, String?>(
 /// Provider untuk cleaner statistics
 final cleanerStatsProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, cleanerId) async {
-      final service = ref.watch(firestoreServiceProvider);
+      final service = ref.watch(appwriteDatabaseServiceProvider);
       return service.getCleanerStats(cleanerId);
     });
 
@@ -115,30 +115,71 @@ final cleanerStatsProvider =
 
 /// State class untuk filter dan sorting laporan
 class ReportFilterState {
-  final ReportStatus? statusFilter;
+  final String? searchQuery;
+  final List<ReportStatus>? statusFilter; // Changed to List for multiple selection
+  final List<String>? locationFilter;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final bool showUrgentOnly;
   final String? departmentFilter;
+  final String? assignedToFilter;
   final ReportSortBy sortBy;
 
   const ReportFilterState({
+    this.searchQuery,
     this.statusFilter,
+    this.locationFilter,
+    this.startDate,
+    this.endDate,
     this.showUrgentOnly = false,
     this.departmentFilter,
+    this.assignedToFilter,
     this.sortBy = ReportSortBy.newest,
   });
 
   ReportFilterState copyWith({
-    ReportStatus? statusFilter,
+    String? searchQuery,
+    List<ReportStatus>? statusFilter,
+    List<String>? locationFilter,
+    DateTime? startDate,
+    DateTime? endDate,
     bool? showUrgentOnly,
     String? departmentFilter,
+    String? assignedToFilter,
     ReportSortBy? sortBy,
   }) {
     return ReportFilterState(
+      searchQuery: searchQuery ?? this.searchQuery,
       statusFilter: statusFilter ?? this.statusFilter,
+      locationFilter: locationFilter ?? this.locationFilter,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
       showUrgentOnly: showUrgentOnly ?? this.showUrgentOnly,
       departmentFilter: departmentFilter ?? this.departmentFilter,
+      assignedToFilter: assignedToFilter ?? this.assignedToFilter,
       sortBy: sortBy ?? this.sortBy,
     );
+  }
+  
+  bool get isEmpty => 
+      searchQuery == null && 
+      (statusFilter == null || statusFilter!.isEmpty) &&
+      (locationFilter == null || locationFilter!.isEmpty) &&
+      startDate == null &&
+      endDate == null &&
+      !showUrgentOnly &&
+      assignedToFilter == null;
+      
+  int get activeFilterCount {
+    int count = 0;
+    if (searchQuery != null && searchQuery!.isNotEmpty) count++;
+    if (statusFilter != null && statusFilter!.isNotEmpty) count++;
+    if (locationFilter != null && locationFilter!.isNotEmpty) count++;
+    if (startDate != null) count++;
+    if (endDate != null) count++;
+    if (showUrgentOnly) count++;
+    if (assignedToFilter != null) count++;
+    return count;
   }
 }
 
@@ -151,8 +192,20 @@ class ReportFilterNotifier extends Notifier<ReportFilterState> {
     return const ReportFilterState();
   }
 
-  void setStatusFilter(ReportStatus? status) {
-    state = state.copyWith(statusFilter: status);
+  void setSearchQuery(String query) {
+    state = state.copyWith(searchQuery: query);
+  }
+
+  void setStatusFilter(List<ReportStatus>? statuses) {
+    state = state.copyWith(statusFilter: statuses);
+  }
+  
+  void setLocationFilter(List<String>? locations) {
+    state = state.copyWith(locationFilter: locations);
+  }
+  
+  void setDateRange(DateTime? start, DateTime? end) {
+    state = state.copyWith(startDate: start, endDate: end);
   }
 
   void toggleUrgentFilter() {
@@ -161,6 +214,10 @@ class ReportFilterNotifier extends Notifier<ReportFilterState> {
 
   void setDepartmentFilter(String? departmentId) {
     state = state.copyWith(departmentFilter: departmentId);
+  }
+  
+  void setAssignedToFilter(String? cleanerId) {
+    state = state.copyWith(assignedToFilter: cleanerId);
   }
 
   void setSortBy(ReportSortBy sortBy) {
@@ -187,16 +244,55 @@ final filteredReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
   return allReportsAsync.whenData((reports) {
     var filtered = reports;
 
-    // Apply status filter
-    if (filterState.statusFilter != null) {
-      filtered = filtered
-          .where((r) => r.status == filterState.statusFilter)
-          .toList();
+    // 1. Search Query
+    if (filterState.searchQuery != null && filterState.searchQuery!.isNotEmpty) {
+      final query = filterState.searchQuery!.toLowerCase();
+      filtered = filtered.where((r) =>
+        r.location.toLowerCase().contains(query) ||
+        (r.description?.toLowerCase().contains(query) ?? false) ||
+        r.userName.toLowerCase().contains(query)
+      ).toList();
     }
 
-    // Apply urgent filter
+    // 2. Status Filter
+    if (filterState.statusFilter != null && filterState.statusFilter!.isNotEmpty) {
+      filtered = filtered
+          .where((r) => filterState.statusFilter!.contains(r.status))
+          .toList();
+    }
+    
+    // 3. Location Filter
+    if (filterState.locationFilter != null && filterState.locationFilter!.isNotEmpty) {
+      filtered = filtered
+          .where((r) => filterState.locationFilter!.contains(r.location))
+          .toList();
+    }
+    
+    // 4. Date Range
+    if (filterState.startDate != null) {
+      filtered = filtered.where((r) => 
+        r.date.isAfter(filterState.startDate!)
+      ).toList();
+    }
+    
+    if (filterState.endDate != null) {
+      // Add 1 day to include the end date fully
+      final end = filterState.endDate!.add(const Duration(days: 1));
+      filtered = filtered.where((r) => 
+        r.date.isBefore(end)
+      ).toList();
+    }
+
+    // 5. Urgent Filter
     if (filterState.showUrgentOnly) {
       filtered = filtered.where((r) => r.isUrgent).toList();
+    }
+    
+    // 6. Assigned To Filter
+    if (filterState.assignedToFilter != null) {
+      // Note: This assumes we have assignedToId in Report, or we filter by cleanerName if ID not available
+      // Checking Report model... assuming cleanerId exists or similar
+      filtered = filtered.where((r) => r.cleanerId == filterState.assignedToFilter).toList();
     }
 
     // Apply sorting

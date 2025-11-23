@@ -21,7 +21,17 @@
       "Bash(nc:*)",
       "Bash(del libscreensadminall_reports_management_screen_UPDATED.dart)",
       "Bash(timeout 30 flutter analyze:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "Bash(git reflog:*)",
+      "Bash(git log:*)",
+      "Bash(git fetch:*)",
+      "Bash(findstr:*)",
+      "Bash(powershell -Command:*)",
+      "Bash(flutter pub run build_runner watch:*)",
+      "Bash(timeout 60 flutter analyze:*)",
+      "Bash(timeout 120 flutter analyze:*)",
+      "Bash(del /q \"lib\\screens\\admin\\admin_dashboard_screen_backup_old.dart\" \"lib\\screens\\admin\\admin_dashboard_screen_hooks.dart\" \"lib\\screens\\admin\\bulk_receipt_screen.dart\" \"lib\\screens\\admin\\bulk_receipt_screen_hooks.dart\")",
+      "Bash(timeout 90 flutter analyze:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:logging/logging.dart';
-import '../../models/user_profile.dart';
+import 'package:appwrite/appwrite.dart';
+import '../../services/appwrite_auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -17,7 +15,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
-  final _logger = Logger('SignUpScreen');
+  final _authService = AppwriteAuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -32,46 +30,17 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   String _determineRoleFromEmail(String email) {
-    if (email.contains('admin') || email.contains('admin')) {
+    if (email.contains('admin')) {
       return 'admin';
     } else if (email.contains('cleaner') || email.contains('petugas')) {
       return 'cleaner';
-    } else {
-      return 'employee';
     }
-  }
-
-  Future<void> _createUserProfile(User user) async {
-    try {
-      _logger.info('Creating user profile in Firestore for ${user.uid}');
-
-      final firestore = FirebaseFirestore.instance;
-      final role = _determineRoleFromEmail(user.email ?? '');
-
-      final profile = UserProfile(
-        uid: user.uid,
-        displayName: _nameController.text.trim(),
-        email: user.email ?? '',
-        role: role,
-        joinDate: DateTime.now(),
-        status: 'active',
-      );
-
-      await firestore.collection('users').doc(user.uid).set(profile.toMap());
-
-      _logger.info('User profile created successfully with role: $role');
-    } catch (e) {
-      _logger.severe('Error creating user profile: $e');
-      rethrow;
-    }
+    return 'employee';
   }
 
   Future<void> _register() async {
     if (_isLoading) return;
-
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (_passwordController.text != _confirmPasswordController.text) {
       if (!mounted) return;
@@ -85,32 +54,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
-      _logger.info(
-        'Attempting to create user account for: ${_emailController.text}',
+      final email = _emailController.text.trim();
+      final role = _determineRoleFromEmail(email);
+
+      await _authService.signUpWithEmailAndPassword(
+        email: email,
+        password: _passwordController.text.trim(),
+        name: _nameController.text.trim(),
+        role: role,
       );
-
-      final userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-
-      final user = userCredential.user;
-      if (user == null) {
-        throw Exception('Failed to create user - user is null');
-      }
-
-      _logger.info('Firebase Auth account created: ${user.uid}');
-
-      await user.updateDisplayName(_nameController.text.trim());
-      _logger.info('Display name updated');
-
-      await _createUserProfile(user);
 
       if (!mounted) return;
 
@@ -125,78 +80,46 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
         ),
       );
 
       if (!mounted) return;
       Navigator.pop(context);
-    } on FirebaseAuthException catch (e) {
-      _logger.warning('Registration failed: ${e.code}', e);
-
+    } on AppwriteException catch (e) {
       if (!mounted) return;
-
-      String errorMessage;
-      switch (e.code) {
-        case 'email-already-in-use':
-          errorMessage =
-              'Email sudah terdaftar. Silakan login atau gunakan email lain.';
-          break;
-        case 'invalid-email':
-          errorMessage = 'Format email tidak valid';
-          break;
-        case 'operation-not-allowed':
-          errorMessage = 'Registrasi dengan email dan password tidak diizinkan';
-          break;
-        case 'weak-password':
-          errorMessage = 'Password terlalu lemah. Gunakan minimal 6 karakter';
-          break;
-        case 'network-request-failed':
-          errorMessage = 'Koneksi internet bermasalah. Periksa koneksi Anda';
-          break;
-        default:
-          errorMessage = e.message ?? 'Terjadi kesalahan saat registrasi';
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 4),
-        ),
-      );
+      _showError(_getErrorMessage(e));
     } catch (e) {
-      _logger.severe('Unexpected error during registration', e);
-
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Terjadi kesalahan yang tidak terduga',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(e.toString(), style: const TextStyle(fontSize: 12)),
-            ],
-          ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 5),
-        ),
-      );
+      _showError('Terjadi kesalahan: ${e.toString()}');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _getErrorMessage(AppwriteException e) {
+    switch (e.code) {
+      case 409:
+        return 'Email sudah terdaftar. Silakan login.';
+      case 400:
+        if (e.message?.contains('password') ?? false) {
+          return 'Password terlalu lemah (minimal 8 karakter)';
+        }
+        return 'Format email tidak valid';
+      case 429:
+        return 'Terlalu banyak percobaan. Tunggu sebentar';
+      default:
+        return e.message ?? 'Terjadi kesalahan saat registrasi';
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
   }
 
   @override

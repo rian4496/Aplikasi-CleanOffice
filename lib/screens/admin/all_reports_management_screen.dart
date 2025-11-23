@@ -55,6 +55,20 @@ class _AllReportsManagementScreenState
 
       // ==================== BODY ====================
       body: isDesktop ? _buildDesktopLayout(allReportsAsync) : _buildMobileLayout(allReportsAsync),
+      
+      // ====================FAB (Mobile Only) ====================
+      floatingActionButton: !isDesktop
+          ? FloatingActionButton(
+              onPressed: () {
+                // TODO: Navigate to create report screen
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Fitur buat laporan segera hadir')),
+                );
+              },
+              backgroundColor: const Color(0xFF5D5FEF),
+              child: const Icon(Icons.add, color: Colors.white),
+            )
+          : null,
     );
   }
 
@@ -63,81 +77,35 @@ class _AllReportsManagementScreenState
     return AppBar(
       title: const Text(
         'Kelola Laporan',
-        style: TextStyle(color: Colors.white),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      backgroundColor: AppTheme.primary,
+      centerTitle: false,
+      backgroundColor: Colors.transparent,
       foregroundColor: Colors.white,
       elevation: 0,
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF7B5AFF), Color(0xFF5D5FEF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.pop(context),
+      ),
       actions: [
-        // Filter button
-        PopupMenuButton<String>(
-          icon: const Icon(Icons.filter_list, color: Colors.white),
-          tooltip: 'Filter',
-          onSelected: (value) {
-            setState(() {
-              if (value == 'urgent') {
-                _showUrgentOnly = !_showUrgentOnly;
-              } else if (value == 'all') {
-                _filterStatus = null;
-              } else {
-                _filterStatus = ReportStatus.values.firstWhere(
-                  (s) => s.toFirestore() == value,
-                );
-              }
-            });
+        IconButton(
+          icon: const Icon(Icons.search, color: Colors.white),
+          onPressed: () {
+            // Focus on search bar
           },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'all',
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.list,
-                    size: 20,
-                    color: _filterStatus == null
-                        ? AppTheme.primary
-                        : Colors.grey,
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('Semua Status'),
-                ],
-              ),
-            ),
-            const PopupMenuDivider(),
-            ...ReportStatus.values.map((status) {
-              return PopupMenuItem(
-                value: status.toFirestore(),
-                child: Row(
-                  children: [
-                    Icon(
-                      status.icon,
-                      size: 20,
-                      color: _filterStatus == status
-                          ? AppTheme.primary
-                          : status.color,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(status.displayName),
-                  ],
-                ),
-              );
-            }),
-            const PopupMenuDivider(),
-            PopupMenuItem(
-              value: 'urgent',
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.warning,
-                    size: 20,
-                    color: _showUrgentOnly ? AppTheme.error : Colors.grey,
-                  ),
-                  const SizedBox(width: 12),
-                  const Text('Urgent Saja'),
-                ],
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -288,9 +256,8 @@ class _AllReportsManagementScreenState
         // Search bar
         _buildSearchBar(),
 
-        // Filter chips
-        if (_filterStatus != null || _showUrgentOnly)
-          _buildFilterChips(),
+        // Filter tabs (like in screenshot)
+        _buildFilterTabs(),
 
         // Reports list
         Expanded(
@@ -511,44 +478,166 @@ class _AllReportsManagementScreenState
   }
 
   // ==================== SEARCH BAR ====================
-
   Widget _buildSearchBar() {
-    return Container(
+    return Padding(
       padding: const EdgeInsets.all(16),
-      child: TextField(
-        controller: _searchController,
-        decoration: InputDecoration(
-          hintText: 'Cari lokasi, judul, atau deskripsi...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: _searchQuery.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    setState(() {
-                      _searchController.clear();
-                      _searchQuery = '';
-                    });
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
+      child: Row(
+        children: [
+          // Search box
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: Colors.grey[400], size: 22),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        hintText: 'Cari laporan...',
+                        border: InputBorder.none,
+                        hintStyle: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 14,
+                        ),
+                      ),
+                      onChanged: (value) {
+                        setState(() => _searchQuery = value);
+                      },
+                    ),
+                  ),
+                  if (_searchQuery.isNotEmpty)
+                    IconButton(
+                      icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                      onPressed: () {
+                        setState(() {
+                          _searchController.clear();
+                          _searchQuery = '';
+                        });
+                      },
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                ],
+              ),
+            ),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[300]!),
+          const SizedBox(width: 12),
+          
+          // Sort & Filter button
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey[300]!),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  // TODO: Show filter dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Filter dialog coming soon'),
+                      duration: Duration(seconds: 1),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.tune, color: Colors.grey[700], size: 20),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Sort & Filter',
+                        style: TextStyle(
+                          color: Colors.grey[700],
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppTheme.primary, width: 2),
+        ],
+      ),
+    );
+  }
+
+
+  // ==================== FILTER TABS ====================
+  Widget _buildFilterTabs() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          // Semua Laporan tab (active)
+          Expanded(
+            child: ElevatedButton(
+              onPressed: () {
+                setState(() => _filterStatus = null);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _filterStatus == null 
+                    ? const Color(0xFF5D5FEF) 
+                    : Colors.grey[200],
+                foregroundColor: _filterStatus == null 
+                    ? Colors.white 
+                    : Colors.grey[700],
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                'Semua Laporan',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-        ),
-        onChanged: (value) {
-          setState(() => _searchQuery = value);
-        },
+          const SizedBox(width: 12),
+          // Belum ada laporan tab (inactive)
+          Expanded(
+            child: OutlinedButton(
+              onPressed: () {
+                // TODO: Filter for empty reports
+              },
+              style: OutlinedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.grey[700],
+                side: BorderSide(color: Colors.grey[300]!),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+              child: const Text(
+                'Belum ada laporan',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

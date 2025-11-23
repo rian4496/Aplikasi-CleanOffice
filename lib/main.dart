@@ -1,35 +1,37 @@
-// lib/main.dart - UPDATED: Production Firebase Mode + Crashlytics
+// lib/main.dart
+// Clean Office Management System - Main Entry Point
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'firebase_options.dart';
+
+// Core
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'core/services/appwrite_client.dart';
 
 // Auth Screens
 import 'screens/auth/login_screen.dart';
-import 'screens/auth/sign_up_screen.dart'; 
+import 'screens/auth/sign_up_screen.dart';
 
 // Employee Screens
 import 'screens/employee/employee_home_screen.dart';
 import 'screens/employee/create_report_screen.dart';
 import 'screens/employee/all_reports_screen.dart';
+import 'screens/employee/create_request_screen.dart';
 
 // Cleaner Screens
 import 'screens/cleaner/cleaner_home_screen.dart';
 
-// Admin Screens
-import 'screens/admin/admin_dashboard_screen.dart';
-import 'screens/admin/analytics_screen.dart';
+// Admin Screens - NEW
+import 'screens/admin/dashboard/admin_dashboard_unified_screen.dart';
+import 'screens/admin/analytics/analytics_screen.dart';
+import 'screens/admin/reports/reports_list_screen.dart';
+import 'screens/admin/verification/verification_screen.dart';
+import 'screens/admin/cleaners/cleaners_management_screen.dart';
 
 // Shared Screens
 import 'screens/shared/profile_screen.dart';
@@ -37,110 +39,30 @@ import 'screens/shared/settings_screen.dart';
 import 'screens/shared/edit_profile_screen.dart';
 import 'screens/shared/change_password_screen.dart';
 import 'screens/notification_screen.dart';
-import 'screens/employee/create_request_screen.dart';
 
 // Inventory Screens
 import 'screens/inventory/inventory_list_screen.dart';
 
 void main() async {
-  // Run app with error handling zone
   runZonedGuarded(() async {
-    // Ensure Flutter binding is initialized
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
-    // Setup Crashlytics (only on mobile platforms, not web)
-    if (!kIsWeb) {
-      // Pass all uncaught "fatal" errors from the framework to Crashlytics
-      FlutterError.onError = (errorDetails) {
-        FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-      };
-      
-      // Pass all uncaught asynchronous errors to Crashlytics
-      PlatformDispatcher.instance.onError = (error, stack) {
-        FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-        return true;
-      };
-      
-      // Toggle crash collection based on user consent (optional)
-      if (kDebugMode) {
-        // In debug mode, disable Crashlytics to avoid noise
-        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(false);
-      } else {
-        // In release mode, enable Crashlytics
-        await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
-      }
-    }
-    
-    // In debug mode, also print errors to console
-    if (kDebugMode) {
-      FlutterError.onError = (errorDetails) {
-        FlutterError.presentError(errorDetails);
-        // Also send to Crashlytics if not web
-        if (!kIsWeb) {
-          FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
-        }
-      };
-    }
-
-  // ==================== FIREBASE EMULATOR CONFIG ====================
-  // 
-  // OPTION A: Use PRODUCTION Firebase (Current Setting)
-  // - For testing with real Firebase project
-  // - Upload foto will work
-  // - Data saved to production Firestore
-  //
-  // OPTION B: Use LOCAL Emulator (Uncomment code below)
-  // - For local development
-  // - Need to run: firebase emulators:start
-  // - Data saved to local emulator only
-  //
-  // ==================================================================
-
-  // 🔥 EMULATOR MODE: DISABLED (Using Production Firebase)
- // debugPrint('📱 Using PRODUCTION Firebase');
-  
-  if (kDebugMode) {
+    // Initialize Appwrite
     try {
-      // Detect platform - Android emulator uses 10.0.2.2
-      // Web/iOS/Desktop use 127.0.0.1
-      final emulatorHost = defaultTargetPlatform == TargetPlatform.android 
-          ? '10.0.2.2'  // Android emulator
-          : '127.0.0.1'; // Web, iOS, Desktop
-      
-      // Connect to Firebase Emulators
-      await FirebaseAuth.instance.useAuthEmulator(emulatorHost, 9099);
-      FirebaseFirestore.instance.useFirestoreEmulator(emulatorHost, 8080);
-      await FirebaseStorage.instance.useStorageEmulator(emulatorHost, 9199);
-      
-      debugPrint('✅ Connected to Firebase Emulators at $emulatorHost');
+      await AppwriteClient().initialize();
+      debugPrint('✅ Appwrite initialized successfully');
     } catch (e) {
-      debugPrint('⚠️ Failed to connect to emulators: $e');
+      debugPrint('⚠️ Appwrite initialization failed: $e');
+      // Continue app execution even if Appwrite fails (for development)
     }
-  }
 
-
-    // Initialize date formatting for Indonesian locale
+    // Initialize Indonesian locale
     await initializeDateFormatting('id_ID', null);
 
-    // Run app with ProviderScope for Riverpod
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
+    runApp(const ProviderScope(child: MyApp()));
   }, (error, stack) {
-    // Catch errors outside Flutter (only on mobile, not web)
-    if (!kIsWeb) {
-      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    }
-    // In debug, also print to console
     if (kDebugMode) {
-      debugPrint('Uncaught error: $error');
+      debugPrint('❌ Unhandled error: $error');
       debugPrint('Stack trace: $stack');
     }
   });
@@ -155,8 +77,8 @@ class MyApp extends StatelessWidget {
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-
-      // Localization delegates
+      
+      // Localization
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
@@ -170,85 +92,74 @@ class MyApp extends StatelessWidget {
 
       // Initial route
       initialRoute: AppConstants.loginRoute,
-      
+
       // Routes
       routes: {
         // ==================== ROOT ====================
-        '/': (context) => const LoginScreen(), // Add home/root route
+        '/': (context) => const LoginScreen(),
 
         // ==================== AUTH ====================
         AppConstants.loginRoute: (context) => const LoginScreen(),
         '/register': (context) => const SignUpScreen(),
         '/signup': (context) => const SignUpScreen(),
-        
+
         // ==================== HOME SCREENS ====================
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),
         AppConstants.homeCleanerRoute: (context) => const CleanerHomeScreen(),
-        AppConstants.homeAdminRoute: (context) => const AdminDashboardScreen(),
         
+        // ADMIN - NEW UNIFIED SCREEN (Mobile + Desktop Responsive)
+        AppConstants.homeAdminRoute: (context) => const AdminDashboardUnifiedScreen(),
+        '/admin/dashboard': (context) => const AdminDashboardUnifiedScreen(),
+
+        // ==================== ADMIN SCREENS (NEW) ====================
+        '/admin/reports': (context) => const ReportsListScreen(),
+        '/admin/verification': (context) => const VerificationScreen(),
+        '/admin/analytics': (context) => const AnalyticsScreen(),
+        '/admin/cleaners': (context) => const CleanersManagementScreen(),
+        
+        // Analytics (backward compatibility)
+        '/analytics': (context) => const AnalyticsScreen(),
+
         // ==================== EMPLOYEE ROUTES ====================
         '/create_report': (context) => const CreateReportScreen(),
         '/all_reports': (context) => const AllReportsScreen(),
-        '/request_history': (context) => const Scaffold(
-          body: Center(child: Text('Request History - Coming Soon')),
-        ),
-        
-        // ==================== CLEANER ROUTES ====================
-        '/cleaner/pending_reports': (context) => const Scaffold(
-          body: Center(child: Text('Pending Reports - Use direct import')),
-        ),
-        '/cleaner/available_requests': (context) => const Scaffold(
-          body: Center(child: Text('Available Requests - Use direct import')),
-        ),
-        '/cleaner/my_tasks': (context) => const Scaffold(
-          body: Center(child: Text('My Tasks - Use direct import')),
-        ),
-        
-        // ==================== ADMIN ROUTES ====================
-        '/admin/analytics': (context) => const AnalyticsScreen(),
-        '/analytics': (context) => const AnalyticsScreen(),
-        '/admin/reports_management': (context) => const Scaffold(
-          body: Center(child: Text('Reports Management - Use direct import')),
-        ),
-        '/admin/requests_management': (context) => const Scaffold(
-          body: Center(child: Text('Requests Management - Use direct import')),
-        ),
-        '/admin/cleaner_management': (context) => const Scaffold(
-          body: Center(child: Text('Cleaner Management - Use direct import')),
-        ),
-        '/admin/verification_queue': (context) => const Scaffold(
-          body: Center(child: Text('Verification Queue - Use direct import')),
-        ),
-        
+        '/create_request': (context) => const CreateRequestScreen(),
+
         // ==================== SHARED ROUTES ====================
         '/profile': (context) => const ProfileScreen(),
         '/settings': (context) => const SettingsScreen(),
         '/edit_profile': (context) => const EditProfileScreen(),
         '/change_password': (context) => const ChangePasswordScreen(),
         '/notifications': (context) => const NotificationScreen(),
-        '/create_request': (context) => const CreateRequestScreen(),
-        
+
         // ==================== INVENTORY ROUTES ====================
         '/inventory': (context) => const InventoryListScreen(),
         '/inventory/list': (context) => const InventoryListScreen(),
-        '/inventory_list': (context) => const InventoryListScreen(),
       },
-      
-      // Handle unknown routes - redirect to login
+
+      // Handle unknown routes
       onUnknownRoute: (settings) {
         debugPrint('⚠️ Unknown route: ${settings.name}');
         return MaterialPageRoute(
           builder: (context) => Scaffold(
-            appBar: AppBar(title: const Text('Route Not Found')),
+            appBar: AppBar(
+              title: const Text('Halaman Tidak Ditemukan'),
+              backgroundColor: Colors.red,
+            ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Route "${settings.name}" tidak ditemukan',
                     style: const TextStyle(fontSize: 16),
+                    textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(

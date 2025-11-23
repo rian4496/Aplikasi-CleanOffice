@@ -1,4 +1,5 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// lib/models/department.dart
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
 class Department {
   final String id;
@@ -19,16 +20,27 @@ class Department {
     this.updatedAt,
   });
 
+  // Helper to parse dates from various formats
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'name': name,
       'description': description,
       'supervisorId': supervisorId,
       'locations': locations,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
+
+  /// Convert to Appwrite document format
+  Map<String, dynamic> toAppwrite() => toMap();
 
   factory Department.fromMap(String id, Map<String, dynamic> map) {
     return Department(
@@ -37,8 +49,21 @@ class Department {
       description: map['description'] ?? '',
       supervisorId: map['supervisorId'] ?? '',
       locations: List<String>.from(map['locations'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(map['updatedAt']),
+    );
+  }
+
+  /// Factory from Appwrite document
+  factory Department.fromAppwrite(Map<String, dynamic> data) {
+    return Department(
+      id: data['\$id'] ?? data['id'] ?? '',
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      supervisorId: data['supervisorId'] ?? '',
+      locations: List<String>.from(data['locations'] ?? []),
+      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(data['\$updatedAt']) ?? _parseDate(data['updatedAt']),
     );
   }
 

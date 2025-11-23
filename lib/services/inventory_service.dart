@@ -1,113 +1,82 @@
 // lib/services/inventory_service.dart
-// Inventory management service
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+// Inventory management service - Using Appwrite
 
 import '../models/inventory_item.dart';
 import '../models/stock_history.dart';
+import '../services/appwrite_database_service.dart';
 
 class InventoryService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final AppwriteDatabaseService _dbService = AppwriteDatabaseService();
 
   // ==================== INVENTORY ITEMS ====================
 
   /// Stream all inventory items
   Stream<List<InventoryItem>> streamAllItems() {
-    return _firestore
-        .collection('inventory')
-        .orderBy('name')
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => InventoryItem.fromMap(doc.id, doc.data()))
-            .toList());
+    return _dbService.getAllInventoryItems();
   }
 
   /// Stream low stock items
   Stream<List<InventoryItem>> streamLowStockItems() {
-    return streamAllItems().map((items) =>
-        items.where((item) => item.status == StockStatus.lowStock || 
-                             item.status == StockStatus.outOfStock).toList());
+    return _dbService.getLowStockItems();
   }
 
   /// Add new item
   Future<void> addItem(InventoryItem item) async {
-    await _firestore.collection('inventory').doc(item.id).set(item.toMap());
+    await _dbService.createInventoryItem(item);
   }
 
   /// Update item
   Future<void> updateItem(String itemId, Map<String, dynamic> updates) async {
     updates['updatedAt'] = DateTime.now().toIso8601String();
-    await _firestore.collection('inventory').doc(itemId).update(updates);
+    await _dbService.updateInventoryItem(itemId, updates);
   }
 
   /// Delete item
   Future<void> deleteItem(String itemId) async {
-    await _firestore.collection('inventory').doc(itemId).delete();
+    await _dbService.softDeleteInventoryItem(itemId);
   }
 
   /// Update stock
   Future<void> updateStock(String itemId, int newStock) async {
-    await updateItem(itemId, {'currentStock': newStock});
+    await _dbService.updateInventoryStock(itemId, newStock);
   }
 
   // ==================== STOCK REQUESTS ====================
 
   /// Stream all pending requests
   Stream<List<StockRequest>> streamPendingRequests() {
-    return _firestore
-        .collection('stockRequests')
-        .where('status', isEqualTo: 'pending')
-        .orderBy('requestedAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StockRequest.fromMap(doc.id, doc.data()))
-            .toList());
+    return _dbService.getPendingStockRequests();
   }
 
   /// Stream user's requests
   Stream<List<StockRequest>> streamUserRequests(String userId) {
-    return _firestore
-        .collection('stockRequests')
-        .where('requesterId', isEqualTo: userId)
-        .orderBy('requestedAt', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StockRequest.fromMap(doc.id, doc.data()))
-            .toList());
+    return _dbService.getStockRequestsByUser(userId);
   }
 
   /// Create request
   Future<void> createRequest(StockRequest request) async {
-    await _firestore.collection('stockRequests').doc(request.id).set(request.toMap());
+    await _dbService.createStockRequest(request);
   }
 
   /// Approve request
   Future<void> approveRequest(String requestId, String approvedBy, String approvedByName) async {
-    await _firestore.collection('stockRequests').doc(requestId).update({
-      'status': 'approved',
-      'approvedAt': DateTime.now().toIso8601String(),
-      'approvedBy': approvedBy,
-      'approvedByName': approvedByName,
-    });
+    await _dbService.approveStockRequest(requestId, approvedBy, approvedByName);
   }
 
   /// Reject request
   Future<void> rejectRequest(String requestId, String reason) async {
-    await _firestore.collection('stockRequests').doc(requestId).update({
-      'status': 'rejected',
-      'rejectionReason': reason,
-    });
+    await _dbService.rejectStockRequest(requestId, 'system', 'System', reason);
   }
 
   // ==================== ENHANCED STOCK OPERATIONS WITH HISTORY ====================
 
   /// Get single item by ID
   Future<InventoryItem> getItemById(String itemId) async {
-    final doc = await _firestore.collection('inventory').doc(itemId).get();
-    if (!doc.exists) {
+    final item = await _dbService.getInventoryItemById(itemId);
+    if (item == null) {
       throw Exception('Item not found');
     }
-    return InventoryItem.fromMap(doc.id, doc.data()!);
+    return item;
   }
 
   /// Add stock with history logging
@@ -126,19 +95,8 @@ class InventoryService {
     // Update stock
     await updateStock(itemId, newStock);
 
-    // Log to history
-    await _logStockHistory(
-      itemId: itemId,
-      itemName: item.name,
-      action: StockAction.add,
-      quantity: quantity,
-      previousStock: item.currentStock,
-      newStock: newStock,
-      performedBy: performedBy,
-      performedByName: performedByName,
-      notes: notes,
-      referenceId: referenceId,
-    );
+    // Log to history (TODO: implement stock history in Appwrite)
+    // For now, just update the stock
   }
 
   /// Reduce stock with history logging
@@ -165,19 +123,8 @@ class InventoryService {
     // Update stock
     await updateStock(itemId, newStock);
 
-    // Log to history
-    await _logStockHistory(
-      itemId: itemId,
-      itemName: item.name,
-      action: StockAction.reduce,
-      quantity: quantity,
-      previousStock: item.currentStock,
-      newStock: newStock,
-      performedBy: performedBy,
-      performedByName: performedByName,
-      notes: notes,
-      referenceId: referenceId,
-    );
+    // Log to history (TODO: implement stock history in Appwrite)
+    // For now, just update the stock
   }
 
   /// Fulfill approved request and reduce stock
@@ -186,17 +133,12 @@ class InventoryService {
     required String fulfilledBy,
     required String fulfilledByName,
   }) async {
-    // Get request
-    final requestDoc = await _firestore
-        .collection('stockRequests')
-        .doc(requestId)
-        .get();
-
-    if (!requestDoc.exists) {
-      throw Exception('Request not found');
-    }
-
-    final request = StockRequest.fromMap(requestDoc.id, requestDoc.data()!);
+    // Get all stock requests and find the one we need
+    final requests = await _dbService.getAllStockRequests().first;
+    final request = requests.firstWhere(
+      (r) => r.id == requestId,
+      orElse: () => throw Exception('Request not found'),
+    );
 
     // Validate request is approved
     if (request.status != RequestStatus.approved) {
@@ -214,73 +156,23 @@ class InventoryService {
     );
 
     // Update request status to fulfilled
-    await _firestore.collection('stockRequests').doc(requestId).update({
-      'status': 'fulfilled',
-      'fulfilledAt': DateTime.now().toIso8601String(),
-      'fulfilledBy': fulfilledBy,
-      'fulfilledByName': fulfilledByName,
-    });
+    await _dbService.fulfillStockRequest(requestId);
   }
 
   // ==================== STOCK HISTORY ====================
-
-  /// Log stock history entry
-  Future<void> _logStockHistory({
-    required String itemId,
-    required String itemName,
-    required StockAction action,
-    required int quantity,
-    required int previousStock,
-    required int newStock,
-    required String performedBy,
-    required String performedByName,
-    String? notes,
-    String? referenceId,
-  }) async {
-    final now = DateTime.now();
-    final historyEntry = StockHistory(
-      id: 'hist_${now.millisecondsSinceEpoch}',
-      itemId: itemId,
-      itemName: itemName,
-      action: action,
-      quantity: quantity,
-      previousStock: previousStock,
-      newStock: newStock,
-      performedBy: performedBy,
-      performedByName: performedByName,
-      notes: notes,
-      timestamp: now,
-      referenceId: referenceId,
-    );
-
-    await _firestore
-        .collection('stockHistory')
-        .doc(historyEntry.id)
-        .set(historyEntry.toMap());
-  }
+  // Note: Stock history functionality requires additional Appwrite collection setup
+  // These methods return empty streams for now
 
   /// Stream stock history for an item
   Stream<List<StockHistory>> streamItemHistory(String itemId) {
-    return _firestore
-        .collection('stockHistory')
-        .where('itemId', isEqualTo: itemId)
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StockHistory.fromMap(doc.id, doc.data()))
-            .toList());
+    // TODO: Implement stock history collection in Appwrite
+    return Stream.value([]);
   }
 
   /// Stream all stock history (for admin audit)
   Stream<List<StockHistory>> streamAllHistory({int limit = 50}) {
-    return _firestore
-        .collection('stockHistory')
-        .orderBy('timestamp', descending: true)
-        .limit(limit)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => StockHistory.fromMap(doc.id, doc.data()))
-            .toList());
+    // TODO: Implement stock history collection in Appwrite
+    return Stream.value([]);
   }
 
   /// Get history by date range
@@ -289,21 +181,8 @@ class InventoryService {
     required DateTime endDate,
     String? itemId,
   }) async {
-    var query = _firestore
-        .collection('stockHistory')
-        .where('timestamp',
-            isGreaterThanOrEqualTo: startDate.toIso8601String())
-        .where('timestamp', isLessThanOrEqualTo: endDate.toIso8601String());
-
-    if (itemId != null) {
-      query = query.where('itemId', isEqualTo: itemId);
-    }
-
-    final snapshot = await query.orderBy('timestamp', descending: true).get();
-
-    return snapshot.docs
-        .map((doc) => StockHistory.fromMap(doc.id, doc.data()))
-        .toList();
+    // TODO: Implement stock history collection in Appwrite
+    return [];
   }
 
   // ==================== BATCH OPERATIONS ====================
@@ -312,36 +191,25 @@ class InventoryService {
   Future<void> bulkDelete(List<String> itemIds) async {
     if (itemIds.isEmpty) return;
 
-    final batch = _firestore.batch();
-
-    // Delete items
+    // Delete items one by one (Appwrite doesn't have batch operations like Firestore)
     for (final itemId in itemIds) {
-      final itemRef = _firestore.collection('inventory').doc(itemId);
-      batch.delete(itemRef);
+      await _dbService.softDeleteInventoryItem(itemId);
     }
-
-    // Commit batch
-    await batch.commit();
   }
 
   /// Bulk update category for multiple items
   Future<void> bulkUpdateCategory(List<String> itemIds, String category) async {
     if (itemIds.isEmpty) return;
 
-    final batch = _firestore.batch();
     final now = DateTime.now().toIso8601String();
 
     // Update category for each item
     for (final itemId in itemIds) {
-      final itemRef = _firestore.collection('inventory').doc(itemId);
-      batch.update(itemRef, {
+      await _dbService.updateInventoryItem(itemId, {
         'category': category,
         'updatedAt': now,
       });
     }
-
-    // Commit batch
-    await batch.commit();
   }
 
   /// Bulk update stock for multiple items
@@ -352,36 +220,14 @@ class InventoryService {
   ) async {
     if (itemStockMap.isEmpty) return;
 
-    final batch = _firestore.batch();
-    final now = DateTime.now();
-
     for (final entry in itemStockMap.entries) {
       final itemId = entry.key;
       final newStock = entry.value;
 
       // Update item stock
-      final itemRef = _firestore.collection('inventory').doc(itemId);
-      batch.update(itemRef, {
-        'currentStock': newStock,
-        'updatedAt': now.toIso8601String(),
-      });
+      await _dbService.updateInventoryStock(itemId, newStock);
 
-      // Log history (individual writes, not batched)
-      final item = await getItemById(itemId);
-      await _logStockHistory(
-        itemId: itemId,
-        itemName: item.name,
-        action: StockAction.adjustment,
-        quantity: (newStock - item.currentStock).abs(),
-        previousStock: item.currentStock,
-        newStock: newStock,
-        performedBy: performedBy,
-        performedByName: performedByName,
-        notes: 'Bulk stock adjustment',
-      );
+      // Log history (TODO: implement stock history in Appwrite)
     }
-
-    // Commit batch
-    await batch.commit();
   }
 }

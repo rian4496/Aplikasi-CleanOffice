@@ -1,13 +1,13 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
+import '../../providers/riverpod/request_providers.dart' show appwriteStorageServiceProvider;
 
 final _logger = AppLogger('CreateCleaningReportScreen');
 
@@ -24,7 +24,7 @@ class _CreateCleaningReportScreenState
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
-  File? _selectedImage;
+  Uint8List? _imageBytes;
   bool _isSubmitting = false;
 
   @override
@@ -38,18 +38,18 @@ class _CreateCleaningReportScreenState
     try {
       final imagePicker = ImagePicker();
       final pickedImage = await imagePicker.pickImage(
-        source: ImageSource.camera,
+        source: ImageSource.gallery, // Web doesn't support camera
         maxWidth: AppConstants.maxImageWidth.toDouble(),
         imageQuality: AppConstants.imageQuality,
       );
 
       if (pickedImage == null) return;
 
-      final file = File(pickedImage.path);
+      // Read as bytes (works on both Web & Mobile)
+      final bytes = await pickedImage.readAsBytes();
 
       // Validate file size
-      final bytes = await file.length();
-      if (!AppConstants.isValidFileSize(bytes)) {
+      if (!AppConstants.isValidFileSize(bytes.length)) {
         if (!mounted) return;
         _showError(
           'Ukuran file terlalu besar. Max ${AppConstants.formatFileSize(AppConstants.maxImageSizeBytes)}',
@@ -58,10 +58,10 @@ class _CreateCleaningReportScreenState
       }
 
       setState(() {
-        _selectedImage = file;
+        _imageBytes = bytes;
       });
 
-      _logger.info('Image selected for cleaning report');
+      _logger.info('Image selected for cleaning report: ${bytes.length} bytes');
     } catch (e, stackTrace) {
       _logger.error('Error picking image', e, stackTrace);
       _showError('Gagal mengambil foto');
@@ -69,30 +69,33 @@ class _CreateCleaningReportScreenState
   }
 
   Future<String?> _uploadImage() async {
-    if (_selectedImage == null) return null;
+    if (_imageBytes == null) return null;
 
     try {
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
       _logger.info('Uploading cleaning report image');
 
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'cleaning_report_$timestamp.jpg';
-      final storageRef = FirebaseStorage.instance.ref().child(
-        '${AppConstants.reportImagesPath}/${user.uid}/$fileName',
+      final storageService = ref.read(appwriteStorageServiceProvider);
+      final result = await storageService.uploadImage(
+        bytes: _imageBytes!,
+        folder: 'cleaning_reports',
+        userId: userProfile.uid,
       );
 
-      final uploadTask = await storageRef.putFile(_selectedImage!);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      _logger.info('Cleaning report image uploaded successfully');
-      return downloadUrl;
-    } on FirebaseException catch (e, stackTrace) {
+      if (result.isSuccess && result.data != null) {
+        _logger.info('Cleaning report image uploaded successfully');
+        return result.data;
+      } else {
+        _logger.error('Upload failed: ${result.error}');
+        throw StorageException(message: result.error ?? 'Upload failed');
+      }
+    } catch (e, stackTrace) {
       _logger.error('Upload image error', e, stackTrace);
-      throw StorageException.fromFirebase(e);
+      rethrow;
     }
   }
 
@@ -108,13 +111,14 @@ class _CreateCleaningReportScreenState
 
       // Upload image if exists
       String? imageUrl;
-      if (_selectedImage != null) {
+      if (_imageBytes != null) {
         imageUrl = await _uploadImage();
       }
 
       // Create report
       final actions = ref.read(cleanerActionsProvider.notifier);
       await actions.createCleaningReport(
+        title: 'Laporan Kebersihan',
         location: _locationController.text.trim(),
         description: _descriptionController.text.trim(),
         imageUrl: imageUrl,
@@ -374,17 +378,18 @@ class _CreateCleaningReportScreenState
                   ),
                   border: Border.all(color: Colors.grey.shade400, width: 2),
                 ),
-                child: _selectedImage != null
+                child: _imageBytes != null
                     ? Stack(
                         children: [
                           ClipRRect(
                             borderRadius: BorderRadius.circular(
                               AppConstants.defaultRadius - 2,
                             ),
-                            child: Image.file(
-                              _selectedImage!,
+                            child: Image.memory(
+                              _imageBytes!,
                               fit: BoxFit.cover,
                               width: double.infinity,
+                              height: double.infinity,
                             ),
                           ),
                           Positioned(

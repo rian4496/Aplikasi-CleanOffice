@@ -3,7 +3,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
@@ -218,11 +217,10 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> {
   // ==================== HEADER ====================
 
   Widget _buildHeader() {
-    final user = FirebaseAuth.instance.currentUser;
     final userProfileAsync = ref.watch(currentUserProfileProvider);
     final hour = DateTime.now().hour;
     String greeting;
-    
+
     if (hour < 12) {
       greeting = 'Selamat Pagi';
     } else if (hour < 15) {
@@ -255,7 +253,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> {
           const SizedBox(height: 4),
           userProfileAsync.when(
             data: (profile) => Text(
-              profile?.displayName ?? user?.displayName ?? 'Petugas Kebersihan',
+              profile?.displayName ?? 'Petugas Kebersihan',
               style: const TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
@@ -464,7 +462,7 @@ class _CleanerHomeScreenState extends ConsumerState<CleanerHomeScreen> {
 
     if (shouldLogout == true && mounted) {
       try {
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authActionsProvider.notifier).logout();
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, AppConstants.loginRoute);
       } catch (e) {

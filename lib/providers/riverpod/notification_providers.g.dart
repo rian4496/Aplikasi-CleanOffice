@@ -52,7 +52,7 @@ final class UserNotificationsProvider
   }
 }
 
-String _$userNotificationsHash() => r'b575bf5000e49ad83c4ff7ac8a3969092b29bfd8';
+String _$userNotificationsHash() => r'97e14f9a4cf89dc0da53cd822c1cde73b84c6315';
 
 /// Stream of unread notification count
 
@@ -91,14 +91,18 @@ final class UnreadNotificationCountProvider
 }
 
 String _$unreadNotificationCountHash() =>
-    r'e5b53b42f4fdb2cf7a898b02130f41d8df9d2c73';
+    r'40a46308fc9b6df77bd75201dce98889761eaa18';
 
-/// Stream of notification settings
+/// Notification settings - stored locally for now
+/// Note: Appwrite simplified schema doesn't include notification_settings collection
+/// This could be added later or stored in user preferences
 
 @ProviderFor(notificationSettings)
 const notificationSettingsProvider = NotificationSettingsProvider._();
 
-/// Stream of notification settings
+/// Notification settings - stored locally for now
+/// Note: Appwrite simplified schema doesn't include notification_settings collection
+/// This could be added later or stored in user preferences
 
 final class NotificationSettingsProvider
     extends
@@ -110,7 +114,9 @@ final class NotificationSettingsProvider
     with
         $FutureModifier<NotificationSettings>,
         $StreamProvider<NotificationSettings> {
-  /// Stream of notification settings
+  /// Notification settings - stored locally for now
+  /// Note: Appwrite simplified schema doesn't include notification_settings collection
+  /// This could be added later or stored in user preferences
   const NotificationSettingsProvider._()
     : super(
         from: null,
@@ -138,7 +144,7 @@ final class NotificationSettingsProvider
 }
 
 String _$notificationSettingsHash() =>
-    r'eaf9bbead42a050638c66d0ba2da63b69b1dbf58';
+    r'e140fb5e7a19e6ca5c0efd8b9c2c6b3121413c67';
 
 /// Mark notification as read
 
@@ -196,7 +202,7 @@ final class MarkNotificationAsReadProvider
 }
 
 String _$markNotificationAsReadHash() =>
-    r'5bc0aba3c4599f520be0b8a38531f02e88f9ad82';
+    r'c726fa542d1fe4866c837c797103304b76a75c9b';
 
 /// Mark notification as read
 
@@ -258,7 +264,7 @@ final class MarkAllNotificationsAsReadProvider
 }
 
 String _$markAllNotificationsAsReadHash() =>
-    r'6a799dc0803feec207571ec35639289d6cf07333';
+    r'a77e7beb36dd36cbd089db46c652d1d68b6f1370';
 
 /// Delete notification
 
@@ -315,7 +321,7 @@ final class DeleteNotificationProvider
 }
 
 String _$deleteNotificationHash() =>
-    r'e41bf20ee4b85c8df79b085eade6c169248fd1e7';
+    r'84273d5b849bad6a527c44943f0872013fe869cd';
 
 /// Delete notification
 
@@ -340,16 +346,22 @@ final class DeleteNotificationFamily extends $Family
 }
 
 /// Save notification settings
+/// Note: For now, settings are handled locally
+/// Can be enhanced to store in Appwrite later
 
 @ProviderFor(saveNotificationSettings)
 const saveNotificationSettingsProvider = SaveNotificationSettingsFamily._();
 
 /// Save notification settings
+/// Note: For now, settings are handled locally
+/// Can be enhanced to store in Appwrite later
 
 final class SaveNotificationSettingsProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
   /// Save notification settings
+  /// Note: For now, settings are handled locally
+  /// Can be enhanced to store in Appwrite later
   const SaveNotificationSettingsProvider._({
     required SaveNotificationSettingsFamily super.from,
     required NotificationSettings super.argument,
@@ -395,9 +407,11 @@ final class SaveNotificationSettingsProvider
 }
 
 String _$saveNotificationSettingsHash() =>
-    r'48431b10404d49977639a7ac083b817eb2b706c6';
+    r'8d07456ceda5cde67422f73ec14d3de9c4cfeea7';
 
 /// Save notification settings
+/// Note: For now, settings are handled locally
+/// Can be enhanced to store in Appwrite later
 
 final class SaveNotificationSettingsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, NotificationSettings> {
@@ -411,6 +425,8 @@ final class SaveNotificationSettingsFamily extends $Family
       );
 
   /// Save notification settings
+  /// Note: For now, settings are handled locally
+  /// Can be enhanced to store in Appwrite later
 
   SaveNotificationSettingsProvider call(NotificationSettings settings) =>
       SaveNotificationSettingsProvider._(argument: settings, from: this);

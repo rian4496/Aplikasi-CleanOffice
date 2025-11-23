@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/error/exceptions.dart';
 import '../../widgets/custom_password_field.dart';
 import '../../providers/riverpod/auth_providers.dart';
 
@@ -36,7 +36,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
         next.when(
           error: (error, stackTrace) {
             String message;
-            if (error is FirebaseAuthException) {
+            if (error is AuthException) {
               switch (error.code) {
                 case 'wrong-password':
                 case 'user-mismatch':
@@ -46,7 +46,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   message = 'Password baru terlalu lemah';
                   break;
                 default:
-                  message = 'Terjadi kesalahan. Silahkan coba lagi.';
+                  message = error.message;
               }
             } else {
               message = 'Terjadi kesalahan yang tidak diketahui.';

@@ -1,21 +1,25 @@
+// lib/providers/riverpod/profile_providers.dart
+// ✅ PROFILE PROVIDERS - Migrated to Appwrite
+//
+// FEATURES:
+// - Profile update actions
+// - Profile picture upload/delete
+// - Work schedule providers
+
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_profile.dart';
-import '../../models/work_schedule.dart'; // TAMBAHAN: Import WorkSchedule model
+import '../../models/work_schedule.dart';
+import '../../services/appwrite_database_service.dart';
+import '../../services/appwrite_storage_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import './auth_providers.dart';
+import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
+import './request_providers.dart' show appwriteStorageServiceProvider;
 
 final _logger = AppLogger('ProfileProviders');
-
-// ==================== STORAGE PROVIDER ====================
-
-final firebaseStorageProvider = Provider<FirebaseStorage>((ref) {
-  return FirebaseStorage.instance;
-});
 
 // ==================== PROFILE ACTIONS NOTIFIER ====================
 
@@ -25,9 +29,10 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     return const AsyncValue.data(null);
   }
 
-  FirebaseStorage get _storage => ref.read(firebaseStorageProvider);
-  FirebaseAuth get _auth => ref.read(firebaseAuthProvider);
-  FirebaseFirestore get _firestore => ref.read(firestoreProvider);
+  AppwriteDatabaseService get _database =>
+      ref.read(appwriteDatabaseServiceProvider);
+  AppwriteStorageService get _storage =>
+      ref.read(appwriteStorageServiceProvider);
 
   /// Update user profile
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -36,54 +41,57 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Updating profile for user: ${updatedProfile.uid}');
 
-      await _firestore
-          .collection('users')
-          .doc(updatedProfile.uid)
-          .update(updatedProfile.toMap());
+      await _database.updateUserProfile(updatedProfile);
 
       _logger.info('Profile updated successfully');
       state = const AsyncValue.data(null);
 
       // Refresh current user profile
       ref.invalidate(currentUserProfileProvider);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Update profile error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
+    } on ValidationException {
       rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected update profile error', e, stackTrace);
+      _logger.error('Update profile error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
-      rethrow;
+      throw const FirestoreException(
+        message: 'Gagal mengupdate profil. Silakan coba lagi.',
+      );
     }
   }
 
-  /// Upload profile picture
-  Future<String> uploadProfilePicture(File imageFile, String userId) async {
+  /// Upload profile picture (supports both File and Uint8List)
+  Future<String?> uploadProfilePicture({
+    File? imageFile,
+    Uint8List? imageBytes,
+    required String userId,
+  }) async {
     try {
       _logger.info('Uploading profile picture for user: $userId');
 
-      // Delete old picture if exists
-      try {
-        final oldRef = _storage.ref().child('profile_pictures/$userId.jpg');
-        await oldRef.delete();
-        _logger.info('Old profile picture deleted');
-      } catch (e) {
-        _logger.warning('No old profile picture to delete');
+      Uint8List? bytes = imageBytes;
+      if (bytes == null && imageFile != null) {
+        bytes = await imageFile.readAsBytes();
       }
 
-      // Upload new picture
-      final ref = _storage.ref().child('profile_pictures/$userId.jpg');
-      final uploadTask = await ref.putFile(imageFile);
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
+      if (bytes == null) {
+        throw const ValidationException(message: 'No image provided');
+      }
 
-      _logger.info('Profile picture uploaded successfully');
-      return downloadUrl;
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Upload profile picture error', e, stackTrace);
-      throw StorageException.fromFirebase(e);
+      final result = await _storage.uploadImage(
+        bytes: bytes,
+        folder: 'profile_pictures',
+        userId: userId,
+      );
+
+      if (result.isSuccess && result.data != null) {
+        _logger.info('Profile picture uploaded successfully');
+        return result.data;
+      } else {
+        _logger.error('Upload profile picture failed: ${result.error}');
+        throw StorageException(message: result.error ?? 'Upload failed');
+      }
     } catch (e, stackTrace) {
-      _logger.error('Unexpected upload error', e, stackTrace);
+      _logger.error('Upload profile picture error', e, stackTrace);
       rethrow;
     }
   }
@@ -94,33 +102,31 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
       _logger.info('Deleting profile picture for user: $userId');
 
       // Delete from storage
-      final storageRef = _storage.refFromURL(photoUrl);
-      await storageRef.delete();
+      await _storage.deleteImage(photoUrl);
 
-      // Update user profile
-      await _auth.currentUser?.updatePhotoURL(null);
-
-      // Update Firestore
-      await _firestore.collection('users').doc(userId).update({
-        'photoURL': null,
-      });
+      // Update user profile to remove photo URL
+      final currentProfile = ref.read(currentUserProfileProvider).value;
+      if (currentProfile != null) {
+        final updatedProfile = currentProfile.copyWith(photoURL: null);
+        await _database.updateUserProfile(updatedProfile);
+      }
 
       _logger.info('Profile picture deleted successfully');
 
       // Refresh profile
       ref.invalidate(currentUserProfileProvider);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Delete profile picture error', e, stackTrace);
-      throw StorageException.fromFirebase(e);
     } catch (e, stackTrace) {
-      _logger.error('Unexpected delete error', e, stackTrace);
-      rethrow;
+      _logger.error('Delete profile picture error', e, stackTrace);
+      throw const StorageException(
+        message: 'Gagal menghapus foto profil. Silakan coba lagi.',
+      );
     }
   }
 
   /// Update profile with new photo
   Future<void> updateProfileWithPhoto({
-    required File imageFile,
+    File? imageFile,
+    Uint8List? imageBytes,
     required UserProfile profile,
   }) async {
     state = const AsyncValue.loading();
@@ -129,16 +135,19 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
       _logger.info('Updating profile with new photo');
 
       // Upload image first
-      final photoUrl = await uploadProfilePicture(imageFile, profile.uid);
+      final photoUrl = await uploadProfilePicture(
+        imageFile: imageFile,
+        imageBytes: imageBytes,
+        userId: profile.uid,
+      );
 
-      // Update auth profile
-      await _auth.currentUser?.updatePhotoURL(photoUrl);
+      if (photoUrl != null) {
+        // Update profile with new photo URL
+        final updatedProfile = profile.copyWith(photoURL: photoUrl);
+        await updateProfile(updatedProfile);
+        _logger.info('Profile and photo updated successfully');
+      }
 
-      // Update profile with new photo URL
-      final updatedProfile = profile.copyWith(photoURL: photoUrl);
-      await updateProfile(updatedProfile);
-
-      _logger.info('Profile and photo updated successfully');
       state = const AsyncValue.data(null);
     } catch (e, stackTrace) {
       _logger.error('Update profile with photo error', e, stackTrace);
@@ -154,30 +163,16 @@ final profileActionsProvider =
     );
 
 // ==================== WORK SCHEDULE PROVIDERS ====================
+// Note: Work schedules are not included in the simplified Appwrite schema
+// These providers return empty lists as placeholders
+// TODO: Implement when schedules collection is added to Appwrite
 
 /// Provider untuk work schedules (stream)
 final userSchedulesProvider = StreamProvider.family<List<WorkSchedule>, String>(
   (ref, userId) {
-    final firestore = ref.watch(firestoreProvider);
-
-    return firestore
-        .collection('schedules')
-        .where('userId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) {
-                try {
-                  return WorkSchedule.fromMap(doc.id, doc.data());
-                } catch (e) {
-                  _logger.warning('Error parsing schedule ${doc.id}: $e');
-                  return null;
-                }
-              })
-              .whereType<WorkSchedule>()
-              .toList(); // Filter out null values
-        });
+    // TODO: Implement with Appwrite when schedules collection is added
+    _logger.info('Work schedules not yet implemented in Appwrite');
+    return Stream.value([]);
   },
 );
 
@@ -188,24 +183,7 @@ final currentUserSchedulesProvider = StreamProvider<List<WorkSchedule>>((ref) {
     return Stream.value([]);
   }
 
-  final firestore = ref.watch(firestoreProvider);
-
-  return firestore
-      .collection('schedules')
-      .where('userId', isEqualTo: userId)
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) {
-        return snapshot.docs
-            .map((doc) {
-              try {
-                return WorkSchedule.fromMap(doc.id, doc.data());
-              } catch (e) {
-                _logger.warning('Error parsing schedule ${doc.id}: $e');
-                return null;
-              }
-            })
-            .whereType<WorkSchedule>()
-            .toList(); // Filter out null values
-      });
+  // TODO: Implement with Appwrite when schedules collection is added
+  _logger.info('Work schedules not yet implemented in Appwrite');
+  return Stream.value([]);
 });

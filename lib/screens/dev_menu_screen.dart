@@ -8,11 +8,8 @@ import 'package:aplikasi_cleanoffice/screens/employee/create_request_screen.dart
 import 'package:aplikasi_cleanoffice/screens/shared/profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/change_password_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/request_history_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/shared/reset_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/admin/bulk_receipt_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/dev/seed_data_screen.dart';
 /// Development Menu untuk test UI tanpa Firebase Authentication
 /// HANYA UNTUK DEVELOPMENT - JANGAN DIPAKAI DI PRODUCTION!
@@ -109,10 +106,12 @@ class DevMenuScreen extends StatelessWidget {
             _buildScreenCard(
               context,
               title: 'Reset Password Screen',
-              subtitle: 'Halaman reset password',
+              subtitle: 'Halaman reset password (Coming Soon)',
               icon: Icons.lock_reset,
               color: Colors.orange,
-              screen: const ResetPasswordScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Reset Password - Coming Soon')),
+              ),
             ),
 
             const SizedBox(height: 24),
@@ -167,18 +166,22 @@ class DevMenuScreen extends StatelessWidget {
             _buildScreenCard(
               context,
               title: 'Request History',
-              subtitle: 'Riwayat permintaan',
+              subtitle: 'Riwayat permintaan (Coming Soon)',
               icon: Icons.history,
               color: Colors.brown,
-              screen: const RequestHistoryScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Request History - Coming Soon')),
+              ),
             ),
             _buildScreenCard(
               context,
               title: 'Bulk Receipt Generator',
-              subtitle: 'Upload Excel untuk buat kwitansi',
+              subtitle: 'Upload Excel untuk buat kwitansi (Coming Soon)',
               icon: Icons.receipt_long,
               color: Colors.orange,
-              screen: const BulkReceiptScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Bulk Receipt - Coming Soon')),
+              ),
             ),
 
             const SizedBox(height: 24),

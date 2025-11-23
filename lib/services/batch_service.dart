@@ -1,142 +1,92 @@
-// lib/services/batch_service.dart
-// Service for batch operations on Firestore
-
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:appwrite/appwrite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../core/config/appwrite_config.dart';
+import '../core/services/appwrite_client.dart';
+import '../core/logging/app_logger.dart';
 
-import '../models/report.dart';
-
+/// Service responsible for handling batch operations on reports.
+/// Follows SRP by focusing solely on bulk actions.
 class BatchService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
-  /// Maximum items per batch (Firestore limit is 500)
-  static const int maxBatchSize = 500;
-  
-  /// Bulk verify reports
-  Future<void> bulkVerify(List<String> reportIds, {String? verifiedBy}) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      batch.update(docRef, {
-        'status': ReportStatus.verified.toString(),
-        'verifiedAt': FieldValue.serverTimestamp(),
-        if (verifiedBy != null) 'verifiedBy': verifiedBy,
-      });
-    });
-  }
-  
-  /// Bulk assign to cleaner
-  Future<void> bulkAssign(
-    List<String> reportIds,
-    String cleanerId,
-    String cleanerName,
-  ) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      batch.update(docRef, {
-        'assignedToId': cleanerId,
-        'cleanerName': cleanerName,
-        'status': ReportStatus.assigned.toString(),
-        'assignedAt': FieldValue.serverTimestamp(),
-      });
-    });
-  }
-  
-  /// Bulk change status
-  Future<void> bulkChangeStatus(
-    List<String> reportIds,
-    ReportStatus status,
-  ) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      final updateData = <String, dynamic>{
-        'status': status.toString(),
-      };
-      
-      // Add timestamp based on status
-      switch (status) {
-        case ReportStatus.completed:
-          updateData['completedAt'] = FieldValue.serverTimestamp();
-          break;
-        case ReportStatus.verified:
-          updateData['verifiedAt'] = FieldValue.serverTimestamp();
-          break;
-        case ReportStatus.inProgress:
-          updateData['startedAt'] = FieldValue.serverTimestamp();
-          break;
-        default:
-          break;
-      }
-      
-      batch.update(docRef, updateData);
-    });
-  }
-  
-  /// Bulk delete reports
-  Future<void> bulkDelete(List<String> reportIds) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      batch.delete(docRef);
-    });
-  }
-  
-  /// Bulk archive reports (soft delete)
-  Future<void> bulkArchive(List<String> reportIds) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      batch.update(docRef, {
-        'archived': true,
-        'archivedAt': FieldValue.serverTimestamp(),
-      });
-    });
-  }
-  
-  /// Bulk mark as urgent
-  Future<void> bulkMarkUrgent(List<String> reportIds, bool isUrgent) async {
-    await _executeBatch(reportIds, (batch, id) {
-      final docRef = _firestore.collection('reports').doc(id);
-      batch.update(docRef, {
-        'isUrgent': isUrgent,
-      });
-    });
-  }
-  
-  /// Execute batch operations with automatic chunking
-  Future<void> _executeBatch(
-    List<String> ids,
-    void Function(WriteBatch batch, String id) operation,
-  ) async {
-    // Split into chunks if exceeds max batch size
-    final chunks = _chunkList(ids, maxBatchSize);
+  final Databases _databases;
+  final _logger = AppLogger('BatchService');
+
+  BatchService(this._databases);
+
+  /// Verifies multiple reports at once.
+  /// Note: Appwrite does not support atomic batch writes natively in Client SDK yet.
+  /// We execute these in parallel.
+  Future<void> bulkVerifyReports(List<String> reportIds, String adminId) async {
+    _logger.info('Batch verifying ${reportIds.length} reports');
     
-    for (final chunk in chunks) {
-      final batch = _firestore.batch();
-      
-      for (final id in chunk) {
-        operation(batch, id);
-      }
-      
-      await batch.commit();
+    final futures = reportIds.map((id) => _databases.updateDocument(
+      databaseId: AppwriteConfig.databaseId,
+      collectionId: AppwriteConfig.reportsCollectionId,
+      documentId: id,
+      data: {
+        'status': 'verified',
+        'verifiedAt': DateTime.now().toIso8601String(),
+        'verifiedBy': adminId,
+      },
+    ));
+
+    try {
+      await Future.wait(futures);
+      _logger.info('Batch verification successful');
+    } catch (e) {
+      _logger.error('Batch verification failed', e);
+      rethrow;
+    }
+  }
+
+  /// Deletes multiple reports at once.
+  Future<void> bulkDeleteReports(List<String> reportIds) async {
+    _logger.info('Batch deleting ${reportIds.length} reports');
+    
+    final futures = reportIds.map((id) => _databases.deleteDocument(
+      databaseId: AppwriteConfig.databaseId,
+      collectionId: AppwriteConfig.reportsCollectionId,
+      documentId: id,
+    ));
+
+    try {
+      await Future.wait(futures);
+      _logger.info('Batch deletion successful');
+    } catch (e) {
+      _logger.error('Batch deletion failed', e);
+      rethrow;
     }
   }
   
-  /// Split list into chunks
-  List<List<T>> _chunkList<T>(List<T> list, int chunkSize) {
-    final chunks = <List<T>>[];
-    for (var i = 0; i < list.length; i += chunkSize) {
-      final end = (i + chunkSize < list.length) ? i + chunkSize : list.length;
-      chunks.add(list.sublist(i, end));
+  /// Assigns multiple reports to a cleaner.
+  Future<void> bulkAssignReports(List<String> reportIds, String cleanerId, String cleanerName) async {
+    _logger.info('Batch assigning ${reportIds.length} reports to $cleanerName');
+    
+    final futures = reportIds.map((id) => _databases.updateDocument(
+      databaseId: AppwriteConfig.databaseId,
+      collectionId: AppwriteConfig.reportsCollectionId,
+      documentId: id,
+      data: {
+        'cleanerId': cleanerId,
+        'cleanerName': cleanerName,
+        'status': 'pending', 
+        'assignedAt': DateTime.now().toIso8601String(),
+      },
+    ));
+
+    try {
+      await Future.wait(futures);
+      _logger.info('Batch assignment successful');
+    } catch (e) {
+      _logger.error('Batch assignment failed', e);
+      rethrow;
     }
-    return chunks;
-  }
-  
-  /// Get estimated time for batch operation
-  Duration estimateBatchTime(int itemCount) {
-    // Rough estimate: ~100ms per item
-    return Duration(milliseconds: itemCount * 100);
   }
 }
 
-// Provider
+/// Provider for BatchService.
+/// Follows DIP by injecting dependencies.
 final batchServiceProvider = Provider<BatchService>((ref) {
-  return BatchService();
+  final client = AppwriteClient().client;
+  final databases = Databases(client);
+  return BatchService(databases);
 });

@@ -1,19 +1,20 @@
 // lib/screens/dev/seed_data_screen.dart
-// Screen untuk generate sample data (DEV ONLY)
+// Screen untuk generate sample data (DEV ONLY) - Using Appwrite
 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../services/seed_data_service.dart';
 import '../../core/theme/app_theme.dart';
+import '../../providers/riverpod/auth_providers.dart';
 
-class SeedDataScreen extends StatefulWidget {
+class SeedDataScreen extends ConsumerStatefulWidget {
   const SeedDataScreen({super.key});
 
   @override
-  State<SeedDataScreen> createState() => _SeedDataScreenState();
+  ConsumerState<SeedDataScreen> createState() => _SeedDataScreenState();
 }
 
-class _SeedDataScreenState extends State<SeedDataScreen> {
+class _SeedDataScreenState extends ConsumerState<SeedDataScreen> {
   final _seedService = SeedDataService();
   bool _isLoading = false;
   int _currentCount = 0;
@@ -32,8 +33,8 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
   }
 
   Future<void> _generateSampleData() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final profile = ref.read(currentUserProfileProvider).value;
+    if (profile == null) {
       _showError('User not logged in! Login dulu sebagai admin.');
       return;
     }
@@ -44,8 +45,8 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
 
     try {
       await _seedService.generateSampleInventory(
-        userId: user.uid,
-        userName: user.displayName ?? 'Dev User',
+        userId: profile.uid,
+        userName: profile.displayName,
       );
 
       await _loadCount();
@@ -53,7 +54,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Sample data berhasil dibuat!'),
+            content: Text('Sample data berhasil dibuat!'),
             backgroundColor: AppTheme.success,
           ),
         );
@@ -71,7 +72,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('⚠️ Konfirmasi'),
+        title: const Text('Konfirmasi'),
         content: const Text(
           'Hapus SEMUA data inventory?\nTindakan ini tidak bisa di-undo!',
         ),
@@ -104,7 +105,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('✅ Semua data berhasil dihapus'),
+            content: Text('Semua data berhasil dihapus'),
             backgroundColor: AppTheme.warning,
           ),
         );
@@ -132,7 +133,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('🌱 Generate Sample Data'),
+        title: const Text('Generate Sample Data'),
         backgroundColor: Colors.transparent,
         elevation: 0,
         flexibleSpace: Container(
@@ -188,7 +189,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
 
                   // Generate Button
                   _buildActionCard(
-                    title: '🌱 Generate Sample Data',
+                    title: 'Generate Sample Data',
                     description: 'Buat 8 item inventaris sample dengan berbagai status stok',
                     buttonText: 'Generate Data',
                     buttonColor: AppTheme.primary,
@@ -200,7 +201,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
 
                   // Clear Button
                   _buildActionCard(
-                    title: '🗑️ Clear All Data',
+                    title: 'Clear All Data',
                     description: 'Hapus semua data inventory dari database',
                     buttonText: 'Clear All',
                     buttonColor: AppTheme.error,
@@ -324,7 +325,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              '📋 Sample Data Preview',
+              'Sample Data Preview',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -333,8 +334,8 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
             const SizedBox(height: 16),
             _buildPreviewItem('Sapu Ijuk', 'Alat', 'Stok: 25/100', AppTheme.success),
             _buildPreviewItem('Kain Pel', 'Alat', 'Stok: 15/50', AppTheme.success),
-            _buildPreviewItem('Sabun Cuci', 'Consumable', 'Stok: 3/100 ⚠️', AppTheme.warning),
-            _buildPreviewItem('Pewangi', 'Consumable', 'Stok: 0/50 ❌', AppTheme.error),
+            _buildPreviewItem('Sabun Cuci', 'Consumable', 'Stok: 3/100 (Low)', AppTheme.warning),
+            _buildPreviewItem('Pewangi', 'Consumable', 'Stok: 0/50 (Out)', AppTheme.error),
             _buildPreviewItem('Masker N95', 'PPE', 'Stok: 8/100', Colors.blue),
             _buildPreviewItem('Sarung Tangan', 'PPE', 'Stok: 45/200', AppTheme.success),
             _buildPreviewItem('Pembersih Lantai', 'Consumable', 'Stok: 12/100', Colors.blue),
@@ -370,7 +371,7 @@ class _SeedDataScreenState extends State<SeedDataScreen> {
                   ),
                 ),
                 Text(
-                  '$category • $stock',
+                  '$category - $stock',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,

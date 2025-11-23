@@ -1,96 +1,75 @@
 // lib/providers/riverpod/request_providers.dart
-// ✅ REQUEST PROVIDERS - Riverpod State Management for Requests
+// ✅ REQUEST PROVIDERS - Migrated to Appwrite
 //
 // FEATURES:
 // - Stream providers for real-time request updates
 // - Request validation (3 active limit)
-// - Cleaner list provider (for selection)
 // - Request actions (create, self-assign, start, complete, cancel)
 // - Role-based data access
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/request.dart';
-import '../../services/request_service.dart';
-import '../../services/storage_service.dart';
+import '../../services/appwrite_storage_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
+import './auth_providers.dart';
+import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
 
 final _logger = AppLogger('RequestProviders');
-
-// ==================== SERVICE PROVIDER ====================
-
-/// Request Service Provider
-final requestServiceProvider = Provider<RequestService>((ref) {
-  return RequestService();
-});
-
-// ==================== AUTH PROVIDERS ====================
-
-/// Current Request User Provider
-final currentRequestUserProvider = StreamProvider<User?>((ref) {
-  return FirebaseAuth.instance.authStateChanges();
-});
-
-/// Current Request User ID Provider
-final currentRequestUserIdProvider = Provider<String?>((ref) {
-  final userAsync = ref.watch(currentRequestUserProvider);
-  return userAsync.whenData((user) => user?.uid).value;
-});
 
 // ==================== REQUEST STREAM PROVIDERS ====================
 
 /// My Requests Provider (for employee to see own requests)
 final myRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final userId = ref.watch(currentRequestUserIdProvider);
-  
+  final userId = ref.watch(currentUserIdProvider);
+
   if (userId == null) {
     return Stream.value([]);
   }
 
-  final service = ref.watch(requestServiceProvider);
-  return service.getRequestsByUser(userId);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getServiceRequestsByUser(userId);
 });
 
 /// Pending Requests Provider (for cleaner to self-assign)
 final pendingRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final service = ref.watch(requestServiceProvider);
-  return service.getPendingRequests();
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getPendingServiceRequests();
 });
 
 /// My Assigned Requests Provider (for cleaner to see assigned requests)
 final myAssignedRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final userId = ref.watch(currentRequestUserIdProvider);
-  
+  final userId = ref.watch(currentUserIdProvider);
+
   if (userId == null) {
     return Stream.value([]);
   }
 
-  final service = ref.watch(requestServiceProvider);
-  return service.getRequestsByAssignedCleaner(userId);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getServiceRequestsByCleaner(userId);
 });
 
 /// All Requests Provider (for admin)
 final allRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final service = ref.watch(requestServiceProvider);
-  return service.getAllRequests();
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getAllServiceRequests();
 });
 
 /// Requests by Status Provider
-final requestsByStatusProvider = StreamProvider.family<List<Request>, RequestStatus>(
+final requestsByStatusProvider =
+    StreamProvider.family<List<Request>, RequestStatus>(
   (ref, status) {
-    final service = ref.watch(requestServiceProvider);
-    return service.getRequestsByStatus(status);
+    final service = ref.watch(appwriteDatabaseServiceProvider);
+    return service.getServiceRequestsByStatus(status);
   },
 );
 
 /// Request by ID Provider (for detail screen)
 final requestByIdProvider = StreamProvider.family<Request?, String>(
   (ref, requestId) {
-    final service = ref.watch(requestServiceProvider);
-    return service.watchRequestById(requestId);
+    final service = ref.watch(appwriteDatabaseServiceProvider);
+    return service.watchServiceRequestById(requestId);
   },
 );
 
@@ -98,26 +77,26 @@ final requestByIdProvider = StreamProvider.family<Request?, String>(
 
 /// Can Create Request Provider (check 3 active limit)
 final canCreateRequestProvider = FutureProvider<bool>((ref) async {
-  final userId = ref.watch(currentRequestUserIdProvider);
-  
+  final userId = ref.watch(currentUserIdProvider);
+
   if (userId == null) {
     return false;
   }
 
-  final service = ref.watch(requestServiceProvider);
-  return await service.canCreateRequest(userId);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return await service.canCreateServiceRequest(userId);
 });
 
 /// Active Request Count Provider
 final activeRequestCountProvider = FutureProvider<int>((ref) async {
-  final userId = ref.watch(currentRequestUserIdProvider);
-  
+  final userId = ref.watch(currentUserIdProvider);
+
   if (userId == null) {
     return 0;
   }
 
-  final service = ref.watch(requestServiceProvider);
-  return await service.getActiveRequestCount(userId);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return await service.getActiveServiceRequestCount(userId);
 });
 
 // ==================== REQUEST SUMMARY PROVIDERS ====================
@@ -148,10 +127,14 @@ final myRequestsSummaryProvider = Provider<RequestSummary>((ref) {
     data: (requests) {
       return RequestSummary(
         total: requests.length,
-        pending: requests.where((r) => r.status == RequestStatus.pending).length,
-        assigned: requests.where((r) => r.status == RequestStatus.assigned).length,
-        inProgress: requests.where((r) => r.status == RequestStatus.inProgress).length,
-        completed: requests.where((r) => r.status == RequestStatus.completed).length,
+        pending:
+            requests.where((r) => r.status == RequestStatus.pending).length,
+        assigned:
+            requests.where((r) => r.status == RequestStatus.assigned).length,
+        inProgress:
+            requests.where((r) => r.status == RequestStatus.inProgress).length,
+        completed:
+            requests.where((r) => r.status == RequestStatus.completed).length,
         active: requests.where((r) => r.isActive).length,
       );
     },
@@ -191,55 +174,14 @@ class CleanerProfile {
     this.photoUrl,
     this.activeTaskCount = 0,
   });
-
-  factory CleanerProfile.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-    return CleanerProfile(
-      id: doc.id,
-      name: data['name'] as String? ?? 'Unknown',
-      email: data['email'] as String?,
-      photoUrl: data['photoUrl'] as String?,
-      activeTaskCount: data['activeTaskCount'] as int? ?? 0,
-    );
-  }
 }
 
 /// Available Cleaners Provider (for employee to select cleaner)
+/// TODO: Implement with Appwrite users query when needed
 final availableCleanersProvider = StreamProvider<List<CleanerProfile>>((ref) {
-  try {
-    return FirebaseFirestore.instance
-        .collection('users')
-        .where('role', isEqualTo: 'cleaner')
-        .snapshots()
-        .asyncMap((snapshot) async {
-      final cleaners = <CleanerProfile>[];
-      
-      for (var doc in snapshot.docs) {
-        final cleaner = CleanerProfile.fromFirestore(doc);
-        
-        // Get active task count for this cleaner
-        final requestService = ref.read(requestServiceProvider);
-        final stats = await requestService.getRequestStatsByCleaner(cleaner.id);
-        final activeCount = stats['active'] ?? 0;
-        
-        cleaners.add(CleanerProfile(
-          id: cleaner.id,
-          name: cleaner.name,
-          email: cleaner.email,
-          photoUrl: cleaner.photoUrl,
-          activeTaskCount: activeCount,
-        ));
-      }
-      
-      // Sort by active task count (least busy first)
-      cleaners.sort((a, b) => a.activeTaskCount.compareTo(b.activeTaskCount));
-      
-      return cleaners;
-    });
-  } catch (e) {
-    _logger.error('Error getting cleaners', e);
-    return Stream.value([]);
-  }
+  // For now, return empty list - cleaner selection feature can be added later
+  // This would require querying users collection with role='cleaner'
+  return Stream.value([]);
 });
 
 // ==================== REQUEST ACTIONS ====================
@@ -247,6 +189,11 @@ final availableCleanersProvider = StreamProvider<List<CleanerProfile>>((ref) {
 /// Request Actions Provider
 final requestActionsProvider = Provider<RequestActions>((ref) {
   return RequestActions(ref);
+});
+
+/// Storage Service Provider for image uploads
+final appwriteStorageServiceProvider = Provider<AppwriteStorageService>((ref) {
+  return AppwriteStorageService();
 });
 
 class RequestActions {
@@ -258,29 +205,37 @@ class RequestActions {
   Future<String> createRequest({
     required String location,
     required String description,
-    String? assignedTo,          // Optional cleaner selection
+    String? assignedTo,
     String? assignedToName,
     bool isUrgent = false,
     DateTime? preferredDateTime,
-    Uint8List? imageBytes,       // Optional image
+    Uint8List? imageBytes,
   }) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const ValidationException(message: 'User not logged in');
+      }
+
+      // Check if user can create request (max 3 active)
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      final canCreate = await service.canCreateServiceRequest(userProfile.uid);
+      if (!canCreate) {
+        throw const ValidationException(
+          message: 'Anda sudah memiliki 3 permintaan aktif. Tunggu sampai selesai.',
+        );
       }
 
       // Upload image if provided
       String? imageUrl;
       if (imageBytes != null) {
         _logger.info('Uploading request image...');
-        final storageService = ref.read(storageServiceProvider);
+        final storageService = ref.read(appwriteStorageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: imageBytes,
           folder: 'requests',
-          userId: user.uid,
+          userId: userProfile.uid,
         );
-
         if (result.isSuccess && result.data != null) {
           imageUrl = result.data;
           _logger.info('Image uploaded: $imageUrl');
@@ -290,19 +245,28 @@ class RequestActions {
       }
 
       // Create request
-      final service = ref.read(requestServiceProvider);
-      final requestId = await service.createRequest(
-        userId: user.uid,
-        userName: user.displayName ?? 'Unknown',
-        userRole: 'employee',
+      final request = Request(
+        id: '', // Will be generated by Appwrite
         location: location,
         description: description,
-        assignedTo: assignedTo,
-        assignedToName: assignedToName,
+        requestedBy: userProfile.uid,
+        requestedByName: userProfile.displayName,
+        requestedByRole: userProfile.role,
+        status: assignedTo != null ? RequestStatus.assigned : RequestStatus.pending,
+        createdAt: DateTime.now(),
         isUrgent: isUrgent,
         preferredDateTime: preferredDateTime,
+        assignedTo: assignedTo,
+        assignedToName: assignedToName,
+        assignedAt: assignedTo != null ? DateTime.now() : null,
+        assignedBy: assignedTo != null ? 'employee' : null,
         imageUrl: imageUrl,
       );
+
+      final requestId = await service.createServiceRequest(request);
+      if (requestId == null) {
+        throw const FirestoreException(message: 'Gagal membuat permintaan.');
+      }
 
       _logger.info('Request created successfully: $requestId');
       return requestId;
@@ -310,55 +274,50 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error creating request', e);
-      throw const FirestoreException(message: 'Gagal membuat permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal membuat permintaan. Silakan coba lagi.',
+      );
     }
   }
 
   /// Self-assign request (cleaner picks from pending)
   Future<void> selfAssignRequest(String requestId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const ValidationException(message: 'User not logged in');
       }
 
-      final service = ref.read(requestServiceProvider);
-      await service.selfAssignRequest(
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      await service.selfAssignServiceRequest(
         requestId,
-        user.uid,
-        user.displayName ?? 'Unknown',
+        userProfile.uid,
+        userProfile.displayName,
       );
 
       _logger.info('Request self-assigned successfully');
     } on ValidationException {
       rethrow;
-    } on FirestoreException {
-      rethrow;
     } catch (e) {
       _logger.error('Error self-assigning request', e);
-      throw const FirestoreException(message: 'Gagal mengambil permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal mengambil permintaan. Silakan coba lagi.',
+      );
     }
   }
 
   /// Start request (cleaner starts working)
   Future<void> startRequest(String requestId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw const ValidationException(message: 'User not logged in');
-      }
-
-      final service = ref.read(requestServiceProvider);
-      await service.startRequest(requestId, user.uid);
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      await service.startServiceRequest(requestId);
 
       _logger.info('Request started successfully');
-    } on ValidationException {
-      rethrow;
-    } on FirestoreException {
-      rethrow;
     } catch (e) {
       _logger.error('Error starting request', e);
-      throw const FirestoreException(message: 'Gagal memulai permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal memulai permintaan. Silakan coba lagi.',
+      );
     }
   }
 
@@ -369,8 +328,8 @@ class RequestActions {
     String? completionNotes,
   }) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const ValidationException(message: 'User not logged in');
       }
 
@@ -378,13 +337,12 @@ class RequestActions {
       String? completionImageUrl;
       if (completionImageBytes != null) {
         _logger.info('Uploading completion image...');
-        final storageService = ref.read(storageServiceProvider);
+        final storageService = ref.read(appwriteStorageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: completionImageBytes,
           folder: 'request_completions',
-          userId: user.uid,
+          userId: userProfile.uid,
         );
-
         if (result.isSuccess && result.data != null) {
           completionImageUrl = result.data;
           _logger.info('Completion image uploaded: $completionImageUrl');
@@ -394,10 +352,9 @@ class RequestActions {
       }
 
       // Complete request
-      final service = ref.read(requestServiceProvider);
-      await service.completeRequest(
-        requestId: requestId,
-        cleanerId: user.uid,
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      await service.completeServiceRequest(
+        requestId,
         completionImageUrl: completionImageUrl,
         completionNotes: completionNotes,
       );
@@ -405,63 +362,56 @@ class RequestActions {
       _logger.info('Request completed successfully');
     } on ValidationException {
       rethrow;
-    } on FirestoreException {
-      rethrow;
     } catch (e) {
       _logger.error('Error completing request', e);
-      throw const FirestoreException(message: 'Gagal menyelesaikan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal menyelesaikan permintaan. Silakan coba lagi.',
+      );
     }
   }
 
   /// Cancel request (by requester)
   Future<void> cancelRequest(String requestId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        throw const ValidationException(message: 'User not logged in');
-      }
-
-      final service = ref.read(requestServiceProvider);
-      await service.cancelRequest(requestId, user.uid);
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      await service.cancelServiceRequest(requestId);
 
       _logger.info('Request cancelled successfully');
-    } on ValidationException {
-      rethrow;
-    } on FirestoreException {
-      rethrow;
     } catch (e) {
       _logger.error('Error cancelling request', e);
-      throw const FirestoreException(message: 'Gagal membatalkan permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal membatalkan permintaan. Silakan coba lagi.',
+      );
     }
   }
 
   /// Delete request (soft delete)
   Future<void> deleteRequest(String requestId) async {
     try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const ValidationException(message: 'User not logged in');
       }
 
-      final service = ref.read(requestServiceProvider);
-      await service.softDeleteRequest(requestId, user.uid);
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      await service.softDeleteServiceRequest(requestId, userProfile.uid);
 
       _logger.info('Request deleted successfully');
     } on ValidationException {
       rethrow;
-    } on FirestoreException {
-      rethrow;
     } catch (e) {
       _logger.error('Error deleting request', e);
-      throw const FirestoreException(message: 'Gagal menghapus permintaan. Silakan coba lagi.');
+      throw const FirestoreException(
+        message: 'Gagal menghapus permintaan. Silakan coba lagi.',
+      );
     }
   }
 
   /// Get request by ID
   Future<Request?> getRequestById(String requestId) async {
     try {
-      final service = ref.read(requestServiceProvider);
-      return await service.getRequestById(requestId);
+      final service = ref.read(appwriteDatabaseServiceProvider);
+      return await service.getServiceRequestById(requestId);
     } catch (e) {
       _logger.error('Error getting request', e);
       return null;

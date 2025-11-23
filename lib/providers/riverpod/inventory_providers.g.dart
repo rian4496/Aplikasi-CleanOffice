@@ -8,6 +8,62 @@ part of 'inventory_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
+/// Provider untuk AppwriteDatabaseService singleton
+/// Digunakan di seluruh inventory providers
+
+@ProviderFor(appwriteDatabaseService)
+const appwriteDatabaseServiceProvider = AppwriteDatabaseServiceProvider._();
+
+/// Provider untuk AppwriteDatabaseService singleton
+/// Digunakan di seluruh inventory providers
+
+final class AppwriteDatabaseServiceProvider
+    extends
+        $FunctionalProvider<
+          AppwriteDatabaseService,
+          AppwriteDatabaseService,
+          AppwriteDatabaseService
+        >
+    with $Provider<AppwriteDatabaseService> {
+  /// Provider untuk AppwriteDatabaseService singleton
+  /// Digunakan di seluruh inventory providers
+  const AppwriteDatabaseServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appwriteDatabaseServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appwriteDatabaseServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<AppwriteDatabaseService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  AppwriteDatabaseService create(Ref ref) {
+    return appwriteDatabaseService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(AppwriteDatabaseService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<AppwriteDatabaseService>(value),
+    );
+  }
+}
+
+String _$appwriteDatabaseServiceHash() =>
+    r'1494f51b806808b4d193c4564fa18494e9388490';
+
 /// Stream all inventory items
 
 @ProviderFor(allInventoryItems)
@@ -52,7 +108,7 @@ final class AllInventoryItemsProvider
   }
 }
 
-String _$allInventoryItemsHash() => r'063abfcb317752401d6c603c61379ad984d64591';
+String _$allInventoryItemsHash() => r'1a1158c7e5814ae854384e851be54ee100184083';
 
 /// Stream low stock items
 
@@ -98,7 +154,7 @@ final class LowStockItemsProvider
   }
 }
 
-String _$lowStockItemsHash() => r'2061f8d6cde3850ac7781f7acc5b454d484df93a';
+String _$lowStockItemsHash() => r'74179369ace6c2e85a6d5a722e5f811a4b738bd6';
 
 /// Get low stock count
 
@@ -136,7 +192,7 @@ final class LowStockCountProvider
   }
 }
 
-String _$lowStockCountHash() => r'5159499a162e76c25cfe32dd52c85a80ce50f399';
+String _$lowStockCountHash() => r'a6b0f54793e7eb57988d91a6a91014911aef2796';
 
 /// Stream pending stock requests
 
@@ -183,7 +239,7 @@ final class PendingStockRequestsProvider
 }
 
 String _$pendingStockRequestsHash() =>
-    r'd526cb674e258e0365191d1c346425a3d1d0ad9e';
+    r'883fe4e169b15adbba685be388f2dc598667f9e3';
 
 /// Stream user's stock requests
 
@@ -229,7 +285,7 @@ final class MyStockRequestsProvider
   }
 }
 
-String _$myStockRequestsHash() => r'a994d81d148d77bb13298db0d7dd71a528d85d34';
+String _$myStockRequestsHash() => r'949f6b52e8e62d69b8718cdb5bd6ddde1e646d7c';
 
 /// Get pending requests count
 
@@ -268,4 +324,4 @@ final class PendingRequestsCountProvider
 }
 
 String _$pendingRequestsCountHash() =>
-    r'a5630ad8577b663bdb955c28c1ee28da067a1a62';
+    r'2c7a9636c9e29f9a60d49f1f3aa4e49efbbc003a';

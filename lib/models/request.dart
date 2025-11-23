@@ -1,30 +1,11 @@
 // lib/models/request.dart
-// ✅ REQUEST MODEL - For personal service requests (NOT institutional reports)
-// 
-// DIFFERENCE FROM REPORT:
-// - Report: Institutional issues (toilet kotor, AC rusak) - Public visibility
-// - Request: Personal services (bersihkan mobil, angkat galon) - Private visibility
-//
-// VISIBILITY RULES:
-// - Requester: See own requests only
-// - Assigned Cleaner: See assigned requests only
-// - Admin: See ALL requests
-// - Other employees: CANNOT see others' requests
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
 
 // ==================== REQUEST STATUS ENUM ====================
 
-/// Enum untuk status request layanan personal
-///
-/// Flow status:
-/// 1. pending - Request baru dibuat, menunggu cleaner (self-assign atau admin assign)
-/// 2. assigned - Sudah ditugaskan ke cleaner tertentu (by employee atau self-assign)
-/// 3. in_progress - Cleaner sedang mengerjakan
-/// 4. completed - Cleaner sudah selesai
-/// 5. cancelled - Request dibatalkan (by requester atau admin)
 enum RequestStatus {
   pending,
   assigned,
@@ -32,7 +13,6 @@ enum RequestStatus {
   completed,
   cancelled;
 
-  /// Mengkonversi string dari Firestore ke enum
   static RequestStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -51,8 +31,7 @@ enum RequestStatus {
     }
   }
 
-  /// Mengkonversi enum ke string untuk Firestore
-  String toFirestore() {
+  String toDatabase() {
     switch (this) {
       case RequestStatus.pending:
         return 'pending';
@@ -67,7 +46,9 @@ enum RequestStatus {
     }
   }
 
-  /// Display name untuk UI dalam Bahasa Indonesia
+  // Keep for compatibility
+  String toFirestore() => toDatabase();
+
   String get displayName {
     switch (this) {
       case RequestStatus.pending:
@@ -83,7 +64,6 @@ enum RequestStatus {
     }
   }
 
-  /// Warna untuk UI berdasarkan status
   Color get color {
     switch (this) {
       case RequestStatus.pending:
@@ -99,7 +79,6 @@ enum RequestStatus {
     }
   }
 
-  /// Icon untuk UI berdasarkan status
   IconData get icon {
     switch (this) {
       case RequestStatus.pending:
@@ -115,74 +94,44 @@ enum RequestStatus {
     }
   }
 
-  /// Check apakah status ini masih aktif (belum selesai/cancelled)
   bool get isActive {
     return this == RequestStatus.pending ||
         this == RequestStatus.assigned ||
         this == RequestStatus.inProgress;
   }
 
-  /// Check apakah status ini sudah final (tidak bisa diubah lagi)
   bool get isFinal {
     return this == RequestStatus.completed ||
         this == RequestStatus.cancelled;
   }
 
-  /// Check apakah cleaner bisa self-assign
-  bool get canSelfAssign {
-    return this == RequestStatus.pending;
-  }
+  bool get canSelfAssign => this == RequestStatus.pending;
 }
 
 // ==================== REQUEST MODEL ====================
 
-/// Model untuk request layanan personal (bukan laporan institusional)
-/// 
-/// Use Cases:
-/// - Employee request: "Tolong bersihkan mobil saya"
-/// - Employee request: "Tolong angkat galon ke pantry"
-/// - Admin request: "Setup ruang meeting untuk event" (future)
-/// 
-/// Key Features:
-/// - Private visibility (only requester, assigned cleaner, and admin can see)
-/// - Employee can select cleaner when creating (optional)
-/// - Cleaner can self-assign from pending requests
-/// - Max 3 active requests per employee
-/// - Optional photo upload
 class Request {
   final String id;
-  
-  // ==================== REQUEST INFO ====================
-  final String location;                 // "Parkiran Depan", "Pantry Lt 2", etc
-  final String description;              // Detail request
-  final bool isUrgent;                   // Urgent flag
-  final DateTime? preferredDateTime;     // When user wants service (optional)
-  
-  // ==================== REQUESTER INFO ====================
-  final String requestedBy;              // userId (employee/admin)
-  final String requestedByName;          // User's name
-  final String requestedByRole;          // 'employee' (future: 'admin')
-  
-  // ==================== ASSIGNMENT INFO ====================
-  final String? assignedTo;              // cleanerId (null if pending)
-  final String? assignedToName;          // Cleaner's name
-  final DateTime? assignedAt;            // When assigned
-  final String? assignedBy;              // 'employee' | 'self' | 'admin' (tracking)
-  
-  // ==================== STATUS & COMPLETION ====================
-  final RequestStatus status;            // Current status
-  final String? imageUrl;                // Initial photo (optional)
-  final String? completionImageUrl;      // Completion proof (optional)
-  final String? completionNotes;         // Notes from cleaner when completing
-  
-  // ==================== TIMESTAMPS ====================
-  final DateTime createdAt;              // When request created
-  final DateTime? startedAt;             // When cleaner started
-  final DateTime? completedAt;           // When cleaner completed
-  
-  // ==================== SOFT DELETE ====================
-  final DateTime? deletedAt;             // Soft delete timestamp
-  final String? deletedBy;               // Who deleted (userId)
+  final String location;
+  final String description;
+  final bool isUrgent;
+  final DateTime? preferredDateTime;
+  final String requestedBy;
+  final String requestedByName;
+  final String requestedByRole;
+  final String? assignedTo;
+  final String? assignedToName;
+  final DateTime? assignedAt;
+  final String? assignedBy;
+  final RequestStatus status;
+  final String? imageUrl;
+  final String? completionImageUrl;
+  final String? completionNotes;
+  final DateTime createdAt;
+  final DateTime? startedAt;
+  final DateTime? completedAt;
+  final DateTime? deletedAt;
+  final String? deletedBy;
 
   Request({
     required this.id,
@@ -208,36 +157,15 @@ class Request {
     this.deletedBy,
   });
 
-  /// Convert dari Firestore document ke Request object
-  factory Request.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-
-    return Request(
-      id: doc.id,
-      location: data['location'] as String? ?? '',
-      description: data['description'] as String? ?? '',
-      requestedBy: data['requestedBy'] as String? ?? '',
-      requestedByName: data['requestedByName'] as String? ?? '',
-      requestedByRole: data['requestedByRole'] as String? ?? 'employee',
-      status: RequestStatus.fromString(data['status'] as String? ?? 'pending'),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      isUrgent: data['isUrgent'] as bool? ?? false,
-      preferredDateTime: (data['preferredDateTime'] as Timestamp?)?.toDate(),
-      assignedTo: data['assignedTo'] as String?,
-      assignedToName: data['assignedToName'] as String?,
-      assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
-      assignedBy: data['assignedBy'] as String?,
-      imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,
-      completionNotes: data['completionNotes'] as String?,
-      startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),
-      deletedBy: data['deletedBy'] as String?,
-    );
+  // Helper to parse dates from various formats
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
   }
 
-  /// Convert dari Map ke Request object (untuk compatibility)
+  /// Convert dari Map ke Request object (Appwrite compatible)
   factory Request.fromMap(String id, Map<String, dynamic> data) {
     return Request(
       id: id,
@@ -247,60 +175,76 @@ class Request {
       requestedByName: data['requestedByName'] as String? ?? '',
       requestedByRole: data['requestedByRole'] as String? ?? 'employee',
       status: RequestStatus.fromString(data['status'] as String? ?? 'pending'),
-      createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      createdAt: _parseDate(data['createdAt']) ?? DateTime.now(),
       isUrgent: data['isUrgent'] as bool? ?? false,
-      preferredDateTime: (data['preferredDateTime'] as Timestamp?)?.toDate(),
+      preferredDateTime: _parseDate(data['preferredDateTime']),
       assignedTo: data['assignedTo'] as String?,
       assignedToName: data['assignedToName'] as String?,
-      assignedAt: (data['assignedAt'] as Timestamp?)?.toDate(),
+      assignedAt: _parseDate(data['assignedAt']),
       assignedBy: data['assignedBy'] as String?,
       imageUrl: data['imageUrl'] as String?,
       completionImageUrl: data['completionImageUrl'] as String?,
       completionNotes: data['completionNotes'] as String?,
-      startedAt: (data['startedAt'] as Timestamp?)?.toDate(),
-      completedAt: (data['completedAt'] as Timestamp?)?.toDate(),
-      deletedAt: (data['deletedAt'] as Timestamp?)?.toDate(),
+      startedAt: _parseDate(data['startedAt']),
+      completedAt: _parseDate(data['completedAt']),
+      deletedAt: _parseDate(data['deletedAt']),
       deletedBy: data['deletedBy'] as String?,
     );
   }
 
-  /// Convert Request object ke Map untuk Firestore
-  Map<String, dynamic> toFirestore() {
+  /// Convert dari Appwrite document ke Request object
+  factory Request.fromAppwrite(Map<String, dynamic> data) {
+    return Request(
+      id: data['\$id'] as String? ?? '',
+      location: data['location'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      requestedBy: data['requesterId'] as String? ?? data['requestedBy'] as String? ?? '',
+      requestedByName: data['requesterName'] as String? ?? data['requestedByName'] as String? ?? '',
+      requestedByRole: data['requestedByRole'] as String? ?? 'employee',
+      status: RequestStatus.fromString(data['status'] as String? ?? 'pending'),
+      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
+      isUrgent: data['isUrgent'] as bool? ?? false,
+      preferredDateTime: _parseDate(data['preferredTime'] ?? data['preferredDateTime']),
+      assignedTo: data['cleanerId'] as String? ?? data['assignedTo'] as String?,
+      assignedToName: data['cleanerName'] as String? ?? data['assignedToName'] as String?,
+      assignedAt: _parseDate(data['assignedAt']),
+      assignedBy: data['assignedBy'] as String?,
+      imageUrl: data['imageUrl'] as String?,
+      completionImageUrl: data['completionImageUrl'] as String?,
+      completionNotes: data['completionNotes'] as String?,
+      startedAt: _parseDate(data['startedAt']),
+      completedAt: _parseDate(data['completedAt']),
+      deletedAt: _parseDate(data['deletedAt']),
+      deletedBy: data['deletedBy'] as String?,
+    );
+  }
+
+  /// Convert Request object ke Map untuk Appwrite
+  Map<String, dynamic> toAppwrite() {
     return {
+      'requesterId': requestedBy,
+      'requesterName': requestedByName,
       'location': location,
       'description': description,
-      'requestedBy': requestedBy,
-      'requestedByName': requestedByName,
-      'requestedByRole': requestedByRole,
-      'status': status.toFirestore(),
-      'createdAt': Timestamp.fromDate(createdAt),
       'isUrgent': isUrgent,
-      'preferredDateTime': preferredDateTime != null 
-          ? Timestamp.fromDate(preferredDateTime!) 
-          : null,
-      'assignedTo': assignedTo,
-      'assignedToName': assignedToName,
-      'assignedAt': assignedAt != null 
-          ? Timestamp.fromDate(assignedAt!) 
-          : null,
-      'assignedBy': assignedBy,
+      'preferredTime': preferredDateTime?.toIso8601String(),
+      'status': status.toDatabase(),
+      'cleanerId': assignedTo,
+      'cleanerName': assignedToName,
+      'assignedAt': assignedAt?.toIso8601String(),
+      'startedAt': startedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
       'imageUrl': imageUrl,
       'completionImageUrl': completionImageUrl,
       'completionNotes': completionNotes,
-      'startedAt': startedAt != null 
-          ? Timestamp.fromDate(startedAt!) 
-          : null,
-      'completedAt': completedAt != null 
-          ? Timestamp.fromDate(completedAt!) 
-          : null,
-      'deletedAt': deletedAt != null 
-          ? Timestamp.fromDate(deletedAt!) 
-          : null,
+      'deletedAt': deletedAt?.toIso8601String(),
       'deletedBy': deletedBy,
     };
   }
 
-  /// Copy with method untuk immutability
+  // Keep for compatibility
+  Map<String, dynamic> toFirestore() => toAppwrite();
+
   Request copyWith({
     String? id,
     String? location,
@@ -349,24 +293,12 @@ class Request {
     );
   }
 
-  // ==================== HELPER METHODS ====================
-
-  /// Check apakah request sudah diassign ke cleaner
   bool get isAssigned => assignedTo != null;
-
-  /// Check apakah request sudah selesai
   bool get isCompleted => status == RequestStatus.completed;
-
-  /// Check apakah request dibatalkan
   bool get isCancelled => status == RequestStatus.cancelled;
-
-  /// Check apakah request soft deleted
   bool get isDeleted => deletedAt != null;
-
-  /// Check apakah request masih aktif (not completed/cancelled)
   bool get isActive => status.isActive;
 
-  /// Durasi pengerjaan (jika ada)
   Duration? get workDuration {
     if (startedAt != null && completedAt != null) {
       return completedAt!.difference(startedAt!);
@@ -374,7 +306,6 @@ class Request {
     return null;
   }
 
-  /// Response time (dari dibuat hingga ditugaskan)
   Duration? get responseTime {
     if (assignedAt != null) {
       return assignedAt!.difference(createdAt);
@@ -382,7 +313,6 @@ class Request {
     return null;
   }
 
-  /// Total time (dari dibuat hingga selesai)
   Duration? get totalTime {
     if (completedAt != null) {
       return completedAt!.difference(createdAt);
@@ -390,37 +320,20 @@ class Request {
     return null;
   }
 
-  /// Check apakah request ini milik user tertentu
-  bool isOwnedBy(String userId) {
-    return requestedBy == userId;
-  }
+  bool isOwnedBy(String userId) => requestedBy == userId;
+  bool isAssignedTo(String cleanerId) => assignedTo == cleanerId;
 
-  /// Check apakah request ini diassign ke cleaner tertentu
-  bool isAssignedTo(String cleanerId) {
-    return assignedTo == cleanerId;
-  }
-
-  /// Check apakah user ini bisa cancel request
-  /// Rules: Only requester can cancel, and only if status is pending or assigned
   bool canBeCancelledBy(String userId) {
-    return requestedBy == userId && 
-           (status == RequestStatus.pending || status == RequestStatus.assigned);
+    return requestedBy == userId &&
+        (status == RequestStatus.pending || status == RequestStatus.assigned);
   }
 
-  /// Check apakah cleaner ini bisa self-assign
-  /// Rules: Status must be pending and not deleted
-  bool canBeSelfAssigned() {
-    return status == RequestStatus.pending && !isDeleted;
-  }
+  bool canBeSelfAssigned() => status == RequestStatus.pending && !isDeleted;
 
-  /// Check apakah cleaner ini bisa start
-  /// Rules: Must be assigned to this cleaner and status is assigned
   bool canBeStartedBy(String cleanerId) {
     return assignedTo == cleanerId && status == RequestStatus.assigned;
   }
 
-  /// Check apakah cleaner ini bisa complete
-  /// Rules: Must be assigned to this cleaner and status is in_progress
   bool canBeCompletedBy(String cleanerId) {
     return assignedTo == cleanerId && status == RequestStatus.inProgress;
   }
@@ -428,6 +341,6 @@ class Request {
   @override
   String toString() {
     return 'Request(id: $id, location: $location, status: ${status.displayName}, '
-           'requestedBy: $requestedByName, assignedTo: $assignedToName)';
+        'requestedBy: $requestedByName, assignedTo: $assignedToName)';
   }
 }

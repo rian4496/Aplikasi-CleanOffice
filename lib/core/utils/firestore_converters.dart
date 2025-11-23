@@ -1,12 +1,13 @@
 // lib/core/utils/firestore_converters.dart
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:freezed_annotation/freezed_annotation.dart';
 
-/// Timestamp Converter untuk Freezed + Firestore
+/// Timestamp Converter untuk Freezed + Appwrite
 ///
-/// Converts antara DateTime (Dart) dan Timestamp (Firestore)
+/// Converts antara DateTime (Dart) dan ISO 8601 String (Appwrite)
+/// Note: Appwrite uses ISO 8601 strings, not Firebase Timestamp
 ///
 /// Usage dalam Freezed model:
 /// ```dart
@@ -25,14 +26,14 @@ class TimestampConverter implements JsonConverter<DateTime, dynamic> {
   DateTime fromJson(dynamic json) {
     if (json == null) return DateTime.now();
 
-    // From Firestore Timestamp
-    if (json is Timestamp) {
-      return json.toDate();
+    // From ISO String (Appwrite format)
+    if (json is String) {
+      return DateTime.tryParse(json) ?? DateTime.now();
     }
 
-    // From ISO String (for cache/JSON)
-    if (json is String) {
-      return DateTime.parse(json);
+    // From DateTime directly
+    if (json is DateTime) {
+      return json;
     }
 
     // From milliseconds since epoch
@@ -45,8 +46,8 @@ class TimestampConverter implements JsonConverter<DateTime, dynamic> {
 
   @override
   dynamic toJson(DateTime object) {
-    // Always convert to Timestamp for Firestore
-    return Timestamp.fromDate(object);
+    // Always convert to ISO 8601 String for Appwrite
+    return object.toIso8601String();
   }
 }
 
@@ -60,12 +61,12 @@ class NullableTimestampConverter implements JsonConverter<DateTime?, dynamic> {
   DateTime? fromJson(dynamic json) {
     if (json == null) return null;
 
-    if (json is Timestamp) {
-      return json.toDate();
+    if (json is String) {
+      return DateTime.tryParse(json);
     }
 
-    if (json is String) {
-      return DateTime.parse(json);
+    if (json is DateTime) {
+      return json;
     }
 
     if (json is int) {
@@ -78,7 +79,7 @@ class NullableTimestampConverter implements JsonConverter<DateTime?, dynamic> {
   @override
   dynamic toJson(DateTime? object) {
     if (object == null) return null;
-    return Timestamp.fromDate(object);
+    return object.toIso8601String();
   }
 }
 
@@ -100,7 +101,7 @@ class ISODateTimeConverter implements JsonConverter<DateTime, String> {
 
   @override
   DateTime fromJson(String json) {
-    return DateTime.parse(json);
+    return DateTime.tryParse(json) ?? DateTime.now();
   }
 
   @override
@@ -118,7 +119,7 @@ class NullableISODateTimeConverter implements JsonConverter<DateTime?, String?> 
   @override
   DateTime? fromJson(String? json) {
     if (json == null) return null;
-    return DateTime.parse(json);
+    return DateTime.tryParse(json);
   }
 
   @override
@@ -161,7 +162,7 @@ class TimeOfDayConverter implements JsonConverter<TimeOfDay, String> {
 
 /// Report Status Converter
 ///
-/// Converts ReportStatus enum untuk Firestore
+/// Converts ReportStatus enum untuk Database
 class ReportStatusConverter implements JsonConverter<dynamic, String> {
   const ReportStatusConverter();
 
@@ -173,7 +174,7 @@ class ReportStatusConverter implements JsonConverter<dynamic, String> {
 
   @override
   String toJson(dynamic object) {
-    // Assume object has toFirestore() method
+    // Assume object has toDatabase() method
     if (object == null) return 'pending';
     return object.toString().split('.').last;
   }

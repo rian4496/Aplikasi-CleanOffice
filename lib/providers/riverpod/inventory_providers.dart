@@ -1,28 +1,37 @@
 // lib/providers/riverpod/inventory_providers.dart
-// Inventory providers with Riverpod code generation
+// Inventory providers - Migrated to Appwrite
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 import '../../models/inventory_item.dart';
-import '../../services/inventory_service.dart';
+import '../../services/appwrite_database_service.dart';
 import './auth_providers.dart';
 
 part 'inventory_providers.g.dart';
 
-final _inventoryService = InventoryService();
+// ==================== SERVICE PROVIDER ====================
+
+/// Provider untuk AppwriteDatabaseService singleton
+/// Digunakan di seluruh inventory providers
+@riverpod
+AppwriteDatabaseService appwriteDatabaseService(Ref ref) {
+  return AppwriteDatabaseService();
+}
 
 // ==================== INVENTORY ITEMS ====================
 
 /// Stream all inventory items
 @riverpod
 Stream<List<InventoryItem>> allInventoryItems(Ref ref) {
-  return _inventoryService.streamAllItems();
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getAllInventoryItems();
 }
 
 /// Stream low stock items
 @riverpod
 Stream<List<InventoryItem>> lowStockItems(Ref ref) {
-  return _inventoryService.streamLowStockItems();
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getLowStockItems();
 }
 
 /// Get low stock count
@@ -31,7 +40,7 @@ Stream<int> lowStockCount(Ref ref) {
   return ref.watch(lowStockItemsProvider).when(
     data: (items) => Stream.value(items.length),
     loading: () => Stream.value(0),
-    error: (_, _) => Stream.value(0),
+    error: (_, __) => Stream.value(0),
   );
 }
 
@@ -40,17 +49,20 @@ Stream<int> lowStockCount(Ref ref) {
 /// Stream pending stock requests
 @riverpod
 Stream<List<StockRequest>> pendingStockRequests(Ref ref) {
-  return _inventoryService.streamPendingRequests();
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getPendingStockRequests();
 }
 
 /// Stream user's stock requests
 @riverpod
 Stream<List<StockRequest>> myStockRequests(Ref ref) {
   final authState = ref.watch(authStateProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+
   return authState.when(
     data: (user) {
       if (user == null) return Stream.value([]);
-      return _inventoryService.streamUserRequests(user.uid);
+      return service.getStockRequestsByUser(user.$id);
     },
     loading: () => Stream.value([]),
     error: (error, stack) => Stream.value([]),
@@ -63,6 +75,6 @@ Stream<int> pendingRequestsCount(Ref ref) {
   return ref.watch(pendingStockRequestsProvider).when(
     data: (requests) => Stream.value(requests.length),
     loading: () => Stream.value(0),
-    error: (_, _) => Stream.value(0),
+    error: (_, __) => Stream.value(0),
   );
 }

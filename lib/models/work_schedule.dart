@@ -1,4 +1,6 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+// lib/models/work_schedule.dart
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
+
 import 'package:flutter/material.dart' show TimeOfDay;
 
 class WorkSchedule {
@@ -26,6 +28,14 @@ class WorkSchedule {
     this.updatedAt,
   });
 
+  // Helper to parse dates from various formats
+  static DateTime? _parseDate(dynamic value) {
+    if (value == null) return null;
+    if (value is DateTime) return value;
+    if (value is String) return DateTime.tryParse(value);
+    return null;
+  }
+
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
@@ -35,10 +45,13 @@ class WorkSchedule {
       'shiftEnd': '${shiftEnd.hour}:${shiftEnd.minute}',
       'location': location,
       'assignedBy': assignedBy,
-      'createdAt': Timestamp.fromDate(createdAt),
-      'updatedAt': updatedAt != null ? Timestamp.fromDate(updatedAt!) : null,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
     };
   }
+
+  /// Convert to Appwrite document format
+  Map<String, dynamic> toAppwrite() => toMap();
 
   factory WorkSchedule.fromMap(String id, Map<String, dynamic> map) {
     final startTime = map['shiftStart'].toString().split(':');
@@ -59,8 +72,33 @@ class WorkSchedule {
       ),
       location: map['location'] ?? '',
       assignedBy: map['assignedBy'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      updatedAt: (map['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(map['updatedAt']),
+    );
+  }
+
+  /// Factory from Appwrite document
+  factory WorkSchedule.fromAppwrite(Map<String, dynamic> data) {
+    final startTime = data['shiftStart'].toString().split(':');
+    final endTime = data['shiftEnd'].toString().split(':');
+
+    return WorkSchedule(
+      id: data['\$id'] ?? data['id'] ?? '',
+      userId: data['userId'] ?? '',
+      shift: data['shift'] ?? '',
+      workDays: List<String>.from(data['workDays'] ?? []),
+      shiftStart: TimeOfDay(
+        hour: int.parse(startTime[0]),
+        minute: int.parse(startTime[1]),
+      ),
+      shiftEnd: TimeOfDay(
+        hour: int.parse(endTime[0]),
+        minute: int.parse(endTime[1]),
+      ),
+      location: data['location'] ?? '',
+      assignedBy: data['assignedBy'] ?? '',
+      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
+      updatedAt: _parseDate(data['\$updatedAt']) ?? _parseDate(data['updatedAt']),
     );
   }
 

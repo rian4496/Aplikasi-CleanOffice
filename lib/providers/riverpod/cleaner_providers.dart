@@ -1,31 +1,23 @@
+// lib/providers/riverpod/cleaner_providers.dart
+// Cleaner providers - Migrated to Appwrite
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/report.dart';
 import '../../models/request.dart';
-import '../../services/notification_service.dart'; // ✅ ADDED
+import '../../services/appwrite_database_service.dart';
 import './auth_providers.dart';
-import './report_providers.dart';
+import './inventory_providers.dart';
 
 final _logger = AppLogger('CleanerProviders');
 
-// ==================== CLEANER REPORTS PROVIDERS (NEW!) ====================
+// ==================== CLEANER REPORTS PROVIDERS ====================
 
 /// Provider untuk pending reports (belum diambil siapa-siapa)
 final pendingReportsProvider = StreamProvider<List<Report>>((ref) {
-  final firestore = ref.watch(firestoreProvider);
-
-  return firestore
-      .collection('reports')
-      .where('status', isEqualTo: 'pending')
-      .orderBy('date', descending: true)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return Report.fromFirestore(doc);
-    }).toList();
-  });
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getReportsByStatus(ReportStatus.pending);
 });
 
 /// Provider untuk cleaner's active reports (assigned & in_progress)
@@ -33,89 +25,39 @@ final cleanerActiveReportsProvider = StreamProvider<List<Report>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return Stream.value([]);
 
-  final firestore = ref.watch(firestoreProvider);
-
-  return firestore
-      .collection('reports')
-      .where('cleanerId', isEqualTo: userId)
-      .where('status', whereIn: ['assigned', 'in_progress'])
-      .orderBy('assignedAt', descending: true)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return Report.fromFirestore(doc);
-    }).toList();
-  });
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getReportsByCleaner(userId);
 });
 
 /// Provider untuk single report by ID
 final reportDetailProvider =
     StreamProvider.family<Report?, String>((ref, reportId) {
-  final firestore = ref.watch(firestoreProvider);
+  final service = ref.watch(appwriteDatabaseServiceProvider);
 
-  return firestore.collection('reports').doc(reportId).snapshots().map((doc) {
-    if (!doc.exists) return null;
-    return Report.fromFirestore(doc);
-  });
+  // Use a stream that emits the report once and listens for changes
+  return Stream.fromFuture(service.getReportById(reportId));
 });
 
 // ==================== CLEANER REQUESTS PROVIDERS ====================
 
 /// Provider untuk available requests (pending & not assigned)
-final availableRequestsProvider = StreamProvider<List<Request>>((
-  ref,
-) {
-  final firestore = ref.watch(firestoreProvider);
-
-  return firestore
-      .collection('requests')
-      .where('status', whereIn: ['pending'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return Request.fromMap(doc.id, doc.data());
-    }).toList();
-  });
+final availableRequestsProvider = StreamProvider<List<Request>>((ref) {
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getPendingServiceRequests();
 });
 
 /// Provider untuk cleaner's assigned requests
-final cleanerAssignedRequestsProvider =
-    StreamProvider<List<Request>>((ref) {
+final cleanerAssignedRequestsProvider = StreamProvider<List<Request>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return Stream.value([]);
 
-  final firestore = ref.watch(firestoreProvider);
-
-  return firestore
-      .collection('requests')
-      .where('cleanerId', isEqualTo: userId)
-      .where('status', whereIn: ['accepted', 'in_progress'])
-      .orderBy('createdAt', descending: true)
-      .snapshots()
-      .map((snapshot) {
-    return snapshot.docs.map((doc) {
-      return Request.fromMap(doc.id, doc.data());
-    }).toList();
-  });
+  final service = ref.watch(appwriteDatabaseServiceProvider);
+  return service.getServiceRequestsByCleaner(userId);
 });
 
-/// Provider untuk single request by ID
-final requestByIdProvider =
-    StreamProvider.family<Map<String, dynamic>?, String>((ref, requestId) {
-  final firestore = ref.watch(firestoreProvider);
+// ==================== CLEANER STATISTICS ====================
 
-  return firestore.collection('requests').doc(requestId).snapshots().map((
-    doc,
-  ) {
-    if (!doc.exists) return null;
-    return {'id': doc.id, ...doc.data()!};
-  });
-});
-
-// ==================== CLEANER STATISTICS (UPDATED - dari REPORTS!) ====================
-
-/// Provider untuk cleaner statistics - UPDATED untuk menghitung dari REPORTS
+/// Provider untuk cleaner statistics
 final cleanerStatsProvider = Provider<Map<String, int>>((ref) {
   final userId = ref.watch(currentUserIdProvider);
 
@@ -128,54 +70,27 @@ final cleanerStatsProvider = Provider<Map<String, int>>((ref) {
     };
   }
 
-  // Watch active reports (assigned & in_progress)
   final activeReportsAsync = ref.watch(cleanerActiveReportsProvider);
-
-  // Watch completed reports
-  final completedReportsAsync = ref.watch(cleanerReportsProvider(userId));
 
   return activeReportsAsync.when(
     data: (activeReports) {
-      // Count assigned
       final assigned =
           activeReports.where((r) => r.status == ReportStatus.assigned).length;
-
-      // Count in progress
       final inProgress = activeReports
           .where((r) => r.status == ReportStatus.inProgress)
           .length;
+      final completed = activeReports
+          .where((r) =>
+              r.status == ReportStatus.completed ||
+              r.status == ReportStatus.verified)
+          .length;
 
-      // Get completed count
-      return completedReportsAsync.when(
-        data: (allReports) {
-          final completed = allReports
-              .where(
-                (r) =>
-                    r.status == ReportStatus.completed ||
-                    r.status == ReportStatus.verified,
-              )
-              .length;
-
-          return {
-            'assigned': assigned,
-            'inProgress': inProgress,
-            'completed': completed,
-            'total': assigned + inProgress + completed,
-          };
-        },
-        loading: () => {
-          'assigned': assigned,
-          'inProgress': inProgress,
-          'completed': 0,
-          'total': assigned + inProgress,
-        },
-        error: (error, stackTrace) => {
-          'assigned': assigned,
-          'inProgress': inProgress,
-          'completed': 0,
-          'total': assigned + inProgress,
-        },
-      );
+      return {
+        'assigned': assigned,
+        'inProgress': inProgress,
+        'completed': completed,
+        'total': assigned + inProgress + completed,
+      };
     },
     loading: () => {
       'assigned': 0,
@@ -201,43 +116,33 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     return const AsyncValue.data(null);
   }
 
-  FirebaseFirestore get _firestore => ref.read(firestoreProvider);
+  AppwriteDatabaseService get _service =>
+      ref.read(appwriteDatabaseServiceProvider);
 
-  // ==================== REPORT ACTIONS (NEW!) ====================
+  // ==================== REPORT ACTIONS ====================
 
   /// Accept a report (pending → assigned)
   Future<void> acceptReport(String reportId) async {
     state = const AsyncValue.loading();
 
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
+      final profile = ref.read(currentUserProfileProvider).value;
+      if (profile == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) {
-        throw const AuthException(message: 'User not authenticated');
-      }
+      _logger.info('Accepting report: $reportId by user: ${profile.uid}');
 
-      _logger.info('Accepting report: $reportId by user: $userId');
-
-      await _firestore.collection('reports').doc(reportId).update({
-        'status': 'assigned',
-        'cleanerId': userId,
-        'cleanerName': user.displayName ?? 'Petugas',
-        'assignedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.assignReportToCleaner(
+        reportId,
+        profile.uid,
+        profile.displayName,
+      );
 
       _logger.info('Report accepted successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Accept report error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected accept report error', e, stackTrace);
+      _logger.error('Accept report error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -250,20 +155,12 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Starting report: $reportId');
 
-      await _firestore.collection('reports').doc(reportId).update({
-        'status': 'in_progress',
-        'startedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.updateReportStatus(reportId, ReportStatus.inProgress);
 
       _logger.info('Report started successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Start report error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected start report error', e, stackTrace);
+      _logger.error('Start report error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -276,27 +173,18 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Completing report: $reportId');
 
-      await _firestore.collection('reports').doc(reportId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.updateReportStatus(reportId, ReportStatus.completed);
 
       _logger.info('Report completed successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Complete report error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected complete report error', e, stackTrace);
+      _logger.error('Complete report error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
   }
 
   /// Complete a report WITH PROOF PHOTO (in_progress → completed)
-  /// 🆕 BATCH 2: Method baru untuk complete dengan foto bukti
   Future<void> completeReportWithProof(
     String reportId,
     String completionImageUrl,
@@ -306,62 +194,12 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Completing report with proof: $reportId');
 
-      // Get report data before updating
-      final reportDoc = await _firestore.collection('reports').doc(reportId).get();
-      if (!reportDoc.exists) {
-        throw Exception('Report not found');
-      }
-
-      await _firestore.collection('reports').doc(reportId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-        'completionImageUrl': completionImageUrl, // ← Foto bukti
-      });
+      await _service.completeReportWithProof(reportId, completionImageUrl);
 
       _logger.info('Report completed with proof successfully');
-
-      // ✅ SEND NOTIFICATION TO EMPLOYEE
-      try {
-        // Recreate report object with completed status
-        final completedReport = Report.fromFirestore(reportDoc);
-        final updatedReport = Report(
-          id: completedReport.id,
-          title: completedReport.title,
-          location: completedReport.location,
-          date: completedReport.date,
-          status: ReportStatus.completed,
-          userId: completedReport.userId,
-          userName: completedReport.userName,
-          userEmail: completedReport.userEmail,
-          cleanerId: completedReport.cleanerId,
-          cleanerName: completedReport.cleanerName,
-          description: completedReport.description,
-          imageUrl: completedReport.imageUrl,
-          isUrgent: completedReport.isUrgent,
-          assignedAt: completedReport.assignedAt,
-          startedAt: completedReport.startedAt,
-          completedAt: DateTime.now(),
-          departmentId: completedReport.departmentId,
-          completionImageUrl: completionImageUrl,
-        );
-
-        _logger.info('Sending completion notification to employee: ${updatedReport.userId}');
-        await NotificationService().notifyReportCompleted(report: updatedReport);
-        _logger.info('✅ Notification sent successfully');
-      } catch (e) {
-        // Don't fail the completion if notification fails
-        _logger.error('Failed to send notification', e);
-      }
-      // ✅✅✅ END OF NOTIFICATION CODE ✅✅✅
-
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Complete report with proof error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected complete report error', e, stackTrace);
+      _logger.error('Complete report with proof error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -374,34 +212,23 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
 
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
+      final profile = ref.read(currentUserProfileProvider).value;
+      if (profile == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) {
-        throw const AuthException(message: 'User not authenticated');
-      }
+      _logger.info('Accepting request: $requestId by user: ${profile.uid}');
 
-      _logger.info('Accepting request: $requestId by user: $userId');
-
-      await _firestore.collection('requests').doc(requestId).update({
-        'status': 'accepted',
-        'cleanerId': userId,
-        'cleanerName': user.displayName ?? 'Petugas',
-        'acceptedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.selfAssignServiceRequest(
+        requestId,
+        profile.uid,
+        profile.displayName,
+      );
 
       _logger.info('Request accepted successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Accept request error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected accept request error', e, stackTrace);
+      _logger.error('Accept request error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -414,20 +241,12 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Starting request: $requestId');
 
-      await _firestore.collection('requests').doc(requestId).update({
-        'status': 'in_progress',
-        'startedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.startServiceRequest(requestId);
 
       _logger.info('Request started successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Start request error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected start request error', e, stackTrace);
+      _logger.error('Start request error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -440,27 +259,18 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Completing request: $requestId');
 
-      await _firestore.collection('requests').doc(requestId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-      });
+      await _service.completeServiceRequest(requestId);
 
       _logger.info('Request completed successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Complete request error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected complete request error', e, stackTrace);
+      _logger.error('Complete request error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
   }
 
   /// Complete a request WITH PROOF PHOTO (in_progress → completed)
-  /// 🆕 BATCH 2: Method baru untuk complete dengan foto bukti
   Future<void> completeRequestWithProof(
     String requestId,
     String completionImageUrl,
@@ -470,21 +280,15 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Completing request with proof: $requestId');
 
-      await _firestore.collection('requests').doc(requestId).update({
-        'status': 'completed',
-        'completedAt': FieldValue.serverTimestamp(),
-        'completionImageUrl': completionImageUrl, // ← Foto bukti
-      });
+      await _service.completeServiceRequest(
+        requestId,
+        completionImageUrl: completionImageUrl,
+      );
 
       _logger.info('Request completed with proof successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Complete request with proof error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected complete request error', e, stackTrace);
+      _logger.error('Complete request with proof error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }
@@ -492,6 +296,7 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
 
   /// Create a new cleaning report
   Future<void> createCleaningReport({
+    required String title,
     required String location,
     required String description,
     String? imageUrl,
@@ -499,44 +304,39 @@ class CleanerActionsNotifier extends Notifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
 
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
+      final profile = ref.read(currentUserProfileProvider).value;
+      if (profile == null) {
         throw const AuthException(message: 'User not logged in');
-      }
-
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) {
-        throw const AuthException(message: 'User not authenticated');
       }
 
       _logger.info('Creating cleaning report');
 
-      await _firestore.collection('reports').add({
-        'userId': userId,
-        'userName': user.displayName ?? 'Petugas',
-        'userEmail': user.email,
-        'cleanerId': userId,
-        'cleanerName': user.displayName ?? 'Petugas',
-        'location': location,
-        'description': description,
-        'imageUrl': imageUrl,
-        'status': 'completed', // Cleaner creates already completed reports
-        'isUrgent': false,
-        'date': FieldValue.serverTimestamp(),
-        'assignedAt': FieldValue.serverTimestamp(),
-        'startedAt': FieldValue.serverTimestamp(),
-        'completedAt': FieldValue.serverTimestamp(),
-      });
+      final report = Report(
+        id: '',
+        title: title,
+        location: location,
+        description: description,
+        date: DateTime.now(),
+        status: ReportStatus.completed,
+        userId: profile.uid,
+        userName: profile.displayName,
+        userEmail: profile.email,
+        cleanerId: profile.uid,
+        cleanerName: profile.displayName,
+        imageUrl: imageUrl,
+        isUrgent: false,
+        assignedAt: DateTime.now(),
+        startedAt: DateTime.now(),
+        completedAt: DateTime.now(),
+        departmentId: profile.departmentId,
+      );
+
+      await _service.createReport(report);
 
       _logger.info('Cleaning report created successfully');
       state = const AsyncValue.data(null);
-    } on FirebaseException catch (e, stackTrace) {
-      _logger.error('Create cleaning report error', e, stackTrace);
-      final exception = FirestoreException.fromFirebase(e);
-      state = AsyncValue.error(exception, stackTrace);
-      rethrow;
     } catch (e, stackTrace) {
-      _logger.error('Unexpected create report error', e, stackTrace);
+      _logger.error('Create cleaning report error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
       rethrow;
     }

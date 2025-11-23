@@ -15,22 +15,14 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
 
-  # Backend - Appwrite
+  # Backend - Appwrite (Firebase removed)
   appwrite: ^20.3.1
-
-  # Firebase
-  firebase_core: ^4.1.1
-  firebase_auth: ^6.1.0
-  cloud_firestore: ^6.0.2
-  firebase_storage: ^13.0.2
-  firebase_app_check: ^0.4.1+1
-  cloud_functions: ^6.0.3
-  firebase_crashlytics: ^5.0.4
 
   # Settings
   shared_preferences: ^2.2.2
   package_info_plus: ^9.0.0
   url_launcher: ^6.3.0
+  share_plus: ^10.0.0
 
   # State Management - HOOKS RIVERPOD
   hooks_riverpod: ^3.0.2

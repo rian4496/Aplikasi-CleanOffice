@@ -1,46 +1,35 @@
 // lib/services/storage_service.dart
+// Storage service - Using Appwrite Storage
 
 import 'dart:io';
 
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_image_compress/flutter_image_compress.dart';
 
-/// Result pattern untuk error handling yang clean
-class StorageResult<T> {
-  final T? data;
-  final String? error;
-  final bool isSuccess;
+import '../services/appwrite_storage_service.dart';
 
-  StorageResult.success(this.data)
-      : error = null,
-        isSuccess = true;
+// Re-export StorageResult from appwrite_storage_service for backward compatibility
+export '../services/appwrite_storage_service.dart' show StorageResult;
 
-  StorageResult.failure(this.error)
-      : data = null,
-        isSuccess = false;
-}
-
-/// Service untuk handle Firebase Storage
+/// Service untuk handle Storage - delegates to AppwriteStorageService
 /// Features:
 /// - Upload image dengan auto-compression
 /// - Delete image
 /// - Get image URL
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  final AppwriteStorageService _appwriteStorage = AppwriteStorageService();
 
   // ========================================
   // UPLOAD IMAGE
   // ========================================
-  
-  /// Upload image ke Firebase Storage dengan auto-compression
-  /// 
+
+  /// Upload image ke Storage dengan auto-compression
+  ///
   /// [bytes] - Image bytes (dari XFile.readAsBytes() atau File.readAsBytes())
   /// [folder] - Folder tujuan ('reports' atau 'profiles')
   /// [userId] - User ID untuk naming file
   /// [fileName] - Optional custom filename (default: userId_timestamp.jpg)
-  /// 
+  ///
   /// Returns: StorageResult dengan URL download atau error message
   Future<StorageResult<String>> uploadImage({
     required Uint8List bytes,
@@ -48,39 +37,12 @@ class StorageService {
     required String userId,
     String? fileName,
   }) async {
-    try {
-      // Validate input
-      if (bytes.isEmpty) {
-        return StorageResult.failure('Image bytes kosong');
-      }
-
-      // Compress image
-      final compressedBytes = await _compressImageBytes(bytes);
-
-      // Generate unique filename
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final finalFileName = fileName ?? '${userId}_$timestamp.jpg';
-      final storagePath = '$folder/$finalFileName';
-
-      // Upload ke Firebase Storage
-      final ref = _storage.ref().child(storagePath);
-      final uploadTask = await ref.putData(
-        compressedBytes,
-        SettableMetadata(contentType: 'image/jpeg'),
-      );
-
-      // Get download URL
-      final downloadUrl = await uploadTask.ref.getDownloadURL();
-
-      debugPrint('✅ Image uploaded: $downloadUrl');
-      return StorageResult.success(downloadUrl);
-    } on FirebaseException catch (e) {
-      debugPrint('❌ Firebase error: ${e.message}');
-      return StorageResult.failure('Firebase error: ${e.message}');
-    } catch (e) {
-      debugPrint('❌ Upload error: $e');
-      return StorageResult.failure('Gagal upload: $e');
-    }
+    return _appwriteStorage.uploadImage(
+      bytes: bytes,
+      folder: folder,
+      userId: userId,
+      fileName: fileName,
+    );
   }
 
   /// Upload inventory image (convenience method)
@@ -89,122 +51,56 @@ class StorageService {
   ///
   /// Returns: Download URL string (throws on error)
   Future<String> uploadInventoryImage(File imageFile) async {
-    try {
-      // Read file bytes
-      final bytes = await imageFile.readAsBytes();
+    return _appwriteStorage.uploadInventoryImage(imageFile);
+  }
 
-      // Generate unique filename for inventory
-      final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final fileName = 'inventory_$timestamp.jpg';
+  /// Upload report image (convenience method)
+  Future<String> uploadReportImage(File imageFile, String userId) async {
+    return _appwriteStorage.uploadReportImage(imageFile, userId);
+  }
 
-      // Upload using the generic method
-      final result = await uploadImage(
-        bytes: bytes,
-        folder: 'inventory',
-        userId: 'inv',
-        fileName: fileName,
-      );
-
-      // Check result and return URL or throw
-      if (result.isSuccess && result.data != null) {
-        return result.data!;
-      } else {
-        throw Exception(result.error ?? 'Upload failed');
-      }
-    } catch (e) {
-      debugPrint('❌ Upload inventory image error: $e');
-      throw Exception('Gagal upload gambar: $e');
-    }
+  /// Upload profile image (convenience method)
+  Future<String> uploadProfileImage(File imageFile, String userId) async {
+    return _appwriteStorage.uploadProfileImage(imageFile, userId);
   }
 
   // ========================================
   // DELETE IMAGE
   // ========================================
 
-  /// Delete image dari Firebase Storage
-  /// 
+  /// Delete image dari Storage
+  ///
   /// [imageUrl] - URL lengkap dari image yang akan dihapus
-  /// 
+  ///
   /// Returns: StorageResult dengan success status
   Future<StorageResult<bool>> deleteImage(String imageUrl) async {
-    try {
-      if (imageUrl.isEmpty) {
-        return StorageResult.failure('URL image kosong');
-      }
-
-      // Get reference dari URL
-      final ref = _storage.refFromURL(imageUrl);
-      await ref.delete();
-
-      debugPrint('✅ Image deleted: $imageUrl');
-      return StorageResult.success(true);
-    } on FirebaseException catch (e) {
-      debugPrint('❌ Firebase error: ${e.message}');
-      return StorageResult.failure('Firebase error: ${e.message}');
-    } catch (e) {
-      debugPrint('❌ Delete error: $e');
-      return StorageResult.failure('Gagal delete: $e');
-    }
+    return _appwriteStorage.deleteImage(imageUrl);
   }
 
   // ========================================
   // GET IMAGE URL
   // ========================================
-  
+
   /// Get download URL dari path di Storage
-  /// 
+  ///
   /// [storagePath] - Path file di Storage (misal: 'reports/user123_123456.jpg')
-  /// 
+  ///
   /// Returns: StorageResult dengan download URL
   Future<StorageResult<String>> getImageUrl(String storagePath) async {
+    // For Appwrite, we construct the URL directly
+    // This is a simplified implementation - actual URL format depends on Appwrite setup
     try {
-      final ref = _storage.ref().child(storagePath);
-      final url = await ref.getDownloadURL();
-      
-      return StorageResult.success(url);
-    } on FirebaseException catch (e) {
-      debugPrint('❌ Firebase error: ${e.message}');
-      return StorageResult.failure('Firebase error: ${e.message}');
+      // The storagePath format is typically: folder/filename
+      // We can't directly get URL from path in Appwrite like Firebase
+      // This would need the file ID, so we return an error for now
+      debugPrint('getImageUrl called with path: $storagePath');
+      return StorageResult.failure(
+        'Direct path to URL conversion not supported. Use file URLs from upload response.',
+      );
     } catch (e) {
-      debugPrint('❌ Get URL error: $e');
+      debugPrint('Get URL error: $e');
       return StorageResult.failure('Gagal get URL: $e');
     }
-  }
-
-  // ========================================
-  // PRIVATE HELPER METHODS
-  // ========================================
-
-  /// Compress image bytes untuk hemat storage & bandwidth
-  /// Target: ~500KB max
-  Future<Uint8List> _compressImageBytes(Uint8List bytes) async {
-    try {
-      final originalSize = bytes.length;
-
-      // Compress dengan quality 70
-      final result = await FlutterImageCompress.compressWithList(
-        bytes,
-        quality: 70,
-        minWidth: 1024,
-        minHeight: 1024,
-      );
-
-      final compressedSize = result.length;
-      
-      debugPrint('📦 Compressed: ${_formatBytes(originalSize)} → ${_formatBytes(compressedSize)}');
-      
-      return result;
-    } catch (e) {
-      debugPrint('⚠️ Compress error: $e');
-      return bytes; // Return original kalau error
-    }
-  }
-
-  /// Format bytes ke KB/MB
-  String _formatBytes(int bytes) {
-    if (bytes < 1024) return '$bytes B';
-    if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
 

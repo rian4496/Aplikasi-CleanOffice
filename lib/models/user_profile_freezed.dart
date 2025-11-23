@@ -1,7 +1,7 @@
 // lib/models/user_profile_freezed.dart
 // User Profile model - Freezed Version
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../core/utils/firestore_converters.dart';
 import 'user_role.dart';
@@ -22,8 +22,8 @@ class UserProfile with _$UserProfile {
     required String role,
     @TimestampConverter() required DateTime joinDate,
     String? departmentId,
-    String? employeeId,
-    @Default('active') String status, // 'active', 'inactive'
+    String? staffId,
+    @Default('active') String status, // 'active', 'inactive', 'deleted'
     String? location, // Lokasi kerja/ruangan
   }) = _UserProfile;
 
@@ -41,7 +41,7 @@ class UserProfile with _$UserProfile {
       'role': map['role'] ?? UserRole.employee,
       'joinDate': map['joinDate'], // TimestampConverter handles this
       'departmentId': map['departmentId'],
-      'employeeId': map['employeeId'],
+      'staffId': map['staffId'],
       'status': map['status'] ?? 'active',
       'location': map['location'],
     });
@@ -59,14 +59,14 @@ class UserProfile with _$UserProfile {
       'role': json['role'],
       'joinDate': json['joinDate'], // Already Timestamp from converter
       'departmentId': json['departmentId'],
-      'employeeId': json['employeeId'],
+      'staffId': json['staffId'],
       'status': json['status'],
       'location': json['location'],
     };
   }
 
   /// Static helper methods
-  static List<String> get allStatuses => ['active', 'inactive'];
+  static List<String> get allStatuses => ['active', 'inactive', 'deleted'];
 
   static String getStatusDisplayName(String status) {
     switch (status) {
@@ -74,6 +74,8 @@ class UserProfile with _$UserProfile {
         return 'Aktif';
       case 'inactive':
         return 'Tidak Aktif';
+      case 'deleted':
+        return 'Dihapus';
       default:
         return status;
     }

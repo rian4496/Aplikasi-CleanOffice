@@ -3,11 +3,10 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../screens/admin/analytics_screen_hooks.dart';
+import '../../screens/admin/analytics_screen.dart';
 import '../../screens/admin/all_reports_management_screen.dart';
 import '../../screens/admin/all_requests_management_screen.dart';
 import '../../screens/admin/cleaner_management_screen.dart';
-import '../../screens/admin/bulk_receipt_screen_hooks.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
 import '../../screens/dev/seed_data_screen.dart';
 
@@ -168,11 +167,9 @@ class AdminMoreBottomSheet extends StatelessWidget {
                   color: AppTheme.warning,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BulkReceiptScreen(),
-                      ),
+                    // TODO: Implement bulk receipt with Appwrite
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Fitur segera hadir')),
                     );
                   },
                 ),

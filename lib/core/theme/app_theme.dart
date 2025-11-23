@@ -3,61 +3,78 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // ==================== PALET WARNA UTAMA ====================
+  // ==================== PALET WARNA UTAMA (MODERN) ====================
 
-  // Primary Colors (Biru/Indigo)
-  static const Color primary = Color(0xFF3F51B5); // Indigo 500
-  static const Color primaryDark = Color(0xFF303F9F); // Indigo 700
-  static const Color primaryLight = Color(0xFFE8EAF6); // Indigo 50
+  // Primary Brand Colors (Purple/Blue Gradient)
+  static const Color primary = Color(0xFF7B5AFF); // Vibrant Purple
+  static const Color primaryDark = Color(0xFF5D5FEF); // Deep Purple/Blue
+  static const Color primaryLight = Color(0xFFE9E3FF); // Light Purple
 
-  // Secondary/Accent Color
-  static const Color secondary = Color(0xFF448AFF); // Blue A200
-  static const Color accent = Color(0xFF00BCD4); // Cyan
+  // Secondary/Accent Colors
+  static const Color secondary = Color(0xFF6AD2FF); // Light Blue
+  static const Color accent = Color(0xFF4318FF); // Electric Blue
 
   // Status Colors
-  static const Color success = Color(0xFF4CAF50); // Green
-  static const Color warning = Color(0xFFFF9800); // Orange
-  static const Color error = Color(0xFFF44336); // Red
-  static const Color info = Color(0xFF2196F3); // Blue
+  static const Color success = Color(0xFF05CD99); // Mint Green
+  static const Color warning = Color(0xFFFFB547); // Orange/Yellow
+  static const Color error = Color(0xFFEE5D50); // Soft Red
+  static const Color info = Color(0xFF11CDEF); // Cyan
 
   // Neutral Colors
-  static const Color background = Color(0xFFF4F6F8); // Abu-abu sangat muda
+  static const Color background = Color(0xFFF4F7FE); // Light Grayish Blue (Dashboard Bg)
   static const Color card = Colors.white;
-  static const Color textPrimary = Color(0xFF212121); // Hampir hitam
-  static const Color textSecondary = Color(0xFF757575); // Abu-abu tua
-  static const Color textHint = Color(0xFFBDBDBD); // Abu-abu muda
-  static const Color divider = Color(0xFFE0E0E0);
+  static const Color textPrimary = Color(0xFF2B3674); // Deep Navy (Main Text)
+  static const Color textSecondary = Color(0xFFA3AED0); // Cool Gray (Subtitles)
+  static const Color textHint = Color(0xFFBDBDBD);
+  static const Color divider = Color(0xFFE0E5F2);
 
-  // ==================== MODERN DASHBOARD COLORS ====================
+  // ==================== DASHBOARD SPECIFIC COLORS ====================
 
-  // Header Gradient
-  static const Color headerGradientStart = Color(0xFF5B6FE5);
-  static const Color headerGradientEnd = Color(0xFF4F5FD8);
+  // Header Gradient (if needed)
+  static const Color headerGradientStart = Color(0xFF868CFF);
+  static const Color headerGradientEnd = Color(0xFF4318FF);
 
-  // Stat Card Accent Colors
-  static const Color blueAccent = Color(0xFF5B6FE5);
-  static const Color orangeAccent = Color(0xFFFF9800);
-  static const Color greenAccent = Color(0xFF10B981);
-  static const Color purpleAccent = Color(0xFF8B5CF6);
+  // Stat Card Gradients
+  static const List<Color> blueGradient = [Color(0xFF4481EB), Color(0xFF04BEFE)];
+  static const List<Color> purpleGradient = [Color(0xFF89216B), Color(0xFFDA4453)];
 
-  // Chart Colors (Multi-color bars)
-  static const Color chartPink = Color(0xFFE91E63);
-  static const Color chartPurple = Color(0xFF673AB7);
-  static const Color chartNavy = Color(0xFF283593);
-  static const Color chartMint = Color(0xFF4CAF50);
-  static const Color chartYellow = Color(0xFFFFC107);
-  static const Color chartOrange = Color(0xFFFF9800);
+  // Chart Colors
+  static const Color chartPrimary = Color(0xFF4318FF);
+  static const Color chartSecondary = Color(0xFF6AD2FF);
+  static const Color chartTertiary = Color(0xFFEFF4FB);
+  
+  // Missing Colors from Error Log
+  static const Color blueAccent = Color(0xFF4481EB);
+  static const Color orangeAccent = Color(0xFFFFB547);
+  static const Color greenAccent = Color(0xFF05CD99);
+  static const Color purpleAccent = Color(0xFF89216B);
+  
+  static const Color chartPink = Color(0xFFFF7675);
+  static const Color chartNavy = Color(0xFF2B3674);
+  static const Color chartMint = Color(0xFF00B894);
+  static const Color chartYellow = Color(0xFFFDCB6E);
+  
+  static const Color modernBg = Color(0xFFF4F7FE);
 
-  // Modern Backgrounds
-  static const Color modernBg = Color(0xFFF9FAFB); // Lighter gray
-  static const Color cardBg = Colors.white;
+  // ==================== STYLES & SHADOWS ====================
 
-  // Shadow helper
+  // Shadows
   static BoxShadow get cardShadow => BoxShadow(
-    color: Colors.black.withValues(alpha: 0.08),
-    blurRadius: 10,
-    offset: const Offset(0, 2),
+    color: const Color(0xFF7090B0).withOpacity(0.08),
+    blurRadius: 40,
+    offset: const Offset(0, 8),
   );
+  
+  static BoxShadow get softShadow => BoxShadow(
+    color: const Color(0xFF7090B0).withOpacity(0.05),
+    blurRadius: 20,
+    offset: const Offset(0, 4),
+  );
+
+  // Border Radius
+  static const double cardRadius = 20.0;
+  static const double buttonRadius = 16.0;
+  static const double inputRadius = 16.0;
 
   // ==================== THEME DATA ====================
 
@@ -65,6 +82,7 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
+      fontFamily: 'DM Sans', // Modern font choice (needs to be added to pubspec)
 
       // Color Scheme
       colorScheme: const ColorScheme.light(
@@ -76,133 +94,107 @@ class AppTheme {
         onError: Colors.white,
         surface: card,
         onSurface: textPrimary,
-        // DIHAPUS: Properti 'background' di dalam ColorScheme sudah deprecated.
-        // background: background, 
       ),
 
       // Scaffold
-      // Pengaturan ini sudah benar untuk mengatur warna latar belakang utama aplikasi.
       scaffoldBackgroundColor: background,
 
       // App Bar
       appBarTheme: const AppBarTheme(
-        elevation: 1,
+        elevation: 0,
         centerTitle: false,
-        backgroundColor: card,
+        backgroundColor: background, // Transparent look
         foregroundColor: textPrimary,
         iconTheme: IconThemeData(color: textPrimary),
         titleTextStyle: TextStyle(
-          fontFamily: 'Poppins', // Contoh penggunaan custom font
           color: textPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          fontFamily: 'DM Sans',
         ),
       ),
 
       // Card
       cardTheme: CardThemeData(
-        elevation: 1,
-        shadowColor: Colors.black.withValues(alpha: 0.05),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0, // We use custom shadows
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(cardRadius)),
         color: card,
         margin: EdgeInsets.zero,
       ),
       
       // TextTheme
       textTheme: const TextTheme(
-        headlineMedium: TextStyle(
+        displayLarge: TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.bold,
+          color: textPrimary,
+          letterSpacing: -1.0,
+        ),
+        displayMedium: TextStyle(
           fontSize: 24,
           fontWeight: FontWeight.bold,
           color: textPrimary,
+          letterSpacing: -0.5,
         ),
         titleLarge: TextStyle(
-          fontSize: 18,
+          fontSize: 20,
           fontWeight: FontWeight.bold,
           color: textPrimary,
         ),
         titleMedium: TextStyle(
           fontSize: 16,
-          color: textSecondary,
+          fontWeight: FontWeight.w600,
+          color: textPrimary,
         ),
         bodyLarge: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
-          color: textPrimary,
+          color: textSecondary,
         ),
         bodyMedium: TextStyle(
           fontSize: 14,
+          fontWeight: FontWeight.w500,
           color: textSecondary,
+        ),
+        labelLarge: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+          color: primary,
         ),
       ),
       
-      // ListTileTheme
-      listTileTheme: ListTileThemeData(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        titleTextStyle: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: textPrimary,
-        ),
-        subtitleTextStyle: const TextStyle(
-          fontSize: 14,
-          color: textSecondary,
-        ),
-        iconColor: primary,
-      ),
-
-      // Elevated Button
+      // ElevatedButton
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(buttonRadius),
           ),
-          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
-      ),
-      
-      // FloatingActionButton
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
 
       // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: divider),
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide.none, // Clean look
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: divider),
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: primary, width: 2),
+          borderRadius: BorderRadius.circular(inputRadius),
+          borderSide: const BorderSide(color: primary, width: 1),
         ),
-      ),
-
-      // Chip Theme
-      chipTheme: ChipThemeData(
-        backgroundColor: primary.withAlpha(26),
-        labelStyle: const TextStyle(color: primary, fontWeight: FontWeight.bold),
-        side: BorderSide.none,
-      ),
-      
-      // Divider Theme
-      dividerTheme: const DividerThemeData(
-        color: divider,
-        space: 1,
-        thickness: 1,
+        hintStyle: const TextStyle(color: textSecondary, fontSize: 14),
       ),
     );
   }

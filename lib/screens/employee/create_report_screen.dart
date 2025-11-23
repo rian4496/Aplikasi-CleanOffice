@@ -11,7 +11,7 @@ import '../../core/error/exceptions.dart';
 import '../../core/logging/app_logger.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/employee_providers.dart';
-import '../../services/storage_service.dart'; // 👈 Storage service
+import '../../providers/riverpod/request_providers.dart' show appwriteStorageServiceProvider;
 
 final _logger = AppLogger('CreateReportScreen');
 
@@ -90,19 +90,19 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     }
 
     try {
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user == null) {
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
-      _logger.info('Uploading report image for user: ${user.uid}');
+      _logger.info('Uploading report image for user: ${userProfile.uid}');
 
-      // ✅ Use storage service with bytes (Web-compatible!)
-      final storageService = ref.read(storageServiceProvider);
+      // ✅ Use Appwrite storage service with bytes (Web-compatible!)
+      final storageService = ref.read(appwriteStorageServiceProvider);
       final result = await storageService.uploadImage(
         bytes: _imageBytes!, // Use bytes instead of file
         folder: 'reports',
-        userId: user.uid,
+        userId: userProfile.uid,
       );
 
       // Handle result

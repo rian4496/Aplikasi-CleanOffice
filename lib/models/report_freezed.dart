@@ -1,9 +1,9 @@
 // lib/models/report_freezed.dart
 // ✅ FREEZED VERSION: Report model with auto-generated code
 // ✅ Replaces manual copyWith, ==, hashCode, toString
-// ✅ JSON serialization with Firestore Timestamp support
+// ✅ JSON serialization with Appwrite support
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../core/theme/app_theme.dart';
@@ -204,17 +204,15 @@ class Report with _$Report {
   /// Factory from JSON (auto-generated code will handle this)
   factory Report.fromJson(Map<String, dynamic> json) => _$ReportFromJson(json);
 
-  /// Factory from Firestore DocumentSnapshot
+  /// Factory from Appwrite document
   ///
-  /// Maintains backward compatibility with existing Firestore structure
-  factory Report.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
-
+  /// Maintains backward compatibility with existing database structure
+  factory Report.fromAppwrite(Map<String, dynamic> data) {
     return Report.fromJson({
-      'id': doc.id,
+      'id': data['\$id'] ?? data['id'] ?? '',
       'title': data['title'] ?? '',
       'location': data['location'] ?? '',
-      'date': data['date'], // Converter will handle Timestamp
+      'date': data['date'],
       'status': data['status'] ?? 'pending',
       'userId': data['userId'] ?? '',
       'userName': data['userName'] ?? '',

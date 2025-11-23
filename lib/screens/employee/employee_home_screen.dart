@@ -4,9 +4,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../providers/riverpod/auth_providers.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/report.dart';
 import '../../providers/riverpod/employee_providers.dart';
@@ -157,10 +157,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   // ==================== HEADER WITH GREETING ====================
   Widget _buildHeader() {
-    final user = FirebaseAuth.instance.currentUser;
+    final userProfileAsync = ref.watch(currentUserProfileProvider);
     final hour = DateTime.now().hour;
     String greeting;
-    
+
     if (hour < 12) {
       greeting = 'Selamat Pagi';
     } else if (hour < 15) {
@@ -191,12 +191,30 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
-            user?.displayName ?? 'Budi',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
+          userProfileAsync.when(
+            data: (profile) => Text(
+              profile?.displayName ?? 'Karyawan',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            loading: () => const Text(
+              'Karyawan',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            error: (e, _) => const Text(
+              'Karyawan',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
           ),
           const SizedBox(height: 4),
@@ -392,7 +410,7 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
     if (shouldLogout == true && mounted) {
       try {
-        await FirebaseAuth.instance.signOut();
+        await ref.read(authActionsProvider.notifier).logout();
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/login');
         }

@@ -4,8 +4,8 @@
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../screens/cleaner/my_tasks_screen.dart';
-import '../../screens/cleaner/available_requests_list_screen_hooks.dart';
-import '../../screens/cleaner/create_cleaning_report_screen_hooks.dart';
+import '../../screens/cleaner/available_requests_list_screen.dart';
+import '../../screens/cleaner/create_cleaning_report_screen.dart';
 import '../../screens/cleaner/pending_reports_list_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
 

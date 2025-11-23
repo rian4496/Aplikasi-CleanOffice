@@ -1,7 +1,7 @@
 // lib/models/work_schedule_freezed.dart
 // Work Schedule model - Freezed Version
+// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart' show TimeOfDay;
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../core/utils/firestore_converters.dart';

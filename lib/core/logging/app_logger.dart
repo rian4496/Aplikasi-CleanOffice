@@ -23,10 +23,25 @@ class AppLogger {
     }
   }
 
+  // Filter patterns untuk skip logging (mengurangi noise)
+  static final List<String> _skipPatterns = [
+    'heartbeat',
+    'Received heartbeat',
+    'realtime server',
+  ];
+
   static void _configureLogging() {
     Logger.root.level = kDebugMode ? Level.ALL : Level.WARNING;
 
     Logger.root.onRecord.listen((record) {
+      // Skip noisy logs
+      final message = record.message.toLowerCase();
+      for (final pattern in _skipPatterns) {
+        if (message.contains(pattern.toLowerCase())) {
+          return; // Skip this log
+        }
+      }
+
       final emoji = _getEmojiForLevel(record.level);
       final timestamp = _formatTimestamp(record.time);
       final loggerName = record.loggerName.padRight(20);

@@ -53,7 +53,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     } catch (e, stackTrace) {
       _logger.error('Update profile error', e, stackTrace);
       state = AsyncValue.error(e, stackTrace);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal mengupdate profil. Silakan coba lagi.',
       );
     }

@@ -30,9 +30,9 @@ class AppTheme {
 
   // ==================== DASHBOARD SPECIFIC COLORS ====================
 
-  // Header Gradient (if needed)
-  static const Color headerGradientStart = Color(0xFF868CFF);
-  static const Color headerGradientEnd = Color(0xFF4318FF);
+  // Header Gradient (Light Blue)
+  static const Color headerGradientStart = Color(0xFF64B5F6); // Light Blue
+  static const Color headerGradientEnd = Color(0xFF1976D2);   // Blue
 
   // Stat Card Gradients
   static const List<Color> blueGradient = [Color(0xFF4481EB), Color(0xFF04BEFE)];

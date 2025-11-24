@@ -15,7 +15,7 @@ class SidebarItem {
     this.isHeader = false,
   });
 
-  static const SidebarItem header(String title) => 
+  static SidebarItem header(String title) =>
       SidebarItem(title: title, icon: Icons.abc, route: '', isHeader: true);
 }
 

@@ -9,6 +9,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
+import '../../models/user_profile.dart';
 import '../../services/appwrite_database_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
@@ -183,7 +184,7 @@ class VerificationActions {
       rethrow;
     } catch (e) {
       _logger.error('Error approving report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menyetujui laporan. Silakan coba lagi.',
       );
     }
@@ -209,7 +210,7 @@ class VerificationActions {
       rethrow;
     } catch (e) {
       _logger.error('Error rejecting report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menolak laporan. Silakan coba lagi.',
       );
     }
@@ -225,7 +226,7 @@ class VerificationActions {
       _logger.info('Report assigned to cleaner: ${report.id} -> $cleanerName');
     } catch (e) {
       _logger.error('Error assigning report to cleaner', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menugaskan laporan ke cleaner. Silakan coba lagi.',
       );
     }
@@ -251,4 +252,34 @@ final urgentReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
 final urgentReportsCountProvider = Provider<int>((ref) {
   final reportsAsync = ref.watch(urgentReportsProvider);
   return reportsAsync.whenData((reports) => reports.length).value ?? 0;
+});
+
+// ==================== ACCOUNT VERIFICATION PROVIDERS ====================
+
+/// Provider untuk mendapatkan semua user (untuk verifikasi akun)
+final pendingVerificationUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
+  final service = ref.read(appwriteDatabaseServiceProvider);
+  try {
+    // Ambil semua user profiles
+    final users = await service.getAllUserProfiles();
+    _logger.info('Loaded ${users.length} users for verification');
+    return users;
+  } catch (e) {
+    _logger.error('Error loading users for verification', e);
+    rethrow;
+  }
+});
+
+/// Provider untuk verifikasi user (approve/reject)
+final verifyUserProvider = FutureProvider.family<void, (String, String)>((ref, params) async {
+  final (userId, newStatus) = params;
+  final service = ref.read(appwriteDatabaseServiceProvider);
+
+  try {
+    await service.updateUserStatus(userId, newStatus);
+    _logger.info('User $userId status updated to $newStatus');
+  } catch (e) {
+    _logger.error('Error updating user status', e);
+    rethrow;
+  }
 });

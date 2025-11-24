@@ -362,6 +362,25 @@ class Report {
   bool get needsVerification => status == ReportStatus.completed;
   bool get isDeleted => deletedAt != null;
 
+  // ==================== COMPATIBILITY GETTERS ====================
+  // These provide compatibility with new admin screens expecting different field names
+  
+  /// Alias for date (new screens expect createdAt)
+  DateTime get createdAt => date;
+  
+  /// Alias for departmentId (new screens expect department string)
+  String get department => departmentId ?? 'Unknown';
+  
+  /// Images as list (new screens expect List<String>)
+  List<String> get images => imageUrl != null ? [imageUrl!] : [];
+  
+  /// Completion images as list
+  List<String> get completionImages => 
+      completionImageUrl != null ? [completionImageUrl!] : [];
+  
+  /// Alias for verificationNotes
+  String? get completionNotes => verificationNotes;
+
   Duration? get workDuration {
     if (startedAt != null && completedAt != null) {
       return completedAt!.difference(startedAt!);

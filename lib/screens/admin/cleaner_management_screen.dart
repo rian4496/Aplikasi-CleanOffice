@@ -9,6 +9,7 @@ import '../../providers/riverpod/request_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/admin/admin_sidebar.dart';
+import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 
 class CleanerManagementScreen extends ConsumerStatefulWidget {
   const CleanerManagementScreen({super.key});
@@ -38,6 +39,9 @@ class _CleanerManagementScreenState
 
       // ==================== BODY ====================
       body: isDesktop ? _buildDesktopLayout(cleanersAsync) : _buildMobileLayout(cleanersAsync),
+
+      // ==================== BOTTOM NAV BAR (Mobile Only) ====================
+      bottomNavigationBar: !isDesktop ? _buildBottomNavBar() : null,
     );
   }
 
@@ -876,6 +880,103 @@ class _CleanerManagementScreenState
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // ==================== BOTTOM NAVIGATION BAR ====================
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isActive: false,
+                onTap: () => Navigator.pop(context),
+              ),
+              _buildNavItem(
+                icon: Icons.assignment_rounded,
+                label: 'Laporan',
+                isActive: false,
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushNamed(context, '/reports_management');
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.chat_bubble_rounded,
+                label: 'Chat',
+                isActive: false,
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fitur Chat segera hadir')),
+                  );
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.more_horiz_rounded,
+                label: 'Lainnya',
+                isActive: false,
+                onTap: () {
+                  AdminMoreBottomSheet.show(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    const activeColor = Color(0xFF5D5FEF);
+    final inactiveColor = Colors.grey[600]!;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? activeColor : inactiveColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

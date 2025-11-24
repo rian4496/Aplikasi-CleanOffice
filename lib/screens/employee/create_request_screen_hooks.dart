@@ -498,7 +498,7 @@ class CreateRequestScreen extends HookConsumerWidget {
       } on ValidationException catch (e) {
         _logger.error('Validation error', e);
         showError(context, e.message);
-      } on FirestoreException catch (e) {
+      } on DatabaseException catch (e) {
         _logger.error('Firestore error', e);
         showError(context, e.message);
       } catch (e) {

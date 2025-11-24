@@ -39,9 +39,9 @@ final adminStatsProvider = Provider<AsyncValue<AdminStats>>((ref) {
   }
 
   return AsyncValue.data(AdminStats(
-    needsVerificationCount: needsVerificationAsync.valueOrNull?.length ?? 0,
-    pendingReportsCount: pendingReportsAsync.valueOrNull?.length ?? 0,
-    totalRequestsCount: allRequestsAsync.valueOrNull?.length ?? 0,
-    activeCleanersCount: cleanersAsync.valueOrNull?.length ?? 0,
+    needsVerificationCount: needsVerificationAsync.value?.length ?? 0,
+    pendingReportsCount: pendingReportsAsync.value?.length ?? 0,
+    totalRequestsCount: allRequestsAsync.value?.length ?? 0,
+    activeCleanersCount: cleanersAsync.value?.length ?? 0,
   ));
 });

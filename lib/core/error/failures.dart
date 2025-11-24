@@ -32,7 +32,7 @@ class AuthFailure extends Failure {
 class FirestoreFailure extends Failure {
   const FirestoreFailure({required super.message, super.code});
 
-  factory FirestoreFailure.fromException(FirestoreException e) {
+  factory FirestoreFailure.fromException(DatabaseException e) {
     return FirestoreFailure(message: e.message, code: e.code);
   }
 }
@@ -150,7 +150,7 @@ class UnexpectedFailure extends Failure {
 Failure exceptionToFailure(AppException exception) {
   if (exception is AuthException) {
     return AuthFailure.fromException(exception);
-  } else if (exception is FirestoreException) {
+  } else if (exception is DatabaseException) {
     return FirestoreFailure.fromException(exception);
   } else if (exception is StorageException) {
     return StorageFailure.fromException(exception);

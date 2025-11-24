@@ -1,5 +1,6 @@
 // lib/main.dart
 // Clean Office Management System - Main Entry Point
+// ✅ MIGRATED TO APPWRITE (No Firebase)
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -26,12 +27,9 @@ import 'screens/employee/create_request_screen.dart';
 // Cleaner Screens
 import 'screens/cleaner/cleaner_home_screen.dart';
 
-// Admin Screens - NEW
-import 'screens/admin/dashboard/admin_dashboard_unified_screen.dart';
-import 'screens/admin/analytics/analytics_screen.dart';
-import 'screens/admin/reports/reports_list_screen.dart';
-import 'screens/admin/verification/verification_screen.dart';
-import 'screens/admin/cleaners/cleaners_management_screen.dart';
+// Admin Screens (OLD - Working)
+import 'screens/admin/admin_dashboard_screen.dart';
+import 'screens/admin/analytics_screen.dart';
 
 // Shared Screens
 import 'screens/shared/profile_screen.dart';
@@ -43,24 +41,51 @@ import 'screens/notification_screen.dart';
 // Inventory Screens
 import 'screens/inventory/inventory_list_screen.dart';
 
+// Filter patterns untuk skip noisy logs
+const _skipLogPatterns = [
+  'heartbeat',
+  'Received heartbeat',
+  'realtime server',
+];
+
+bool _shouldSkipLog(String? message) {
+  if (message == null) return false;
+  final lower = message.toLowerCase();
+  for (final pattern in _skipLogPatterns) {
+    if (lower.contains(pattern.toLowerCase())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void main() async {
+  // Override debugPrint untuk filter noisy logs
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (!_shouldSkipLog(message)) {
+      debugPrintSynchronously(message ?? '', wrapWidth: wrapWidth);
+    }
+  };
+
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // Initialize Appwrite
+    // ==================== APPWRITE INITIALIZATION ====================
     try {
       await AppwriteClient().initialize();
       debugPrint('✅ Appwrite initialized successfully');
-    } catch (e) {
-      debugPrint('⚠️ Appwrite initialization failed: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Appwrite initialization failed: $e');
+      debugPrint('Stack trace: $stackTrace');
       // Continue app execution even if Appwrite fails (for development)
     }
 
-    // Initialize Indonesian locale
+    // Initialize Indonesian locale for date formatting
     await initializeDateFormatting('id_ID', null);
 
     runApp(const ProviderScope(child: MyApp()));
   }, (error, stack) {
+    // Global error handler
     if (kDebugMode) {
       debugPrint('❌ Unhandled error: $error');
       debugPrint('Stack trace: $stack');
@@ -106,18 +131,10 @@ class MyApp extends StatelessWidget {
         // ==================== HOME SCREENS ====================
         AppConstants.homeEmployeeRoute: (context) => const EmployeeHomeScreen(),
         AppConstants.homeCleanerRoute: (context) => const CleanerHomeScreen(),
-        
-        // ADMIN - NEW UNIFIED SCREEN (Mobile + Desktop Responsive)
-        AppConstants.homeAdminRoute: (context) => const AdminDashboardUnifiedScreen(),
-        '/admin/dashboard': (context) => const AdminDashboardUnifiedScreen(),
+        AppConstants.homeAdminRoute: (context) => const AdminDashboardScreen(),
 
-        // ==================== ADMIN SCREENS (NEW) ====================
-        '/admin/reports': (context) => const ReportsListScreen(),
-        '/admin/verification': (context) => const VerificationScreen(),
+        // ==================== ADMIN ROUTES ====================
         '/admin/analytics': (context) => const AnalyticsScreen(),
-        '/admin/cleaners': (context) => const CleanersManagementScreen(),
-        
-        // Analytics (backward compatibility)
         '/analytics': (context) => const AnalyticsScreen(),
 
         // ==================== EMPLOYEE ROUTES ====================

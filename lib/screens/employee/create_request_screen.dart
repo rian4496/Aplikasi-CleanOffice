@@ -729,7 +729,7 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     } on ValidationException catch (e) {
       _logger.error('Validation error', e);
       _showError(e.message);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Firestore error', e);
       _showError(e.message);
     } catch (e) {

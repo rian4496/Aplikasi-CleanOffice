@@ -417,7 +417,7 @@ class EditProfileScreen extends HookConsumerWidget {
     } on StorageException catch (e) {
       logger.error('Storage error', e);
       _showError(context, e.message);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       logger.error('Firestore error', e);
       _showError(context, e.message);
     } catch (e, stackTrace) {

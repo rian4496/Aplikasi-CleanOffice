@@ -265,7 +265,7 @@ class RequestActions {
 
       final requestId = await service.createServiceRequest(request);
       if (requestId == null) {
-        throw const FirestoreException(message: 'Gagal membuat permintaan.');
+        throw const DatabaseException(message: 'Gagal membuat permintaan.');
       }
 
       _logger.info('Request created successfully: $requestId');
@@ -274,7 +274,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error creating request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal membuat permintaan. Silakan coba lagi.',
       );
     }
@@ -300,7 +300,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error self-assigning request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal mengambil permintaan. Silakan coba lagi.',
       );
     }
@@ -315,7 +315,7 @@ class RequestActions {
       _logger.info('Request started successfully');
     } catch (e) {
       _logger.error('Error starting request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal memulai permintaan. Silakan coba lagi.',
       );
     }
@@ -364,7 +364,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error completing request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menyelesaikan permintaan. Silakan coba lagi.',
       );
     }
@@ -379,7 +379,7 @@ class RequestActions {
       _logger.info('Request cancelled successfully');
     } catch (e) {
       _logger.error('Error cancelling request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal membatalkan permintaan. Silakan coba lagi.',
       );
     }
@@ -401,7 +401,7 @@ class RequestActions {
       rethrow;
     } catch (e) {
       _logger.error('Error deleting request', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menghapus permintaan. Silakan coba lagi.',
       );
     }

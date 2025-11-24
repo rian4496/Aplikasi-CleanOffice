@@ -203,7 +203,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Firestore error', e);
       _showError(e.message);
     } catch (e, stackTrace) {

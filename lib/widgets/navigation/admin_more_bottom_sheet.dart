@@ -7,6 +7,7 @@ import '../../screens/admin/analytics_screen.dart';
 import '../../screens/admin/all_reports_management_screen.dart';
 import '../../screens/admin/all_requests_management_screen.dart';
 import '../../screens/admin/cleaner_management_screen.dart';
+import '../../screens/admin/account_verification_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
 import '../../screens/dev/seed_data_screen.dart';
 
@@ -108,8 +109,8 @@ class AdminMoreBottomSheet extends StatelessWidget {
                 _buildMenuItem(
                   context: context,
                   icon: Icons.room_service_outlined,
-                  title: 'Kelola Permintaan',
-                  subtitle: 'Kelola permintaan layanan',
+                  title: 'Permintaan Layanan',
+                  subtitle: 'Kelola semua permintaan layanan',
                   color: AppTheme.success,
                   onTap: () {
                     Navigator.pop(context);
@@ -124,6 +125,22 @@ class AdminMoreBottomSheet extends StatelessWidget {
 
                 const SizedBox(height: 16),
                 _buildSectionTitle('Manajemen'),
+                _buildMenuItem(
+                  context: context,
+                  icon: Icons.verified_user_outlined,
+                  title: 'Verifikasi Akun',
+                  subtitle: 'Verifikasi akun petugas & employee baru',
+                  color: Colors.teal,
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AccountVerificationScreen(),
+                      ),
+                    );
+                  },
+                ),
                 _buildMenuItem(
                   context: context,
                   icon: Icons.people_outline,

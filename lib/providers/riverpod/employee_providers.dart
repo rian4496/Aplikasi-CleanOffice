@@ -208,7 +208,7 @@ class EmployeeActions {
       // Create report
       final reportId = await _service.createReport(report);
       if (reportId == null) {
-        throw const FirestoreException(message: 'Gagal membuat laporan.');
+        throw const DatabaseException(message: 'Gagal membuat laporan.');
       }
 
       _logger.info('Report created successfully: $reportId');
@@ -220,7 +220,7 @@ class EmployeeActions {
       rethrow;
     } catch (e) {
       _logger.error('Error creating report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal membuat laporan. Silakan coba lagi.',
       );
     }
@@ -330,7 +330,7 @@ class EmployeeActions {
       rethrow;
     } catch (e) {
       _logger.error('Error updating report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal mengupdate laporan. Silakan coba lagi.',
       );
     }
@@ -350,7 +350,7 @@ class EmployeeActions {
       rethrow;
     } catch (e) {
       _logger.error('Error deleting report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal menghapus laporan. Silakan coba lagi.',
       );
     }
@@ -363,7 +363,7 @@ class EmployeeActions {
       _logger.info('Report restored successfully: $reportId');
     } catch (e) {
       _logger.error('Error restoring report', e);
-      throw const FirestoreException(
+      throw const DatabaseException(
         message: 'Gagal mengembalikan laporan. Silakan coba lagi.',
       );
     }

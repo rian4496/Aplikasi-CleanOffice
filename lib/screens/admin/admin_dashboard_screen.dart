@@ -16,13 +16,10 @@ import '../../providers/riverpod/request_providers.dart';
 import '../../providers/riverpod/dummy_providers.dart';
 
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/shared/custom_speed_dial.dart';
-import '../../widgets/admin/admin_overview_widget.dart';
-import '../../widgets/admin/recent_activities_widget.dart';
 import '../../widgets/admin/admin_sidebar.dart';
+import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 
 // Feature A: Real-time Updates
-import '../../services/realtime_service.dart';
 import '../../widgets/admin/realtime_indicator_widget.dart';
 
 // Feature B: Advanced Filtering
@@ -64,11 +61,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
-    final isMobile = ResponsiveHelper.isMobile(context);
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppTheme.modernBg,
+      // AppBar dan body terpisah - tidak perlu extend
 
       // ==================== APP BAR (Mobile Only) ====================
       appBar: !isDesktop ? _buildAppBar(context) : null,
@@ -151,37 +148,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             )
           : null,
       actions: [
-        // Feature B: Filter button
-        IconButton(
-          icon: const Icon(Icons.filter_list, color: Colors.white),
-          onPressed: () => showDialog(
-            context: context,
-            builder: (_) => const AdvancedFilterDialog(),
-          ),
-          tooltip: 'Advanced Filters',
-        ),
+        // Notification icon
         _buildNotificationIcon(),
-        if (!isDesktop)
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () => Navigator.pushNamed(context, '/profile'),
-          ),
-        // Profile Avatar untuk Desktop
-        if (isDesktop) ...[
-          const SizedBox(width: 8),
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: Colors.white.withValues(alpha: 0.2),
-            child: const Icon(Icons.person, color: Colors.white, size: 20),
-          ),
-        ],
         // Hamburger menu on the right for mobile
         if (!isDesktop)
           IconButton(
             icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 8),
       ],
     );
   }
@@ -462,77 +437,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             ),
           ),
 
-          // Empty State or Content
+          // Weekly Trends Section
           SliverToBoxAdapter(
-            child: needsVerificationAsync.when(
-              data: (reports) {
-                return allRequestsAsync.when(
-                  data: (requests) {
-                    // Show empty state if no data
-                    if (reports.isEmpty && requests.isEmpty) {
-                      return _buildEmptyState();
-                    }
-                    
-                    // Show normal content
-                    return cleanersAsync.when(
-                      data: (cleaners) {
-                        return Column(
-                          children: [
-                            // Overview
-                            AdminOverviewWidget(
-                              reports: reports,
-                              requests: requests,
-                              totalCleaners: cleaners.length,
-                            ),
-                            
-                            // Analytics
-                            _buildAnalyticsSection(reports: reports, requests: requests),
-                            
-                            // Recent Activities
-                            RecentActivitiesWidget(
-                              reports: reports,
-                              requests: requests,
-                              onViewAll: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AllReportsManagementScreen(),
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      },
-                      loading: () => const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(),
-                        ),
-                      ),
-                      error: (e, _) => const SizedBox.shrink(),
-                    );
-                  },
-                  loading: () => const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
-                  error: (e, _) => const SizedBox.shrink(),
-                );
-              },
-              loading: () => const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(32),
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (e, _) => Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(32),
-                  child: Text('Error loading data'),
-                ),
-              ),
-            ),
+            child: _buildMobileWeeklyTrends(needsVerificationAsync),
+          ),
+
+          // Recent Activities Section
+          SliverToBoxAdapter(
+            child: _buildMobileRecentActivities(needsVerificationAsync),
           ),
 
           // Bottom padding for FAB
@@ -544,84 +456,165 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ==================== HEADER ====================
+  // ==================== HEADER (MOCKUP STYLE - Gradient + White Overlap Card) ====================
   Widget _buildHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
     final greeting = _getGreeting();
 
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+    // Card height ~76px (padding 14*2 + content ~48)
+    // Untuk card di tengah batas gradient: gradient harus cover setengah card
+    // Gradient: 70px, card top: 32px -> card overlap 38px di gradient, 38px di bawah
+    return SizedBox(
+      height: 105, // Kurangi gap dengan stat cards
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Background gradient header dengan curve di bawah
+          Container(
+            height: 70, // Tinggi gradient - card akan overlap di tengah batasnya
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
+              ),
+            ),
+          ),
+
+          // White greeting card - posisi pas di tengah batas gradient
+          Positioned(
+            top: 32, // Card dimulai di 32px, gradient berakhir di 70px, jadi ~38px overlap
+            left: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  // Greeting text (hitam) di kiri
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        userProfileAsync.when(
+                          data: (profile) => Text(
+                            '$greeting, ${profile?.displayName ?? 'Admin'}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          loading: () => const Text(
+                            'Selamat Pagi, Admin',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                          error: (e, _) => const Text(
+                            'Selamat Pagi, Admin',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.textPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          DateFormatter.fullDate(DateTime.now()),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Profile avatar di kanan
+                  CircleAvatar(
+                    radius: 24,
+                    backgroundColor: AppTheme.primaryLight,
+                    child: const Icon(
+                      Icons.person,
+                      color: AppTheme.primary,
+                      size: 26,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ],
       ),
-      child: Row(
+    );
+  }
+
+  // ==================== MOCKUP STAT CARD (PASTEL DESIGN) ====================
+  Widget _buildMockupStatCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color bgColor,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  greeting,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                userProfileAsync.when(
-                  data: (profile) => Text(
-                    profile?.displayName ?? 'Administrator',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  loading: () => const Text(
-                    'Administrator',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                  error: (e, _) => const Text(
-                    'Administrator',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  DateFormatter.fullDate(DateTime.now()),
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
+          // Icon at top
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 22,
             ),
           ),
-          // Optional: Add profile avatar
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppTheme.primary.withOpacity(0.1),
-            child: const Icon(
-              Icons.person,
-              color: AppTheme.primary,
-              size: 32,
+          const SizedBox(height: 12),
+          // Large value
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: iconColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Label
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey[700],
             ),
           ),
         ],
@@ -637,63 +630,71 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   ) {
     return needsVerificationAsync.when(
       data: (reports) {
-        // Count reports that need verification (pending or urgent)
-        final verificationCount = reports.where((r) =>
-          r.status == ReportStatus.pending || r.isUrgent
-        ).length;
+        // Count pending reports
         final pendingCount = reports.where((r) =>
           r.status == ReportStatus.pending
         ).length;
         final requestsCount = allRequestsAsync.asData?.value.length ?? 0;
         final cleanersCount = cleanersAsync.asData?.value.length ?? 0;
 
+        // Pastel colors sesuai mockup
+        const Color pastelPink = Color(0xFFFFE4E1);    // Reports - pink/salmon
+        const Color pastelBlue = Color(0xFFE3F2FD);    // Pending - light blue
+        const Color pastelYellow = Color(0xFFFFF8E1);  // Requests - cream/yellow
+        const Color pastelGreen = Color(0xFFE8F5E9);   // Cleaners - mint green
+
+        const Color iconPink = Color(0xFFE57373);
+        const Color iconBlue = Color(0xFF64B5F6);
+        const Color iconYellow = Color(0xFFFFB74D);
+        const Color iconGreen = Color(0xFF81C784);
+
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.only(left: 16, right: 16, top: 8),
           child: Column(
             children: [
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(
+                    child: _buildMockupStatCard(
+                      label: 'Reports',
+                      value: reports.length.toString(),
                       icon: Icons.description_outlined,
-                      color: AppTheme.primary,
-                      label: 'Laporan Masuk',
-                      value: verificationCount.toString(),
-                      onTap: () => _navigateToScreen(const AllReportsManagementScreen()),
+                      bgColor: pastelPink,
+                      iconColor: iconPink,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.pending_actions_outlined,
-                      color: AppTheme.warning,
+                    child: _buildMockupStatCard(
                       label: 'Pending',
                       value: pendingCount.toString(),
-                      onTap: () => _navigateToScreen(const AllReportsManagementScreen()),
+                      icon: Icons.hourglass_empty_rounded,
+                      bgColor: pastelBlue,
+                      iconColor: iconBlue,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.room_service_outlined,
-                      color: AppTheme.info,
-                      label: 'Total Permintaan',
+                    child: _buildMockupStatCard(
+                      label: 'Requests',
                       value: requestsCount.toString(),
-                      onTap: () => _navigateToScreen(const AllRequestsManagementScreen()),
+                      icon: Icons.assignment_outlined,
+                      bgColor: pastelYellow,
+                      iconColor: iconYellow,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: _buildStatCard(
-                      icon: Icons.people_outline,
-                      color: AppTheme.success,
-                      label: 'Petugas Aktif',
+                    child: _buildMockupStatCard(
+                      label: 'Cleaners',
                       value: cleanersCount.toString(),
-                      onTap: () => _navigateToScreen(const CleanerManagementScreen()),
+                      icon: Icons.people_outline_rounded,
+                      bgColor: pastelGreen,
+                      iconColor: iconGreen,
                     ),
                   ),
                 ],
@@ -713,6 +714,264 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           padding: const EdgeInsets.all(24),
           child: Text('Error: $e'),
         ),
+      ),
+    );
+  }
+
+  // ==================== MOBILE WEEKLY TRENDS ====================
+  Widget _buildMobileWeeklyTrends(AsyncValue reportsAsync) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Weekly Trends',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryLight,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Text(
+                  '7 hari terakhir',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          reportsAsync.when(
+            data: (reports) {
+              final reportList = reports.whereType<Report>().toList();
+              return Column(
+                children: [
+                  WeeklyReportChart(
+                    reports: reportList,
+                    isDesktop: false,
+                  ),
+                  const SizedBox(height: 12),
+                  const WeeklyReportChartLegend(),
+                ],
+              );
+            },
+            loading: () => const SizedBox(
+              height: 250,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => SizedBox(
+              height: 250,
+              child: Center(
+                child: Text('Error: $e', style: const TextStyle(color: Colors.red)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ==================== MOBILE RECENT ACTIVITIES ====================
+  Widget _buildMobileRecentActivities(AsyncValue reportsAsync) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Activities',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const AllReportsManagementScreen(),
+                  ),
+                ),
+                child: const Text('Lihat Semua'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          reportsAsync.when(
+            data: (reports) {
+              if (reports.isEmpty) {
+                return _buildEmptyActivities();
+              }
+              final recentReports = reports.take(5).toList();
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: recentReports.length,
+                separatorBuilder: (context, index) => const Divider(height: 16),
+                itemBuilder: (context, index) {
+                  final report = recentReports[index];
+                  return _buildActivityItem(report);
+                },
+              );
+            },
+            loading: () => const SizedBox(
+              height: 150,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => SizedBox(
+              height: 150,
+              child: Center(
+                child: Text('Error: $e', style: const TextStyle(color: Colors.red)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyActivities() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Column(
+        children: [
+          Icon(Icons.history, size: 48, color: Colors.grey[300]),
+          const SizedBox(height: 12),
+          Text(
+            'Belum ada aktivitas',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityItem(dynamic report) {
+    return InkWell(
+      onTap: () {
+        Navigator.pushNamed(
+          context,
+          '/report_detail',
+          arguments: report,
+        );
+      },
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: report.status.color.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              report.status.icon,
+              color: report.status.color,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  report.title,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  report.location,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                DateFormatter.relativeTime(report.date),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: report.status.color.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  report.status.label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    color: report.status.color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -787,70 +1046,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   }
 
-  // ==================== SPEED DIAL ====================
-  Widget _buildSpeedDial() {
-    return CustomSpeedDial(
-      mainButtonColor: AppTheme.primary,
-      actions: [
-        SpeedDialAction(
-          icon: Icons.verified_user,
-          label: 'Verifikasi',
-          backgroundColor: SpeedDialColors.red,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllReportsManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.assignment,
-          label: 'Kelola Laporan',
-          backgroundColor: SpeedDialColors.orange,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllReportsManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.room_service,
-          label: 'Kelola Permintaan',
-          backgroundColor: SpeedDialColors.green,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AllRequestsManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.people,
-          label: 'Kelola Petugas',
-          backgroundColor: SpeedDialColors.purple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const CleanerManagementScreen(),
-            ),
-          ),
-        ),
-        SpeedDialAction(
-          icon: Icons.data_object,
-          label: 'Generate Data',
-          backgroundColor: Colors.deepPurple,
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SeedDataScreen(),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
   // ==================== BOTTOM NAVIGATION BAR ====================
   Widget _buildBottomNavBar() {
     return Container(
@@ -858,7 +1053,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -899,11 +1094,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                 },
               ),
               _buildNavItem(
-                icon: Icons.menu_rounded,
-                label: 'More',
+                icon: Icons.more_horiz_rounded,
+                label: 'Lainnya',
                 isActive: false,
                 onTap: () {
-                  _showCreateOptionsBottomSheet(context);
+                  AdminMoreBottomSheet.show(context);
                 },
               ),
             ],
@@ -948,127 +1143,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  // ==================== CREATE OPTIONS BOTTOM SHEET ====================
-  void _showCreateOptionsBottomSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Header dengan "Buat Baru" dan garis divider
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(color: Colors.grey, width: 1),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    'Buat Baru',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Action items
-            ListView(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              children: [
-                _buildBottomSheetItem(
-                  icon: Icons.verified_user,
-                  title: 'Verifikasi Laporan',
-                  color: AppTheme.error,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToScreen(const AllReportsManagementScreen());
-                  },
-                ),
-                _buildBottomSheetItem(
-                  icon: Icons.assignment,
-                  title: 'Kelola Laporan',
-                  color: AppTheme.warning,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToScreen(const AllReportsManagementScreen());
-                  },
-                ),
-                _buildBottomSheetItem(
-                  icon: Icons.room_service,
-                  title: 'Kelola Permintaan',
-                  color: AppTheme.success,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToScreen(const AllRequestsManagementScreen());
-                  },
-                ),
-                _buildBottomSheetItem(
-                  icon: Icons.people,
-                  title: 'Kelola Petugas',
-                  color: AppTheme.primary,
-                  onTap: () {
-                    Navigator.pop(context);
-                    _navigateToScreen(const CleanerManagementScreen());
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBottomSheetItem({
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, color: color, size: 24),
-      ),
-      title: Text(
-        title,
-        style: const TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
-      trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-      onTap: onTap,
     );
   }
 
@@ -1137,82 +1211,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       child: DashboardStatsGrid(
         stats: stats,
         isDesktop: isDesktop,
-      ),
-    );
-  }
-
-  // ==================== STAT CARD (PASTEL DESIGN) ====================
-  Widget _buildStatCard({
-    required IconData icon,
-    required Color color,
-    required String label,
-    required String value,
-    VoidCallback? onTap,
-  }) {
-    // Pastel color backgrounds
-    final pastelBg = color.withOpacity(0.15);
-    
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: pastelBg,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Icon at top left
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const Spacer(),
-            // Large number in center
-            Center(
-              child: Text(
-                value,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            // Label at bottom center
-            Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: Colors.grey[700],
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                ),
-                textAlign: TextAlign.center,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -1513,76 +1511,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           const SizedBox(height: 16),
           const WeeklyReportChartLegend(),
         ],
-      ),
-    );
-  }
-
-  // ==================== EMPTY STATE ====================
-  Widget _buildEmptyState() {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(48.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.description_outlined,
-                size: 60,
-                color: Colors.grey[400],
-              ),
-            ),
-            const SizedBox(height: 24),
-            
-            // Text
-            Text(
-              'Belum ada laporan',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey[800],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Mulai buat laporan pertama Anda',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-            ),
-            const SizedBox(height: 32),
-            
-            // Button
-            ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AllReportsManagementScreen(),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.add, size: 20),
-              label: const Text('Buat Laporan'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

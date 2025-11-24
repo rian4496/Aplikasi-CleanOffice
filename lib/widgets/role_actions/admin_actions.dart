@@ -202,7 +202,7 @@ class _AdminActionsState extends ConsumerState<AdminActions> {
       if (!mounted) return;
       _showSuccessSnackbar('Laporan berhasil diverifikasi');
       Navigator.pop(context); // Go back after action
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Verify report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {
@@ -240,7 +240,7 @@ class _AdminActionsState extends ConsumerState<AdminActions> {
       if (!mounted) return;
       _showSuccessSnackbar('Laporan ditolak');
       Navigator.pop(context); // Go back after action
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Reject report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {

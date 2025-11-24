@@ -1,3 +1,11 @@
+import 'package:flutter/material.dart';
+import '../core/theme/app_theme.dart';
+import 'admin/advanced_filter_dialog.dart';
+
+/// Dashboard header widget with search, notifications and profile
+class DashboardHeader extends StatelessWidget {
+  final String title;
+  final String subtitle;
   final String? photoUrl;
   final VoidCallback? onNotificationTap;
   final VoidCallback? onProfileTap;
@@ -31,7 +39,7 @@
                   icon: const Icon(Icons.menu, color: AppTheme.textSecondary),
                   onPressed: onMenuTap,
                 ),
-              
+
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,7 +56,7 @@
                   ],
                 ),
               ),
-              
+
               // Search Bar (Hidden on small mobile)
               if (!isMobile)
                 Expanded(
@@ -69,13 +77,19 @@
                             decoration: const InputDecoration(
                               hintText: 'Search...',
                               border: InputBorder.none,
-                onTap: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => const AdvancedFilterDialog(),
-                  );
-                },
-              ),
+                            ),
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => const AdvancedFilterDialog(),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(width: 10),
 
               _buildIconButton(
@@ -88,7 +102,7 @@
                 onTap: () {},
               ),
               const SizedBox(width: 10),
-              
+
               // Profile
               GestureDetector(
                 onTap: onProfileTap,

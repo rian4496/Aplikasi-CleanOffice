@@ -560,7 +560,7 @@ class _CleanerReportDetailScreenState
 
       if (!mounted) return;
       _showSuccessSnackbar('Laporan berhasil diterima');
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Accept report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {
@@ -591,7 +591,7 @@ class _CleanerReportDetailScreenState
 
       if (!mounted) return;
       _showSuccessSnackbar('Pengerjaan dimulai');
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Start report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {
@@ -691,7 +691,7 @@ class _CleanerReportDetailScreenState
 
       // Go back after completion
       Navigator.pop(context);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Complete report error', e);
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();

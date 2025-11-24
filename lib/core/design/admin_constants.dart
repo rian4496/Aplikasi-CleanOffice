@@ -151,6 +151,9 @@ class AdminConstants {
   static const double breakpointMobile = 600.0;
   static const double breakpointTablet = 900.0;
   static const double breakpointDesktop = 1200.0;
+  
+  // Alias for compatibility with new screens
+  static const double tabletBreakpoint = breakpointTablet;
 
   // Helper methods
   static bool isMobile(double width) => width < breakpointMobile;

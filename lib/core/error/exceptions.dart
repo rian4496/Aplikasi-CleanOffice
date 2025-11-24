@@ -1,5 +1,6 @@
 /// Custom exceptions untuk aplikasi Clean Office
 /// Digunakan di data layer (services, repositories)
+/// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 library;
 
 /// Base exception class
@@ -21,9 +22,9 @@ abstract class AppException implements Exception {
       'AppException: $message${code != null ? ' (code: $code)' : ''}';
 }
 
-// ==================== FIREBASE EXCEPTIONS ====================
+// ==================== AUTH EXCEPTIONS ====================
 
-/// Exception untuk Firebase Authentication errors
+/// Exception untuk Authentication errors (Appwrite)
 class AuthException extends AppException {
   const AuthException({
     required super.message,
@@ -32,83 +33,73 @@ class AuthException extends AppException {
     super.stackTrace,
   });
 
-  factory AuthException.fromFirebaseAuth(dynamic error) {
-    final code = error.code as String?;
+  /// Factory untuk Appwrite error codes
+  factory AuthException.fromAppwrite(dynamic error) {
+    final code = error.code?.toString();
     String message;
 
     switch (code) {
-      case 'user-not-found':
+      case '401':
+        message = 'Email atau password salah';
+        break;
+      case '404':
         message = 'Email belum terdaftar';
         break;
-      case 'wrong-password':
-        message = 'Password salah';
-        break;
-      case 'invalid-email':
-        message = 'Format email tidak valid';
-        break;
-      case 'user-disabled':
-        message = 'Akun telah dinonaktifkan';
-        break;
-      case 'too-many-requests':
-        message = 'Terlalu banyak percobaan. Coba lagi nanti';
-        break;
-      case 'email-already-in-use':
+      case '409':
         message = 'Email sudah terdaftar';
         break;
-      case 'weak-password':
-        message = 'Password terlalu lemah';
+      case '429':
+        message = 'Terlalu banyak percobaan. Coba lagi nanti';
         break;
-      case 'requires-recent-login':
-        message = 'Silakan login ulang untuk melanjutkan';
+      case '400':
+        message = 'Format data tidak valid';
         break;
-      case 'network-request-failed':
-        message = 'Koneksi internet bermasalah';
+      case '503':
+        message = 'Service tidak tersedia';
         break;
       default:
-        message = error.message ?? 'Terjadi kesalahan autentikasi';
+        message = error.message?.toString() ?? 'Terjadi kesalahan autentikasi';
     }
 
     return AuthException(message: message, code: code, originalError: error);
   }
 }
 
-/// Exception untuk Firestore errors
-class FirestoreException extends AppException {
-  const FirestoreException({
+/// Exception untuk Database errors (Appwrite)
+class DatabaseException extends AppException {
+  const DatabaseException({
     required super.message,
     super.code,
     super.originalError,
     super.stackTrace,
   });
 
-  factory FirestoreException.fromFirebase(dynamic error) {
-    final code = error.code as String?;
+  /// Factory untuk Appwrite database error codes
+  factory DatabaseException.fromAppwrite(dynamic error) {
+    final code = error.code?.toString();
     String message;
 
     switch (code) {
-      case 'permission-denied':
+      case '401':
         message = 'Anda tidak memiliki akses';
         break;
-      case 'not-found':
+      case '404':
         message = 'Data tidak ditemukan';
         break;
-      case 'already-exists':
+      case '409':
         message = 'Data sudah ada';
         break;
-      case 'cancelled':
-        message = 'Operasi dibatalkan';
+      case '500':
+        message = 'Terjadi kesalahan server';
         break;
-      case 'unavailable':
+      case '503':
         message = 'Service tidak tersedia. Coba lagi';
         break;
-      case 'deadline-exceeded':
-        message = 'Operasi timeout';
-        break;
       default:
-        message = error.message ?? 'Terjadi kesalahan database';
+        message = error.message?.toString() ?? 'Terjadi kesalahan database';
     }
 
-    return FirestoreException(
+    return DatabaseException(
       message: message,
       code: code,
       originalError: error,
@@ -116,7 +107,7 @@ class FirestoreException extends AppException {
   }
 }
 
-/// Exception untuk Firebase Storage errors
+/// Exception untuk Storage errors (Appwrite)
 class StorageException extends AppException {
   const StorageException({
     required super.message,
@@ -125,28 +116,26 @@ class StorageException extends AppException {
     super.stackTrace,
   });
 
-  factory StorageException.fromFirebase(dynamic error) {
-    final code = error.code as String?;
+  /// Factory untuk Appwrite storage error codes
+  factory StorageException.fromAppwrite(dynamic error) {
+    final code = error.code?.toString();
     String message;
 
     switch (code) {
-      case 'object-not-found':
+      case '404':
         message = 'File tidak ditemukan';
         break;
-      case 'unauthorized':
+      case '401':
         message = 'Tidak ada akses untuk upload/download file';
         break;
-      case 'canceled':
-        message = 'Upload dibatalkan';
+      case '413':
+        message = 'Ukuran file terlalu besar';
         break;
-      case 'unknown':
+      case '500':
         message = 'Terjadi kesalahan saat memproses file';
         break;
-      case 'quota-exceeded':
-        message = 'Kuota storage penuh';
-        break;
       default:
-        message = error.message ?? 'Terjadi kesalahan storage';
+        message = error.message?.toString() ?? 'Terjadi kesalahan storage';
     }
 
     return StorageException(message: message, code: code, originalError: error);
@@ -240,17 +229,24 @@ class FormatException extends AppException {
 AppException toAppException(dynamic error, {StackTrace? stackTrace}) {
   if (error is AppException) return error;
 
-  // Check if it's a Firebase error
-  if (error.runtimeType.toString().contains('FirebaseAuth')) {
-    return AuthException.fromFirebaseAuth(error);
-  }
+  // Check if it's an Appwrite error (has code property)
+  final errorString = error.runtimeType.toString().toLowerCase();
 
-  if (error.runtimeType.toString().contains('FirebaseFirestore')) {
-    return FirestoreException.fromFirebase(error);
-  }
+  if (errorString.contains('appwrite') || error.toString().contains('AppwriteException')) {
+    // Try to determine error type based on context
+    final errorMsg = error.toString().toLowerCase();
 
-  if (error.runtimeType.toString().contains('FirebaseStorage')) {
-    return StorageException.fromFirebase(error);
+    if (errorMsg.contains('auth') || errorMsg.contains('user') || errorMsg.contains('session')) {
+      return AuthException.fromAppwrite(error);
+    }
+
+    if (errorMsg.contains('storage') || errorMsg.contains('file') || errorMsg.contains('bucket')) {
+      return StorageException.fromAppwrite(error);
+    }
+
+    if (errorMsg.contains('database') || errorMsg.contains('document') || errorMsg.contains('collection')) {
+      return DatabaseException.fromAppwrite(error);
+    }
   }
 
   // Default to server exception

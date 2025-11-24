@@ -64,7 +64,7 @@ class _RequestDetailScreenState extends ConsumerState<RequestDetailScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: const Text('Detail Request'),
+        title: const Text('Detail Layanan'),
         backgroundColor: Colors.white,
         elevation: 0,
       ),

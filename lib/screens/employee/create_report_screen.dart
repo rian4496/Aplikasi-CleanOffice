@@ -167,7 +167,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
     } on StorageException catch (e) {
       _logger.error('Storage error', e);
       _showError(e.message);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Firestore error', e);
       _showError(e.message);
     } catch (e, stackTrace) {
@@ -200,7 +200,12 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Laporkan Masalah Kebersihan')),
+      appBar: AppBar(
+        title: const Text(
+          'Laporkan Masalah Kebersihan',
+          style: TextStyle(fontSize: 16),
+        ),
+      ),
       body: Stack(
         children: [
           SingleChildScrollView(

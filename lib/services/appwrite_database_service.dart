@@ -29,43 +29,50 @@ class AppwriteDatabaseService {
   // ==================== REPORT QUERIES ====================
 
   /// Get all reports (for admin)
-  /// Returns Stream of Reports list
-  Stream<List<Report>> getAllReports({String? departmentId}) {
-    try {
-      final queries = <String>[
-        Query.equal('deletedAt', [null]),
-        Query.orderDesc('date'),
-      ];
+  /// Returns Stream of Reports list with initial data + realtime updates
+  Stream<List<Report>> getAllReports({String? departmentId}) async* {
+    final queries = <String>[
+      Query.orderDesc('date'),
+    ];
 
-      if (departmentId != null && departmentId.isNotEmpty) {
-        queries.add(Query.equal('departmentId', departmentId));
+    if (departmentId != null && departmentId.isNotEmpty) {
+      queries.add(Query.equal('departmentId', departmentId));
+    }
+
+    // Helper function to fetch reports
+    Future<List<Report>> fetchReports() async {
+      try {
+        final response = await _databases.listDocuments(
+          databaseId: AppwriteConfig.databaseId,
+          collectionId: AppwriteConfig.reportsCollectionId,
+          queries: queries,
+        );
+
+        return response.documents
+            .map((doc) {
+              try {
+                return Report.fromAppwrite(doc.data);
+              } catch (e) {
+                _logger.warning('Error parsing report ${doc.$id}: $e');
+                return null;
+              }
+            })
+            .whereType<Report>()
+            .toList();
+      } catch (e) {
+        _logger.severe('Error fetching reports: $e');
+        return [];
       }
+    }
 
-      return _realtime
-          .subscribe([AppwriteConfig.reportsChannel])
-          .stream
-          .asyncMap((_) async {
-            final response = await _databases.listDocuments(
-              databaseId: AppwriteConfig.databaseId,
-              collectionId: AppwriteConfig.reportsCollectionId,
-              queries: queries,
-            );
+    // Emit initial data first
+    yield await fetchReports();
 
-            return response.documents
-                .map((doc) {
-                  try {
-                    return Report.fromAppwrite(doc.data);
-                  } catch (e) {
-                    _logger.warning('Error parsing report ${doc.$id}: $e');
-                    return null;
-                  }
-                })
-                .whereType<Report>()
-                .toList();
-          });
-    } catch (e) {
-      _logger.severe('Error getting all reports: $e');
-      return Stream.value([]);
+    // Then listen for realtime updates
+    await for (final _ in _realtime
+        .subscribe([AppwriteConfig.reportsChannel])
+        .stream) {
+      yield await fetchReports();
     }
   }
 
@@ -641,6 +648,46 @@ class AppwriteDatabaseService {
     } catch (e) {
       _logger.severe('Error getting user profile: $e');
       return null;
+    }
+  }
+
+  /// Get all user profiles (for account verification)
+  Future<List<UserProfile>> getAllUserProfiles() async {
+    try {
+      final response = await _databases.listDocuments(
+        databaseId: AppwriteConfig.databaseId,
+        collectionId: AppwriteConfig.usersCollectionId,
+        queries: [
+          Query.orderDesc('\$createdAt'),
+          Query.limit(100),
+        ],
+      );
+
+      return response.documents
+          .map((doc) => UserProfile.fromAppwrite(doc.data))
+          .toList();
+    } catch (e) {
+      _logger.severe('Error getting all user profiles: $e');
+      rethrow;
+    }
+  }
+
+  /// Update user status (for verification)
+  Future<void> updateUserStatus(String userId, String newStatus) async {
+    try {
+      await _databases.updateDocument(
+        databaseId: AppwriteConfig.databaseId,
+        collectionId: AppwriteConfig.usersCollectionId,
+        documentId: userId,
+        data: {
+          'status': newStatus,
+        },
+      );
+
+      _logger.info('User $userId status updated to $newStatus');
+    } catch (e) {
+      _logger.severe('Error updating user status: $e');
+      rethrow;
     }
   }
 

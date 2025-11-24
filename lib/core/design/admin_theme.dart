@@ -43,7 +43,7 @@ class AdminTheme {
       ),
 
       // ==================== CARDS ====================
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AdminColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(

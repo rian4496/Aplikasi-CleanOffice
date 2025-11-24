@@ -146,7 +146,7 @@ class _CleanerActionsState extends ConsumerState<CleanerActions> {
       if (!mounted) return;
       _showSuccessSnackbar('Laporan berhasil diterima');
       Navigator.pop(context); // Go back after action
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Accept report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {
@@ -177,7 +177,7 @@ class _CleanerActionsState extends ConsumerState<CleanerActions> {
 
       if (!mounted) return;
       _showSuccessSnackbar('Pengerjaan dimulai');
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Start report error', e);
       _showErrorSnackbar(e.message);
     } catch (e) {
@@ -276,7 +276,7 @@ class _CleanerActionsState extends ConsumerState<CleanerActions> {
 
       // Go back after completion
       Navigator.pop(context);
-    } on FirestoreException catch (e) {
+    } on DatabaseException catch (e) {
       _logger.error('Complete report error', e);
       if (mounted) {
         ScaffoldMessenger.of(context).clearSnackBars();

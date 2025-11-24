@@ -58,7 +58,7 @@ class WeeklyReportChart extends StatelessWidget {
                   default: text = '';
                 }
                 return SideTitleWidget(
-                  axisSide: meta.axisSide,
+                  meta: meta,
                   space: 4,
                   child: Text(text, style: style),
                 );

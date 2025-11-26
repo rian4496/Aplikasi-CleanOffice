@@ -38,6 +38,11 @@ import '../../widgets/admin/cards/top_cleaner_card.dart';
 import '../../providers/riverpod/dashboard_stats_provider.dart';
 import '../../models/report.dart';
 
+// 🎛️ DEVELOPMENT: Mock Data Toggle
+// Set to true to show layout preview with sample data
+// Set to false to use real data from providers
+const bool USE_MOCK_DATA = true;
+
 class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
@@ -624,18 +629,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   // ==================== MOBILE STATS (REFINED) ====================
   Widget _buildMobileStats(
-    AsyncValue needsVerificationAsync,
-    AsyncValue allRequestsAsync,
-    AsyncValue cleanersAsync,
-  ) {
-    return needsVerificationAsync.when(
-      data: (reports) {
-        // Count pending reports
-        final pendingCount = reports.where((r) =>
-          r.status == ReportStatus.pending
-        ).length;
-        final requestsCount = allRequestsAsync.asData?.value.length ?? 0;
-        final cleanersCount = cleanersAsync.asData?.value.length ?? 0;
 
         // Pastel colors sesuai mockup
         const Color pastelPink = Color(0xFFFFE4E1);    // Reports - pink/salmon

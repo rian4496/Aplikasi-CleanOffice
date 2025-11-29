@@ -11,9 +11,15 @@ import '../../providers/riverpod/inventory_selection_provider.dart';
 import '../../widgets/inventory/inventory_card.dart';
 import '../../widgets/inventory/batch_action_bar.dart';
 import '../../widgets/inventory/inventory_detail_dialog.dart';
+import '../../widgets/inventory/category_filter_chips.dart';
+import '../../widgets/inventory/inventory_stats_card.dart';
+import '../../widgets/inventory/low_stock_alert_banner.dart';
+import '../../widgets/inventory/inventory_empty_state.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/constants/app_constants.dart';
 import '../../utils/responsive_ui_helper.dart';
+import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import './inventory_detail_screen.dart';
 
 /// Inventory List Screen - List with search, filters, sorting, and batch actions
@@ -25,14 +31,14 @@ class InventoryListScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // ✅ HOOKS: State management
     final searchQuery = useState('');
-    final selectedCategory = useState<String?>(null);
+    final selectedCategory = useState<InventoryCategory>(InventoryCategory.all);
     final selectedStatus = useState<StockStatus?>(null);
     final sortBy = useState('name'); // 'name', 'stock', 'category'
 
     final itemsAsync = ref.watch(allInventoryItemsProvider);
     final isSelectionMode = ref.watch(selectionModeProvider);
     final selectedIds = ref.watch(inventorySelectionProvider);
-    final isInDialog = ResponsiveHelper.isDesktop(context);
+    final isDesktop = ResponsiveHelper.isDesktop(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -86,16 +92,16 @@ class InventoryListScreen extends HookConsumerWidget {
             ),
           ),
         ),
-        // Sembunyikan back button jika di web/dialog
-        automaticallyImplyLeading: !isInDialog,
+        // Hapus tombol back
+        automaticallyImplyLeading: false,
         leading: isSelectionMode
             ? IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () {
                   ref.read(selectionModeProvider.notifier).disable();
                 },
               )
-            : (isInDialog ? null : null),
+            : null,
         actions: [
           if (isSelectionMode)
             TextButton(
@@ -118,64 +124,20 @@ class InventoryListScreen extends HookConsumerWidget {
                 'Pilih Semua',
                 style: TextStyle(color: Colors.white),
               ),
-            )
-          else ...[
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'select',
-                  child: Row(
-                    children: [
-                      Icon(Icons.checklist, size: 20),
-                      SizedBox(width: 12),
-                      Text('Mode Pilih'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                CheckedPopupMenuItem(
-                  value: 'sort_name',
-                  checked: sortBy.value == 'name',
-                  child: const Text('Urutkan: Nama A-Z'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'sort_stock',
-                  checked: sortBy.value == 'stock',
-                  child: const Text('Urutkan: Stok Terendah'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'sort_category',
-                  checked: sortBy.value == 'category',
-                  child: const Text('Urutkan: Kategori'),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'select') {
-                  ref.read(selectionModeProvider.notifier).enable();
-                } else if (value == 'sort_name') {
-                  sortBy.value = 'name';
-                } else if (value == 'sort_stock') {
-                  sortBy.value = 'stock';
-                } else if (value == 'sort_category') {
-                  sortBy.value = 'category';
-                }
-              },
             ),
-            // Tambahkan tombol close untuk dialog
-            if (isInDialog)
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Tutup',
-              ),
-          ],
         ],
       ),
       body: Column(
         children: [
-          _buildSearchBar(searchQuery),
-          _buildCompactFilters(selectedCategory, selectedStatus),
+          // Compact search bar with filter & sort icons
+          _buildCompactSearchBar(
+            context,
+            ref,
+            searchQuery,
+            selectedCategory,
+            selectedStatus,
+            sortBy,
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: itemsAsync.when(
@@ -188,8 +150,31 @@ class InventoryListScreen extends HookConsumerWidget {
                   sortBy.value,
                 );
 
+                // Calculate stats
+                final lowStockItems = items.where((item) =>
+                  item.status == StockStatus.lowStock
+                ).toList();
+                final outOfStockItems = items.where((item) =>
+                  item.status == StockStatus.outOfStock
+                ).toList();
+
                 if (filtered.isEmpty) {
-                  return _buildEmptyState();
+                  // Show appropriate empty state
+                  final hasFilters = searchQuery.value.isNotEmpty ||
+                    selectedCategory.value != InventoryCategory.all ||
+                    selectedStatus.value != null;
+
+                  if (hasFilters) {
+                    return InventoryEmptyState.filtered(
+                      onClearFilter: () {
+                        searchQuery.value = '';
+                        selectedCategory.value = InventoryCategory.all;
+                        selectedStatus.value = null;
+                      },
+                    );
+                  } else {
+                    return InventoryEmptyState.noItems();
+                  }
                 }
 
                 return RefreshIndicator(
@@ -197,13 +182,39 @@ class InventoryListScreen extends HookConsumerWidget {
                     ref.invalidate(allInventoryItemsProvider);
                   },
                   child: ListView.builder(
-                    itemCount: filtered.length,
+                    itemCount: filtered.length + 2, // +2 for stats card and alert banner
                     itemBuilder: (context, index) {
-                      final item = filtered[index];
+                      // Stats card at index 0
+                      if (index == 0) {
+                        return InventoryStatsCard(
+                          totalItems: items.length,
+                          lowStockCount: lowStockItems.length,
+                          outOfStockCount: outOfStockItems.length,
+                          totalValue: 0, // TODO: Calculate total value
+                        );
+                      }
+
+                      // Alert banner at index 1 (only if there are low stock items)
+                      if (index == 1) {
+                        if (lowStockItems.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return LowStockAlertBanner(
+                          lowStockItems: lowStockItems,
+                          onViewAll: () {
+                            selectedStatus.value = StockStatus.lowStock;
+                          },
+                        );
+                      }
+
+                      // Inventory cards start from index 2
+                      final itemIndex = index - 2;
+                      final item = filtered[itemIndex];
                       final isSelected = selectedIds.contains(item.id);
 
                       return InventoryCard(
                         item: item,
+                        index: itemIndex, // For pastel background rotation
                         isSelectionMode: isSelectionMode,
                         isSelected: isSelected,
                         onTap: () {
@@ -221,6 +232,15 @@ class InventoryListScreen extends HookConsumerWidget {
                               webDialog: InventoryDetailDialog(item: item),
                             );
                           }
+                        },
+                        onAddStock: () {
+                          // TODO: Implement add stock dialog
+                        },
+                        onEdit: () {
+                          // TODO: Navigate to edit screen
+                        },
+                        onMore: () {
+                          // TODO: Show more options
                         },
                         onLongPress: () {
                           if (!isSelectionMode) {
@@ -242,129 +262,276 @@ class InventoryListScreen extends HookConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: itemsAsync.maybeWhen(
-        data: (items) => BatchActionBar(
-          allItems: items,
-          onActionComplete: () {
-            ref.invalidate(allInventoryItemsProvider);
-          },
-        ),
-        orElse: () => const SizedBox.shrink(),
-      ),
+      bottomNavigationBar: isSelectionMode
+          ? itemsAsync.maybeWhen(
+              data: (items) => BatchActionBar(
+                allItems: items,
+                onActionComplete: () {
+                  ref.invalidate(allInventoryItemsProvider);
+                },
+              ),
+              orElse: () => const SizedBox.shrink(),
+            )
+          : (!isDesktop ? _buildBottomNavBar(context, ref) : null),
     );
   }
 
   // ==================== STATIC HELPERS: UI BUILDERS ====================
 
-  /// Build search bar
-  static Widget _buildSearchBar(ValueNotifier<String> searchQuery) {
+  /// Compact search bar with filter & sort icons
+  static Widget _buildCompactSearchBar(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<String> searchQuery,
+    ValueNotifier<InventoryCategory> selectedCategory,
+    ValueNotifier<StockStatus?> selectedStatus,
+    ValueNotifier<String> sortBy,
+  ) {
+    final hasActiveFilters = selectedCategory.value != InventoryCategory.all || selectedStatus.value != null;
+
     return Padding(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Cari item...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
         ),
-        onChanged: (value) => searchQuery.value = value,
+        child: Row(
+          children: [
+            // Search icon
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Icon(Icons.search, color: Colors.grey[400], size: 22),
+            ),
+            // Search input
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Cari item inventaris...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  hintStyle: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+                onChanged: (value) => searchQuery.value = value,
+              ),
+            ),
+            // Clear button (if searching)
+            if (searchQuery.value.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                onPressed: () => searchQuery.value = '',
+              ),
+            // Divider
+            Container(
+              height: 24,
+              width: 1,
+              color: Colors.grey[300],
+            ),
+            // Filter icon button with badge
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showFilterDialog(context, selectedCategory, selectedStatus, sortBy),
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.tune,
+                        color: hasActiveFilters ? AppTheme.primary : Colors.grey[600],
+                        size: 22,
+                      ),
+                      if (hasActiveFilters)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  /// Build compact filters (category + status dropdowns)
-  static Widget _buildCompactFilters(
-    ValueNotifier<String?> selectedCategory,
+  /// Show filter dialog (centered, scrollable)
+  static void _showFilterDialog(
+    BuildContext context,
+    ValueNotifier<InventoryCategory> selectedCategory,
     ValueNotifier<StockStatus?> selectedStatus,
+    ValueNotifier<String> sortBy,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          // Category Dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: selectedCategory.value,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, size: 20),
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            contentPadding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Filter Inventaris',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        selectedCategory.value = InventoryCategory.all;
+                        selectedStatus.value = null;
+                        setModalState(() {});
+                      },
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Category dropdown
+                const Text(
+                  'Kategori',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<InventoryCategory>(
+                    initialValue: selectedCategory.value,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
+                      value: InventoryCategory.all,
                       child: Row(
                         children: [
-                          Icon(Icons.grid_view, size: 18, color: Colors.grey),
-                          SizedBox(width: 8),
+                          Icon(Icons.select_all, size: 20, color: Colors.grey),
+                          SizedBox(width: 12),
                           Text('Semua Kategori'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'alat',
+                      value: InventoryCategory.alat,
                       child: Row(
                         children: [
-                          Icon(Icons.cleaning_services,
-                              size: 18, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          const Text('Alat Kebersihan'),
+                          Icon(Icons.cleaning_services, size: 20, color: Color(0xFF3B82F6)),
+                          SizedBox(width: 12),
+                          Text('Alat Kebersihan'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'consumable',
+                      value: InventoryCategory.consumable,
                       child: Row(
                         children: [
-                          Icon(Icons.water_drop, size: 18, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          const Text('Bahan Habis Pakai'),
+                          Icon(Icons.inventory, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Bahan Habis Pakai'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'ppe',
+                      value: InventoryCategory.ppe,
                       child: Row(
                         children: [
-                          Icon(Icons.security, size: 18, color: Colors.green),
-                          const SizedBox(width: 8),
-                          const Text('Alat Pelindung Diri'),
+                          Icon(Icons.safety_check, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('APD'),
                         ],
                       ),
                     ),
-                  ],
-                  onChanged: (value) => selectedCategory.value = value,
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        selectedCategory.value = value;
+                        setModalState(() {});
+                      }
+                    },
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Status Dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<StockStatus?>(
-                  value: selectedStatus.value,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, size: 20),
-                  items: [
-                    const DropdownMenuItem(
+
+                const SizedBox(height: 20),
+
+                // Status dropdown
+                const Text(
+                  'Status Stok',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<StockStatus?>(
+                    initialValue: selectedStatus.value,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
                       value: null,
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_outline,
-                              size: 18, color: Colors.grey),
-                          SizedBox(width: 8),
+                          Icon(Icons.all_inclusive, size: 20, color: Colors.grey),
+                          SizedBox(width: 12),
                           Text('Semua Status'),
                         ],
                       ),
@@ -373,10 +540,9 @@ class InventoryListScreen extends HookConsumerWidget {
                       value: StockStatus.inStock,
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle,
-                              size: 18, color: AppTheme.success),
-                          const SizedBox(width: 8),
-                          const Text('Stok Cukup'),
+                          Icon(Icons.check_circle, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Stok Cukup'),
                         ],
                       ),
                     ),
@@ -384,9 +550,9 @@ class InventoryListScreen extends HookConsumerWidget {
                       value: StockStatus.lowStock,
                       child: Row(
                         children: [
-                          Icon(Icons.warning, size: 18, color: AppTheme.warning),
-                          const SizedBox(width: 8),
-                          const Text('Stok Rendah'),
+                          Icon(Icons.warning_amber, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('Stok Rendah'),
                         ],
                       ),
                     ),
@@ -394,19 +560,118 @@ class InventoryListScreen extends HookConsumerWidget {
                       value: StockStatus.outOfStock,
                       child: Row(
                         children: [
-                          Icon(Icons.cancel, size: 18, color: AppTheme.error),
-                          const SizedBox(width: 8),
-                          const Text('Habis'),
+                          Icon(Icons.cancel, size: 20, color: Color(0xFFEF4444)),
+                          SizedBox(width: 12),
+                          Text('Habis'),
                         ],
                       ),
                     ),
+                    ],
+                    onChanged: (value) {
+                      selectedStatus.value = value;
+                      setModalState(() {});
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Sort dropdown
+                const Text(
+                  'Urutkan Berdasarkan',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: sortBy.value,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
+                      value: 'name',
+                      child: Row(
+                        children: [
+                          Icon(Icons.sort_by_alpha, size: 20, color: Color(0xFF3B82F6)),
+                          SizedBox(width: 12),
+                          Text('Nama A-Z'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'stock',
+                      child: Row(
+                        children: [
+                          Icon(Icons.trending_down, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('Stok Terendah'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'category',
+                      child: Row(
+                        children: [
+                          Icon(Icons.category, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Kategori'),
+                        ],
+                      ),
+                    ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        sortBy.value = value;
+                        setModalState(() {});
+                      }
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Apply button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Terapkan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
                   ],
-                  onChanged: (value) => selectedStatus.value = value,
                 ),
               ),
             ),
-          ),
-        ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -415,15 +680,20 @@ class InventoryListScreen extends HookConsumerWidget {
   static List<InventoryItem> _filterItems(
     List<InventoryItem> items,
     String searchQuery,
-    String? selectedCategory,
+    InventoryCategory selectedCategory,
     StockStatus? selectedStatus,
     String sortBy,
   ) {
     var filtered = items.where((item) {
       final matchesSearch = searchQuery.isEmpty ||
           item.name.toLowerCase().contains(searchQuery.toLowerCase());
-      final matchesCategory =
-          selectedCategory == null || item.category == selectedCategory;
+
+      // Convert enum to category string for comparison
+      final matchesCategory = selectedCategory == InventoryCategory.all ||
+          (selectedCategory == InventoryCategory.alat && item.category == 'alat') ||
+          (selectedCategory == InventoryCategory.consumable && item.category == 'consumable') ||
+          (selectedCategory == InventoryCategory.ppe && item.category == 'ppe');
+
       final matchesStatus =
           selectedStatus == null || item.status == selectedStatus;
       return matchesSearch && matchesCategory && matchesStatus;
@@ -445,16 +715,106 @@ class InventoryListScreen extends HookConsumerWidget {
     return filtered;
   }
 
-  /// Build empty state
-  static Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('Tidak ada item', style: TextStyle(color: Colors.grey)),
+  // ==================== BOTTOM NAVIGATION BAR ====================
+  static Widget _buildBottomNavBar(BuildContext context, WidgetRef ref) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
         ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                context: context,
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isActive: false,
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
+              ),
+              _buildNavItem(
+                context: context,
+                icon: Icons.assignment_rounded,
+                label: 'Laporan',
+                isActive: false,
+                onTap: () => Navigator.pushReplacementNamed(
+                  context,
+                  '/reports_management',
+                ),
+              ),
+              _buildNavItem(
+                context: context,
+                icon: Icons.chat_bubble_rounded,
+                label: 'Chat',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushNamed(context, '/chat');
+                },
+              ),
+              _buildNavItem(
+                context: context,
+                icon: Icons.more_horiz_rounded,
+                label: 'Lainnya',
+                isActive: false,
+                onTap: () {
+                  AdminMoreBottomSheet.show(context);
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _buildNavItem({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    const activeColor = Color(0xFF5D5FEF);
+    final inactiveColor = Colors.grey[600]!;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? activeColor : inactiveColor,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

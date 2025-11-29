@@ -36,6 +36,12 @@ class AppwriteConfig {
   static const String departmentsCollectionId = 'departments';
   static const String stockHistoryCollectionId = 'stock_history';
 
+  // Chat Collection IDs
+  static const String conversationsCollectionId = 'conversations';
+  static const String messagesCollectionId = 'messages';
+  static const String typingIndicatorsCollectionId = 'typing_indicators';
+  static const String userPresenceCollectionId = 'user_presence';
+
   // ==================== STORAGE CONFIG ====================
 
   /// Storage bucket ID (Free tier: only 1 bucket allowed)
@@ -49,6 +55,7 @@ class AppwriteConfig {
   static const String reportsFolder = 'reports';
   static const String profilesFolder = 'profiles';
   static const String inventoryFolder = 'inventory';
+  static const String chatFolder = 'chat';
 
   // ==================== REALTIME CONFIG ====================
 
@@ -67,6 +74,19 @@ class AppwriteConfig {
 
   static String get serviceRequestsChannel =>
       'databases.$databaseId.collections.$serviceRequestsCollectionId.documents';
+
+  // Chat channels
+  static String get conversationsChannel =>
+      'databases.$databaseId.collections.$conversationsCollectionId.documents';
+
+  static String get messagesChannel =>
+      'databases.$databaseId.collections.$messagesCollectionId.documents';
+
+  static String get typingIndicatorsChannel =>
+      'databases.$databaseId.collections.$typingIndicatorsCollectionId.documents';
+
+  static String get userPresenceChannel =>
+      'databases.$databaseId.collections.$userPresenceCollectionId.documents';
 
   // ==================== HELPER METHODS ====================
 

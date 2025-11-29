@@ -29,15 +29,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     super.dispose();
   }
 
-  String _determineRoleFromEmail(String email) {
-    if (email.contains('admin')) {
-      return 'admin';
-    } else if (email.contains('cleaner') || email.contains('petugas')) {
-      return 'cleaner';
-    }
-    return 'employee';
-  }
-
   Future<void> _register() async {
     if (_isLoading) return;
     if (!_formKey.currentState!.validate()) return;
@@ -58,13 +49,12 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final email = _emailController.text.trim();
-      final role = _determineRoleFromEmail(email);
 
       await _authService.signUpWithEmailAndPassword(
         email: email,
         password: _passwordController.text.trim(),
         name: _nameController.text.trim(),
-        role: role,
+        role: 'employee',  // ✅ Default role, admin will assign during approval
       );
 
       if (!mounted) return;
@@ -75,21 +65,27 @@ class _SignUpScreenState extends State<SignUpScreen> {
             children: const [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Expanded(child: Text('Registrasi berhasil! Silakan login.')),
+              Expanded(
+                child: Text('Akun berhasil didaftar! Tunggu verifikasi dari admin.'),
+              ),
             ],
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
         ),
       );
 
+      // Navigate to login screen after successful registration
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pushReplacementNamed(context, '/login');
     } on AppwriteException catch (e) {
       if (!mounted) return;
+      debugPrint('❌ AppwriteException: code=${e.code}, message=${e.message}');
       _showError(_getErrorMessage(e));
     } catch (e) {
       if (!mounted) return;
+      debugPrint('❌ Generic exception: $e');
       _showError('Terjadi kesalahan: ${e.toString()}');
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -113,11 +109,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }
 
   void _showError(String message) {
+    // Check if it's "Email already exists" error
+    final isEmailExists = message.contains('Email sudah terdaftar');
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
         behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+        action: isEmailExists
+            ? SnackBarAction(
+                label: 'LOGIN',
+                textColor: Colors.white,
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/login');
+                },
+              )
+            : null,
       ),
     );
   }
@@ -169,12 +178,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _nameController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Nama',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.person),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.person, color: Colors.black),
                       ),
                       textInputAction: TextInputAction.next,
                       validator: (value) {
@@ -196,12 +216,23 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _emailController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Email',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.email),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.email, color: Colors.black),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
@@ -224,18 +255,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _passwordController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Password',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.lock),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.lock, color: Colors.black),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscurePassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.grey,
+                            color: Colors.black,
                           ),
                           onPressed: () {
                             setState(() {
@@ -265,18 +307,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _confirmPasswordController,
+                      style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Konfirmasi Password',
+                        labelStyle: const TextStyle(color: Colors.black54),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
                         ),
-                        prefixIcon: const Icon(Icons.lock_outline),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.lock_outline, color: Colors.black),
                         suffixIcon: IconButton(
                           icon: Icon(
                             _obscureConfirmPassword
                                 ? Icons.visibility_off
                                 : Icons.visibility,
-                            color: Colors.grey,
+                            color: Colors.black,
                           ),
                           onPressed: () {
                             setState(() {

@@ -1,14 +1,18 @@
 // lib/widgets/inventory/inventory_card.dart
-// Inventory item card
+// Modern inventory item card with pastel design
 
 import 'package:flutter/material.dart';
 
 import '../../models/inventory_item.dart';
-import '../../core/theme/app_theme.dart';
+import '../../core/design/inventory_design_tokens.dart';
 
 class InventoryCard extends StatelessWidget {
   final InventoryItem item;
+  final int index; // For pastel background rotation
   final VoidCallback? onTap;
+  final VoidCallback? onAddStock;
+  final VoidCallback? onEdit;
+  final VoidCallback? onMore;
   final bool isSelectionMode;
   final bool isSelected;
   final VoidCallback? onLongPress;
@@ -16,7 +20,11 @@ class InventoryCard extends StatelessWidget {
   const InventoryCard({
     super.key,
     required this.item,
+    required this.index,
     this.onTap,
+    this.onAddStock,
+    this.onEdit,
+    this.onMore,
     this.isSelectionMode = false,
     this.isSelected = false,
     this.onLongPress,
@@ -24,149 +32,277 @@ class InventoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      elevation: isSelected ? 4 : 1,
-      color: isSelected ? AppTheme.primary.withValues(alpha: 0.1) : null,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: isSelected
-            ? const BorderSide(color: AppTheme.primary, width: 2)
-            : BorderSide.none,
+    // Get colors from design tokens
+    final categoryColors = InventoryDesignTokens.getCategoryColors(item.category);
+    final statusColors = InventoryDesignTokens.getStatusColors(
+      item.currentStock,
+      item.maxStock,
+      item.minStock,
+    );
+    final cardBackground = InventoryDesignTokens.getCardBackground(index);
+    final cardForeground = InventoryDesignTokens.getCardForeground(index);
+
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: InventoryDesignTokens.cardMarginHorizontal,
+        vertical: InventoryDesignTokens.cardMarginVertical,
       ),
-      child: InkWell(
-        onTap: onTap,
-        onLongPress: onLongPress,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  // Selection checkbox (only in selection mode)
-                  if (isSelectionMode) ...[
-                    Checkbox(
-                      value: isSelected,
-                      onChanged: (_) => onTap?.call(),
-                      activeColor: AppTheme.primary,
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  CircleAvatar(
-                    backgroundColor: item.statusColor.withValues(alpha: 0.2),
-                    child: Icon(
-                      _getCategoryIcon(item.category),
-                      color: item.statusColor,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          _getCategoryLabel(item.category),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: item.statusColor.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      item.statusLabel,
-                      style: TextStyle(
-                        color: item.statusColor,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+      decoration: BoxDecoration(
+        color: cardBackground,
+        borderRadius: BorderRadius.circular(InventoryDesignTokens.cardBorderRadius),
+        boxShadow: isSelected
+            ? [InventoryDesignTokens.cardShadowElevated]
+            : [InventoryDesignTokens.cardShadow],
+        border: isSelected
+            ? Border.all(color: cardForeground, width: 2)
+            : null,
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          onLongPress: onLongPress,
+          borderRadius: BorderRadius.circular(InventoryDesignTokens.cardBorderRadius),
+          child: Padding(
+            padding: const EdgeInsets.all(InventoryDesignTokens.cardPadding),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: Icon + Info + Status Badge
+                Row(
+                  children: [
+                    // Selection checkbox (only in selection mode)
+                    if (isSelectionMode) ...[
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (_) => onTap?.call(),
+                        activeColor: cardForeground,
                       ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Stok: ${item.currentStock}/${item.maxStock} ${item.unit}',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${item.stockPercentage.toStringAsFixed(0)}%',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: item.statusColor,
-                        ),
-                      ),
+                      const SizedBox(width: InventoryDesignTokens.spaceSM),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: item.stockPercentage / 100,
-                      minHeight: 8,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation(item.statusColor),
+
+                    // Icon container with category color
+                    Container(
+                      width: InventoryDesignTokens.iconContainerSize,
+                      height: InventoryDesignTokens.iconContainerSize,
+                      decoration: BoxDecoration(
+                        color: InventoryDesignTokens.iconContainerBackground,
+                        borderRadius: BorderRadius.circular(
+                          InventoryDesignTokens.iconContainerRadius,
+                        ),
+                      ),
+                      child: Icon(
+                        categoryColors.icon,
+                        size: InventoryDesignTokens.iconSize,
+                        color: categoryColors.primary,
+                      ),
                     ),
-                  ),
+
+                    const SizedBox(width: InventoryDesignTokens.spaceMD),
+
+                    // Item name and category
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.name,
+                            style: InventoryDesignTokens.itemNameStyle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: InventoryDesignTokens.spaceXS),
+                          Text(
+                            categoryColors.label,
+                            style: InventoryDesignTokens.categoryLabelStyle,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: InventoryDesignTokens.spaceSM),
+
+                    // Status badge
+                    _buildStatusBadge(statusColors),
+                  ],
+                ),
+
+                const SizedBox(height: InventoryDesignTokens.spaceMD),
+
+                // Stock information
+                _buildStockInfo(statusColors),
+
+                const SizedBox(height: InventoryDesignTokens.spaceMD),
+
+                // Progress bar
+                _buildProgressBar(statusColors),
+
+                // Action buttons (only when not in selection mode)
+                if (!isSelectionMode) ...[
+                  const SizedBox(height: InventoryDesignTokens.spaceMD),
+                  _buildActionButtons(context, cardForeground),
                 ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category) {
-      case 'alat':
-        return Icons.cleaning_services;
-      case 'consumable':
-        return Icons.water_drop;
-      case 'ppe':
-        return Icons.security;
-      default:
-        return Icons.inventory;
-    }
+  /// Build status badge with icon
+  Widget _buildStatusBadge(StatusColors statusColors) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: InventoryDesignTokens.badgePaddingHorizontal,
+        vertical: InventoryDesignTokens.badgePaddingVertical,
+      ),
+      decoration: BoxDecoration(
+        color: statusColors.background,
+        borderRadius: BorderRadius.circular(InventoryDesignTokens.badgeBorderRadius),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            statusColors.icon,
+            size: InventoryDesignTokens.badgeIconSize,
+            color: statusColors.color,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            statusColors.label,
+            style: InventoryDesignTokens.badgeTextStyle.copyWith(
+              color: statusColors.color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getCategoryLabel(String category) {
-    switch (category) {
-      case 'alat':
-        return 'Alat Kebersihan';
-      case 'consumable':
-        return 'Bahan Habis Pakai';
-      case 'ppe':
-        return 'Alat Pelindung Diri';
-      default:
-        return category;
+  /// Build stock information row
+  Widget _buildStockInfo(StatusColors statusColors) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'Stok: ${item.currentStock}/${item.maxStock} ${item.unit}',
+          style: InventoryDesignTokens.stockNumberStyle,
+        ),
+        Text(
+          '${item.stockPercentage.toStringAsFixed(0)}%',
+          style: InventoryDesignTokens.stockPercentageStyle.copyWith(
+            color: statusColors.color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build progress bar with gradient
+  Widget _buildProgressBar(StatusColors statusColors) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(InventoryDesignTokens.progressBarRadius),
+      child: LinearProgressIndicator(
+        value: item.stockPercentage / 100,
+        minHeight: InventoryDesignTokens.progressBarHeight,
+        backgroundColor: InventoryDesignTokens.progressBarBackground,
+        valueColor: AlwaysStoppedAnimation(statusColors.color),
+      ),
+    );
+  }
+
+  /// Build action buttons
+  Widget _buildActionButtons(BuildContext context, Color primaryColor) {
+    return Row(
+      children: [
+        // Add Stock button
+        if (onAddStock != null)
+          Expanded(
+            child: _ActionButton(
+              label: 'Tambah',
+              icon: Icons.add,
+              color: primaryColor,
+              onPressed: onAddStock!,
+            ),
+          ),
+
+        if (onAddStock != null && onEdit != null)
+          const SizedBox(width: InventoryDesignTokens.spaceSM),
+
+        // Edit button
+        if (onEdit != null)
+          Expanded(
+            child: _ActionButton(
+              label: 'Edit',
+              icon: Icons.edit,
+              color: primaryColor,
+              onPressed: onEdit!,
+            ),
+          ),
+
+        if ((onAddStock != null || onEdit != null) && onMore != null)
+          const SizedBox(width: InventoryDesignTokens.spaceSM),
+
+        // More button
+        if (onMore != null)
+          _ActionButton(
+            label: '',
+            icon: Icons.more_vert,
+            color: primaryColor,
+            onPressed: onMore!,
+            isIconOnly: true,
+          ),
+      ],
+    );
+  }
+
+}
+
+/// Action button widget for inventory card
+class _ActionButton extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onPressed;
+  final bool isIconOnly;
+
+  const _ActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onPressed,
+    this.isIconOnly = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isIconOnly) {
+      return IconButton(
+        icon: Icon(icon),
+        color: color,
+        onPressed: onPressed,
+        iconSize: 20,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(),
+      );
     }
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.3)),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 8,
+        ),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+    );
   }
 }

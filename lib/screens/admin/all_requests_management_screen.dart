@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/request.dart';
 import '../../providers/riverpod/request_providers.dart';
@@ -30,8 +31,8 @@ class _AllRequestsManagementScreenState
 
   // Filter state
   RequestStatus? _filterStatus;
-  bool _showUrgentOnly = false;
   String _searchQuery = '';
+  String _sortBy = 'newest'; // 'newest', 'oldest', 'status'
 
   // Date range filter
   DateTime? _startDate;
@@ -85,7 +86,8 @@ class _AllRequestsManagementScreenState
         'Permintaan Layanan',
         style: TextStyle(
           color: Colors.white,
-          fontSize: 16,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
         ),
       ),
       centerTitle: false,
@@ -93,6 +95,8 @@ class _AllRequestsManagementScreenState
       backgroundColor: Colors.transparent,
       foregroundColor: Colors.white,
       elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+      actionsIconTheme: const IconThemeData(color: Colors.white),
       actions: [
         // Notification Icon
         IconButton(
@@ -110,7 +114,7 @@ class _AllRequestsManagementScreenState
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [Color(0xFF7B5AFF), Color(0xFF5D5FEF)],
+            colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -141,7 +145,7 @@ class _AllRequestsManagementScreenState
                     _buildSearchBar(),
 
                     // Filter chips
-                    if (_filterStatus != null || _showUrgentOnly || _startDate != null || _endDate != null)
+                    if (_filterStatus != null || _startDate != null || _endDate != null)
                       _buildFilterChips(),
 
                     // Summary stats
@@ -173,7 +177,7 @@ class _AllRequestsManagementScreenState
         _buildSearchBar(),
 
         // Filter chips
-        if (_filterStatus != null || _showUrgentOnly || _startDate != null || _endDate != null) _buildFilterChips(),
+        if (_filterStatus != null || _startDate != null || _endDate != null) _buildFilterChips(),
 
         // Summary stats
         _buildSummaryStats(allRequestsAsync),
@@ -274,11 +278,6 @@ class _AllRequestsManagementScreenState
           .toList();
     }
 
-    // Filter by urgent
-    if (_showUrgentOnly) {
-      filteredRequests = filteredRequests.where((r) => r.isUrgent).toList();
-    }
-
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
@@ -303,6 +302,19 @@ class _AllRequestsManagementScreenState
         return r.createdAt.isBefore(endOfDay) ||
             r.createdAt.isAtSameMomentAs(endOfDay);
       }).toList();
+    }
+
+    // Apply sorting
+    switch (_sortBy) {
+      case 'newest':
+        filteredRequests.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        break;
+      case 'oldest':
+        filteredRequests.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+        break;
+      case 'status':
+        filteredRequests.sort((a, b) => a.status.index.compareTo(b.status.index));
+        break;
     }
 
     if (filteredRequests.isEmpty) {
@@ -439,36 +451,15 @@ class _AllRequestsManagementScreenState
           title: 'Dashboard',
           onTap: () {
             Navigator.pop(context);
-            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(context, AppConstants.homeAdminRoute, (route) => false);
           },
         ),
         DrawerMenuItem(
-          icon: Icons.analytics,
-          title: 'Analytics',
+          icon: Icons.person_outline,
+          title: 'Profil',
           onTap: () {
             Navigator.pop(context);
-            Navigator.pushNamed(context, '/analytics');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.assignment_outlined,
-          title: 'Kelola Laporan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/reports_management');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.room_service_outlined,
-          title: 'Permintaan Layanan',
-          onTap: () => Navigator.pop(context),
-        ),
-        DrawerMenuItem(
-          icon: Icons.people_outline,
-          title: 'Kelola Petugas',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/cleaner_management');
+            Navigator.pushNamed(context, '/profile');
           },
         ),
         DrawerMenuItem(
@@ -561,7 +552,6 @@ class _AllRequestsManagementScreenState
   Widget _buildFilterIconWithBadge() {
     int activeCount = 0;
     if (_filterStatus != null) activeCount++;
-    if (_showUrgentOnly) activeCount++;
     if (_startDate != null || _endDate != null) activeCount++;
 
     return Stack(
@@ -597,276 +587,314 @@ class _AllRequestsManagementScreenState
     );
   }
 
-  // ==================== FILTER BOTTOM SHEET ====================
+  // ==================== FILTER DIALOG (Dropdown Style) ====================
   void _showFilterBottomSheet() {
-    showModalBottomSheet(
+    // Local state for dialog
+    RequestStatus? selectedStatus = _filterStatus;
+    String selectedSort = _sortBy;
+    DateTime? startDate = _startDate;
+    DateTime? endDate = _endDate;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              // Handle bar
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 12),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                child: Row(
-                  children: [
-                    const Text(
-                      'Filter & Sortir',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+        builder: (context, setModalState) {
+          return AlertDialog(
+            contentPadding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Filter Permintaan',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                selectedStatus = null;
+                                selectedSort = 'newest';
+                                startDate = null;
+                                endDate = null;
+                              });
+                            },
+                            child: const Text('Reset'),
+                          ),
+                        ],
                       ),
-                    ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _filterStatus = null;
-                          _showUrgentOnly = false;
-                          _startDate = null;
-                          _endDate = null;
-                        });
-                        setModalState(() {});
-                        Navigator.pop(context);
-                      },
-                      child: const Text('Reset'),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              // Filter options
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Status filter
-                    const Text(
-                      'Status',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.grey,
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, thickness: 1),
+                      const SizedBox(height: 20),
+
+                      // Status dropdown
+                      const Text(
+                        'Status Permintaan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        _buildFilterChip(
-                          label: 'Semua',
-                          isSelected: _filterStatus == null,
-                          onTap: () {
-                            setState(() => _filterStatus = null);
-                            setModalState(() {});
+                      const SizedBox(height: 12),
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          highlightColor: Colors.grey[200],
+                          hoverColor: Colors.grey[100],
+                          focusColor: Colors.grey[200],
+                          splashColor: Colors.grey[100],
+                        ),
+                        child: DropdownButtonFormField<RequestStatus?>(
+                          initialValue: selectedStatus,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          dropdownColor: Colors.white,
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.select_all, size: 20, color: Colors.grey),
+                                  SizedBox(width: 12),
+                                  Text('Semua Status'),
+                                ],
+                              ),
+                            ),
+                            ...RequestStatus.values.map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Row(
+                                  children: [
+                                    Icon(status.icon, size: 20, color: status.color),
+                                    const SizedBox(width: 12),
+                                    Text(status.displayName),
+                                  ],
+                                ),
+                              );
+                            }),
+                          ],
+                          onChanged: (value) {
+                            setModalState(() => selectedStatus = value);
                           },
                         ),
-                        ...RequestStatus.values.map((status) {
-                          return _buildFilterChip(
-                            label: status.displayName,
-                            isSelected: _filterStatus == status,
-                            color: status.color,
-                            onTap: () {
-                              setState(() => _filterStatus = status);
-                              setModalState(() {});
-                            },
-                          );
-                        }),
-                      ],
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Rentang Tanggal
-                    const Text(
-                      'Rentang Tanggal',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Colors.grey,
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        // Start Date
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: _startDate ?? DateTime.now(),
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                setState(() => _startDate = picked);
-                                setModalState(() {});
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+
+                      const SizedBox(height: 20),
+
+                      // Sort dropdown
+                      const Text(
+                        'Urutkan Berdasarkan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          highlightColor: Colors.grey[200],
+                          hoverColor: Colors.grey[100],
+                          focusColor: Colors.grey[200],
+                          splashColor: Colors.grey[100],
+                        ),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedSort,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          dropdownColor: Colors.white,
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'newest',
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _startDate != null
-                                          ? DateFormat('dd/MM/yyyy').format(_startDate!)
-                                          : 'Dari',
-                                      style: TextStyle(
-                                        color: _startDate != null ? Colors.black87 : Colors.grey[500],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  if (_startDate != null)
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() => _startDate = null);
-                                        setModalState(() {});
-                                      },
-                                      child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
-                                    ),
+                                  Icon(Icons.schedule, size: 20, color: Color(0xFF3B82F6)),
+                                  SizedBox(width: 12),
+                                  Text('Terbaru'),
                                 ],
                               ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        // End Date
-                        Expanded(
-                          child: InkWell(
-                            onTap: () async {
-                              final picked = await showDatePicker(
-                                context: context,
-                                initialDate: _endDate ?? DateTime.now(),
-                                firstDate: DateTime(2020),
-                                lastDate: DateTime.now(),
-                              );
-                              if (picked != null) {
-                                setState(() => _endDate = picked);
-                                setModalState(() {});
-                              }
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey[300]!),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
+                            DropdownMenuItem(
+                              value: 'oldest',
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 18, color: Colors.grey[600]),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _endDate != null
-                                          ? DateFormat('dd/MM/yyyy').format(_endDate!)
-                                          : 'Sampai',
-                                      style: TextStyle(
-                                        color: _endDate != null ? Colors.black87 : Colors.grey[500],
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ),
-                                  if (_endDate != null)
-                                    GestureDetector(
-                                      onTap: () {
-                                        setState(() => _endDate = null);
-                                        setModalState(() {});
-                                      },
-                                      child: Icon(Icons.close, size: 18, color: Colors.grey[400]),
-                                    ),
+                                  Icon(Icons.history, size: 20, color: Color(0xFF6B7280)),
+                                  SizedBox(width: 12),
+                                  Text('Terlama'),
                                 ],
                               ),
                             ),
+                            DropdownMenuItem(
+                              value: 'status',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.category, size: 20, color: Color(0xFF10B981)),
+                                  SizedBox(width: 12),
+                                  Text('Status'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() => selectedSort = value);
+                            }
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Rentang Tanggal
+                      const Text(
+                        'Rentang Tanggal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          // Tanggal Mulai
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: startDate ?? DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => startDate = picked);
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text(
+                                startDate != null
+                                    ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
+                                    : 'Dari',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          // Tanggal Akhir
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: endDate ?? DateTime.now(),
+                                  firstDate: startDate ?? DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => endDate = picked);
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text(
+                                endDate != null
+                                    ? '${endDate!.day}/${endDate!.month}/${endDate!.year}'
+                                    : 'Sampai',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Clear date button
+                      if (startDate != null || endDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: TextButton.icon(
+                            onPressed: () {
+                              setModalState(() {
+                                startDate = null;
+                                endDate = null;
+                              });
+                            },
+                            icon: const Icon(Icons.clear, size: 16),
+                            label: const Text('Hapus Tanggal'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[600],
+                              padding: EdgeInsets.zero,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              // Apply button
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+
+                      const SizedBox(height: 24),
+
+                      // Apply button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Apply filters to widget state
+                            setState(() {
+                              _filterStatus = selectedStatus;
+                              _sortBy = selectedSort;
+                              _startDate = startDate;
+                              _endDate = endDate;
+                            });
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Terapkan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Terapkan Filter',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    Color? color,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? (color ?? AppTheme.primary) : Colors.grey[100],
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? (color ?? AppTheme.primary) : Colors.grey[300]!,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey[700],
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-            fontSize: 13,
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -896,19 +924,6 @@ class _AllRequestsManagementScreenState
               deleteIcon:
                   const Icon(Icons.close, size: 18, color: Colors.white),
               onDeleted: () => setState(() => _filterStatus = null),
-            ),
-          if (_showUrgentOnly)
-            Chip(
-              avatar: const Icon(Icons.warning, size: 16, color: Colors.white),
-              label: const Text('Urgent'),
-              backgroundColor: AppTheme.error,
-              labelStyle: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-              deleteIcon:
-                  const Icon(Icons.close, size: 18, color: Colors.white),
-              onDeleted: () => setState(() => _showUrgentOnly = false),
             ),
           if (_startDate != null || _endDate != null)
             Chip(
@@ -1102,25 +1117,27 @@ class _AllRequestsManagementScreenState
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pop(context), // Kembali ke Dashboard
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
               ),
               _buildNavItem(
                 icon: Icons.assignment_rounded,
                 label: 'Laporan',
                 isActive: false,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/reports_management');
-                },
+                onTap: () => Navigator.pushReplacementNamed(
+                  context,
+                  '/reports_management',
+                ),
               ),
               _buildNavItem(
                 icon: Icons.chat_bubble_rounded,
                 label: 'Chat',
                 isActive: false,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fitur Chat segera hadir')),
-                  );
+                  Navigator.pushNamed(context, '/chat');
                 },
               ),
               _buildNavItem(

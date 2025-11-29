@@ -90,31 +90,40 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: ExportFormat.values.map((format) {
-            return Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: ChoiceChip(
-                  label: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(format.icon, size: 18),
-                      const SizedBox(width: 6),
-                      Text(format.label),
-                    ],
-                  ),
-                  selected: _selectedFormat == format,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedFormat = format);
-                    }
-                  },
-                  selectedColor: format.color.withValues(alpha: 0.2),
-                ),
+        Theme(
+          data: Theme.of(context).copyWith(
+            highlightColor: Colors.grey[200],
+            hoverColor: Colors.grey[100],
+            focusColor: Colors.grey[200],
+            splashColor: Colors.grey[100],
+          ),
+          child: DropdownButtonFormField<ExportFormat>(
+            initialValue: _selectedFormat,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            );
-          }).toList(),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            dropdownColor: Colors.white,
+            items: ExportFormat.values.map((format) {
+              return DropdownMenuItem(
+                value: format,
+                child: Row(
+                  children: [
+                    Icon(format.icon, size: 20, color: format.color),
+                    const SizedBox(width: 12),
+                    Text(format.label),
+                  ],
+                ),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedFormat = value);
+              }
+            },
+          ),
         ),
       ],
     );
@@ -129,39 +138,45 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
           style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
         ),
         const SizedBox(height: 12),
-        DropdownButtonFormField<ReportType>(
-          isExpanded: true,
-          initialValue: _selectedReportType,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        Theme(
+          data: Theme.of(context).copyWith(
+            highlightColor: Colors.grey[200],
+            hoverColor: Colors.grey[100],
+            focusColor: Colors.grey[200],
+            splashColor: Colors.grey[100],
           ),
-          items: ReportType.values.map((type) {
-            return DropdownMenuItem(
-              value: type,
-              child: Text(
-                type.label,
-                style: const TextStyle(fontSize: 14),
-                overflow: TextOverflow.ellipsis,
+          child: DropdownButtonFormField<ReportType>(
+            initialValue: _selectedReportType,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _selectedReportType = value;
-                if (value != ReportType.custom) {
-                  _startDate = null;
-                  _endDate = null;
-                }
-              });
-            }
-          },
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            dropdownColor: Colors.white,
+            items: ReportType.values.map((type) {
+              return DropdownMenuItem(
+                value: type,
+                child: Text(type.label),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedReportType = value;
+                  if (value != ReportType.custom) {
+                    _startDate = null;
+                    _endDate = null;
+                  }
+                });
+              }
+            },
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 8),
         Text(
           _selectedReportType.description,
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
         ),
       ],
     );

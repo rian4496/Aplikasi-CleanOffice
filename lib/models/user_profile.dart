@@ -12,8 +12,9 @@ class UserProfile {
   final String role;
   final DateTime joinDate;
   final String? departmentId;
-  final String? staffId;
+  final String? employeeId;
   final String status; // 'active', 'inactive', 'deleted'
+  final String verificationStatus; // 'pending', 'approved', 'rejected'
   final String? location; // Lokasi kerja/ruangan
 
   UserProfile({
@@ -25,8 +26,9 @@ class UserProfile {
     required this.role,
     required this.joinDate,
     this.departmentId,
-    this.staffId,
-    this.status = 'active',
+    this.employeeId,
+    this.status = 'inactive',  // New users start inactive
+    this.verificationStatus = 'pending',  // Wait for admin approval
     this.location,
   });
 
@@ -40,8 +42,9 @@ class UserProfile {
       'role': role,
       'joinDate': joinDate.toIso8601String(),
       'departmentId': departmentId,
-      'staffId': staffId,
+      'employeeId': employeeId,
       'status': status,
+      'verificationStatus': verificationStatus,
       'location': location,
     };
   }
@@ -64,8 +67,9 @@ class UserProfile {
       role: map['role'] ?? UserRole.employee,
       joinDate: parseJoinDate(map['joinDate']),
       departmentId: map['departmentId'],
-      staffId: map['staffId'],
-      status: map['status'] ?? 'active',
+      employeeId: map['employeeId'],
+      status: map['status'] ?? 'inactive',
+      verificationStatus: map['verificationStatus'] ?? 'pending',
       location: map['location'],
     );
   }
@@ -83,8 +87,9 @@ class UserProfile {
           DateTime.tryParse(data['joinDate'] as String? ?? '') ??
           DateTime.now(),
       departmentId: data['departmentId'] as String?,
-      staffId: data['staffId'] as String?,
-      status: data['status'] as String? ?? 'active',
+      employeeId: data['employeeId'] as String?,
+      status: data['status'] as String? ?? 'inactive',
+      verificationStatus: data['verificationStatus'] as String? ?? 'pending',
       location: data['location'] as String?,
     );
   }
@@ -98,8 +103,9 @@ class UserProfile {
       'phoneNumber': phoneNumber,
       'role': role,
       'departmentId': departmentId,
-      'staffId': staffId,
+      'employeeId': employeeId,
       'status': status,
+      'verificationStatus': verificationStatus,
       'location': location,
     };
   }
@@ -109,8 +115,9 @@ class UserProfile {
     String? photoURL,
     String? phoneNumber,
     String? departmentId,
-    String? staffId,
+    String? employeeId,
     String? status,
+    String? verificationStatus,
     String? location,
   }) {
     return UserProfile(
@@ -122,8 +129,9 @@ class UserProfile {
       role: role,
       joinDate: joinDate,
       departmentId: departmentId ?? this.departmentId,
-      staffId: staffId ?? this.staffId,
+      employeeId: employeeId ?? this.employeeId,
       status: status ?? this.status,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
       location: location ?? this.location,
     );
   }

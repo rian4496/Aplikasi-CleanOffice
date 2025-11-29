@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../providers/riverpod/admin_providers.dart' hide currentUserProfileProvider;
 import '../../widgets/admin/admin_sidebar.dart';
@@ -19,17 +20,19 @@ class AnalyticsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDesktop = ResponsiveHelper.isDesktop(context);
+    final scaffoldKey = GlobalKey<ScaffoldState>();
 
     final needsVerificationAsync = ref.watch(needsVerificationReportsProvider);
 
     return Scaffold(
+      key: scaffoldKey,
       backgroundColor: AppTheme.modernBg,
 
       // ==================== APP BAR (Mobile Only) ====================
-      appBar: !isDesktop ? _buildAppBar(context, isDesktop) : null,
+      appBar: !isDesktop ? _buildAppBar(context, isDesktop, scaffoldKey) : null,
 
-      // ==================== DRAWER (Mobile Only) ====================
-      drawer: !isDesktop ? Drawer(child: _buildMobileDrawer(context)) : null,
+      // ==================== END DRAWER (Mobile Only) ====================
+      endDrawer: !isDesktop ? Drawer(child: _buildMobileDrawer(context)) : null,
 
       // ==================== BODY ====================
       body: isDesktop ? _buildDesktopLayout(needsVerificationAsync) : _buildMobileLayout(needsVerificationAsync),
@@ -40,11 +43,11 @@ class AnalyticsScreen extends ConsumerWidget {
   }
 
   // ==================== APP BAR ====================
-  AppBar _buildAppBar(BuildContext context, bool isDesktop) {
+  AppBar _buildAppBar(BuildContext context, bool isDesktop, GlobalKey<ScaffoldState> scaffoldKey) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
-      automaticallyImplyLeading: !isDesktop,
+      automaticallyImplyLeading: false,
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -54,19 +57,15 @@ class AnalyticsScreen extends ConsumerWidget {
           ),
         ),
       ),
-      leading: !isDesktop
-          ? null
-          : IconButton(
-              icon: const Icon(Icons.arrow_back, color: Colors.white),
-              onPressed: () => Navigator.pop(context),
-            ),
       title: const Text(
         'Analytics Dashboard',
         style: TextStyle(
           color: Colors.white,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w600,
+          fontSize: 16,
         ),
       ),
+      centerTitle: false,
       actions: [
         // Export button
         IconButton(
@@ -79,15 +78,12 @@ class AnalyticsScreen extends ConsumerWidget {
           },
           tooltip: 'Export Data',
         ),
-        // Settings button
+        // Menu button untuk buka endDrawer
         IconButton(
-          icon: const Icon(Icons.settings, color: Colors.white),
-          onPressed: () {
-            Navigator.pushNamed(context, '/settings');
-          },
-          tooltip: 'Settings',
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => scaffoldKey.currentState?.openEndDrawer(),
+          tooltip: 'Menu',
         ),
-        const SizedBox(width: 8),
       ],
     );
   }
@@ -457,36 +453,15 @@ class AnalyticsScreen extends ConsumerWidget {
           title: 'Dashboard',
           onTap: () {
             Navigator.pop(context);
-            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(context, AppConstants.homeAdminRoute, (route) => false);
           },
         ),
         DrawerMenuItem(
-          icon: Icons.analytics,
-          title: 'Analytics',
-          onTap: () => Navigator.pop(context),
-        ),
-        DrawerMenuItem(
-          icon: Icons.assignment_outlined,
-          title: 'Kelola Laporan',
+          icon: Icons.person_outline,
+          title: 'Profil',
           onTap: () {
             Navigator.pop(context);
-            Navigator.pushNamed(context, '/reports_management');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.room_service_outlined,
-          title: 'Kelola Permintaan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/requests_management');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.people_outline,
-          title: 'Kelola Petugas',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/cleaner_management');
+            Navigator.pushNamed(context, '/profile');
           },
         ),
         DrawerMenuItem(
@@ -527,17 +502,21 @@ class AnalyticsScreen extends ConsumerWidget {
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
               ),
               _buildNavItem(
                 context: context,
                 icon: Icons.assignment_rounded,
                 label: 'Laporan',
                 isActive: false,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/reports_management');
-                },
+                onTap: () => Navigator.pushReplacementNamed(
+                  context,
+                  '/reports_management',
+                ),
               ),
               _buildNavItem(
                 context: context,
@@ -545,9 +524,7 @@ class AnalyticsScreen extends ConsumerWidget {
                 label: 'Chat',
                 isActive: false,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fitur Chat segera hadir')),
-                  );
+                  Navigator.pushNamed(context, '/chat');
                 },
               ),
               _buildNavItem(

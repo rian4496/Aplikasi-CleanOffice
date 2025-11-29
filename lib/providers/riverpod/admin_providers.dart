@@ -272,14 +272,22 @@ final pendingVerificationUsersProvider = FutureProvider<List<UserProfile>>((ref)
 
 /// Provider untuk verifikasi user (approve/reject)
 final verifyUserProvider = FutureProvider.family<void, (String, String)>((ref, params) async {
-  final (userId, newStatus) = params;
+  final (userId, action) = params;  // action: 'approve' or 'reject'
   final service = ref.read(appwriteDatabaseServiceProvider);
 
   try {
-    await service.updateUserStatus(userId, newStatus);
-    _logger.info('User $userId status updated to $newStatus');
+    if (action == 'approve' || action == 'approved') {
+      // Set status to 'active' and verificationStatus to 'approved'
+      await service.updateUserVerificationStatus(userId, 'approved');
+      await service.updateUserStatus(userId, 'active');
+      _logger.info('User $userId approved');
+    } else if (action == 'reject' || action == 'rejected') {
+      // Set verificationStatus to 'rejected', keep status as 'inactive'
+      await service.updateUserVerificationStatus(userId, 'rejected');
+      _logger.info('User $userId rejected');
+    }
   } catch (e) {
-    _logger.error('Error updating user status', e);
+    _logger.error('Error updating user verification', e);
     rethrow;
   }
 });

@@ -30,6 +30,7 @@ import 'screens/cleaner/cleaner_home_screen.dart';
 // Admin Screens (OLD - Working)
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/analytics_screen.dart';
+import 'screens/admin/all_reports_management_screen.dart';
 
 // Shared Screens
 import 'screens/shared/profile_screen.dart';
@@ -37,6 +38,9 @@ import 'screens/shared/settings_screen.dart';
 import 'screens/shared/edit_profile_screen.dart';
 import 'screens/shared/change_password_screen.dart';
 import 'screens/notification_screen.dart';
+
+// Chat Screens
+import 'screens/chat/conversation_list_screen.dart';
 
 // Inventory Screens
 import 'screens/inventory/inventory_list_screen.dart';
@@ -136,6 +140,7 @@ class MyApp extends StatelessWidget {
         // ==================== ADMIN ROUTES ====================
         '/admin/analytics': (context) => const AnalyticsScreen(),
         '/analytics': (context) => const AnalyticsScreen(),
+        '/reports_management': (context) => const AllReportsManagementScreen(),
 
         // ==================== EMPLOYEE ROUTES ====================
         '/create_report': (context) => const CreateReportScreen(),
@@ -148,6 +153,10 @@ class MyApp extends StatelessWidget {
         '/edit_profile': (context) => const EditProfileScreen(),
         '/change_password': (context) => const ChangePasswordScreen(),
         '/notifications': (context) => const NotificationScreen(),
+
+        // ==================== CHAT ROUTES ====================
+        '/chat': (context) => const ConversationListScreen(),
+        '/chat/conversations': (context) => const ConversationListScreen(),
 
         // ==================== INVENTORY ROUTES ====================
         '/inventory': (context) => const InventoryListScreen(),

@@ -683,10 +683,27 @@ class AppwriteDatabaseService {
           'status': newStatus,
         },
       );
+      _logger.info('Updated user $userId status to $newStatus');
+    } on AppwriteException catch (e) {
+      _logger.severe('Error updating user status: ${e.message}');
+      rethrow;
+    }
+  }
 
-      _logger.info('User $userId status updated to $newStatus');
-    } catch (e) {
-      _logger.severe('Error updating user status: $e');
+  /// Update user verificationStatus field
+  Future<void> updateUserVerificationStatus(String userId, String verificationStatus) async {
+    try {
+      await _databases.updateDocument(
+        databaseId: AppwriteConfig.databaseId,
+        collectionId: AppwriteConfig.usersCollectionId,
+        documentId: userId,
+        data: {
+          'verificationStatus': verificationStatus,
+        },
+      );
+      _logger.info('Updated user $userId verificationStatus to $verificationStatus');
+    } on AppwriteException catch (e) {
+      _logger.severe('Error updating user verificationStatus: ${e.message}');
       rethrow;
     }
   }

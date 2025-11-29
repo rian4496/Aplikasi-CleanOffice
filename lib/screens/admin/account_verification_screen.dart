@@ -4,10 +4,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/user_profile.dart';
 import '../../providers/riverpod/admin_providers.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
+import '../../widgets/shared/drawer_menu_widget.dart';
 
 class AccountVerificationScreen extends ConsumerStatefulWidget {
   const AccountVerificationScreen({super.key});
@@ -20,6 +22,7 @@ class AccountVerificationScreen extends ConsumerStatefulWidget {
 class _AccountVerificationScreenState
     extends ConsumerState<AccountVerificationScreen>
     with SingleTickerProviderStateMixin {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late TabController _tabController;
   String _searchQuery = '';
 
@@ -38,8 +41,10 @@ class _AccountVerificationScreenState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: AppTheme.modernBg,
       appBar: _buildAppBar(),
+      endDrawer: Drawer(child: _buildEndDrawer()),
       body: Column(
         children: [
           // Search bar
@@ -52,7 +57,7 @@ class _AccountVerificationScreenState
               controller: _tabController,
               children: [
                 _buildUserList('pending'),
-                _buildUserList('active'),
+                _buildUserList('approved'),
                 _buildUserList('rejected'),
               ],
             ),
@@ -68,11 +73,33 @@ class _AccountVerificationScreenState
     return AppBar(
       title: const Text(
         'Verifikasi Akun',
-        style: TextStyle(color: Colors.white),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
       ),
-      backgroundColor: AppTheme.primary,
-      foregroundColor: Colors.white,
+      backgroundColor: Colors.transparent,
       elevation: 0,
+      automaticallyImplyLeading: false,
+      iconTheme: const IconThemeData(color: Colors.white),
+      actionsIconTheme: const IconThemeData(color: Colors.white),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.menu, color: Colors.white),
+          onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
+          tooltip: 'Menu',
+        ),
+      ],
+      flexibleSpace: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+      ),
     );
   }
 
@@ -121,14 +148,14 @@ class _AccountVerificationScreenState
 
     return usersAsync.when(
       data: (users) {
-        // Filter berdasarkan status
+        // Filter berdasarkan verificationStatus
         List<UserProfile> filteredUsers;
         if (statusFilter == 'pending') {
-          filteredUsers = users.where((u) => u.status == 'pending').toList();
-        } else if (statusFilter == 'active') {
-          filteredUsers = users.where((u) => u.status == 'active').toList();
+          filteredUsers = users.where((u) => u.verificationStatus == 'pending').toList();
+        } else if (statusFilter == 'approved') {
+          filteredUsers = users.where((u) => u.verificationStatus == 'approved').toList();
         } else {
-          filteredUsers = users.where((u) => u.status == 'rejected').toList();
+          filteredUsers = users.where((u) => u.verificationStatus == 'rejected').toList();
         }
 
         // Filter berdasarkan search query
@@ -215,8 +242,8 @@ class _AccountVerificationScreenState
   }
 
   Widget _buildUserCard(UserProfile user) {
-    final statusColor = _getStatusColor(user.status);
-    final statusLabel = _getStatusLabel(user.status);
+    final statusColor = _getVerificationStatusColor(user.verificationStatus);
+    final statusLabel = _getVerificationStatusLabel(user.verificationStatus);
     final roleLabel = _getRoleLabel(user.role);
 
     return Card(
@@ -344,7 +371,7 @@ class _AccountVerificationScreenState
     Navigator.pop(context); // Close bottom sheet
 
     try {
-      await ref.read(verifyUserProvider((user.uid, 'active')).future);
+      await ref.read(verifyUserProvider((user.uid, 'approve')).future);
       ref.invalidate(pendingVerificationUsersProvider);
 
       if (mounted) {
@@ -418,7 +445,7 @@ class _AccountVerificationScreenState
 
   Future<void> _rejectUser(UserProfile user, String reason) async {
     try {
-      await ref.read(verifyUserProvider((user.uid, 'rejected')).future);
+      await ref.read(verifyUserProvider((user.uid, 'reject')).future);
       ref.invalidate(pendingVerificationUsersProvider);
 
       if (mounted) {
@@ -441,11 +468,11 @@ class _AccountVerificationScreenState
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
+  Color _getVerificationStatusColor(String verificationStatus) {
+    switch (verificationStatus) {
       case 'pending':
         return AppTheme.warning;
-      case 'active':
+      case 'approved':
         return AppTheme.success;
       case 'rejected':
         return AppTheme.error;
@@ -454,16 +481,16 @@ class _AccountVerificationScreenState
     }
   }
 
-  String _getStatusLabel(String status) {
-    switch (status) {
+  String _getVerificationStatusLabel(String verificationStatus) {
+    switch (verificationStatus) {
       case 'pending':
         return 'Menunggu';
-      case 'active':
+      case 'approved':
         return 'Terverifikasi';
       case 'rejected':
         return 'Ditolak';
       default:
-        return status;
+        return verificationStatus;
     }
   }
 
@@ -481,6 +508,43 @@ class _AccountVerificationScreenState
   }
 
   // ==================== BOTTOM NAVIGATION BAR ====================
+  Widget _buildEndDrawer() {
+    return DrawerMenuWidget(
+      menuItems: [
+        DrawerMenuItem(
+          icon: Icons.dashboard,
+          title: 'Dashboard',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppConstants.homeAdminRoute,
+              (route) => false,
+            );
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.person_outline,
+          title: 'Profil',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/profile');
+          },
+        ),
+        DrawerMenuItem(
+          icon: Icons.settings_outlined,
+          title: 'Pengaturan',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.pushNamed(context, '/settings');
+          },
+        ),
+      ],
+      onLogout: () => Navigator.pushReplacementNamed(context, '/login'),
+      roleTitle: 'Admin',
+    );
+  }
+
   Widget _buildBottomNavBar() {
     return Container(
       decoration: BoxDecoration(
@@ -503,25 +567,27 @@ class _AccountVerificationScreenState
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pop(context),
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
               ),
               _buildNavItem(
                 icon: Icons.assignment_rounded,
                 label: 'Laporan',
                 isActive: false,
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, '/reports_management');
-                },
+                onTap: () => Navigator.pushReplacementNamed(
+                  context,
+                  '/reports_management',
+                ),
               ),
               _buildNavItem(
                 icon: Icons.chat_bubble_rounded,
                 label: 'Chat',
                 isActive: false,
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fitur Chat segera hadir')),
-                  );
+                  Navigator.pushNamed(context, '/chat');
                 },
               ),
               _buildNavItem(
@@ -545,7 +611,7 @@ class _AccountVerificationScreenState
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    const activeColor = Color(0xFF5D5FEF);
+    const activeColor = AppTheme.primary;
     final inactiveColor = Colors.grey[600]!;
 
     return Expanded(
@@ -592,7 +658,7 @@ class _UserDetailSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPending = user.status == 'pending';
+    final isPending = user.verificationStatus == 'pending';
 
     return Container(
       decoration: const BoxDecoration(
@@ -687,8 +753,8 @@ class _UserDetailSheet extends StatelessWidget {
                   _buildInfoRow(Icons.phone_outlined, 'Telepon', user.phoneNumber!),
                 if (user.departmentId != null)
                   _buildInfoRow(Icons.business_outlined, 'Departemen', user.departmentId!),
-                if (user.staffId != null)
-                  _buildInfoRow(Icons.numbers_outlined, 'Staff ID', user.staffId!),
+                if (user.employeeId != null)
+                  _buildInfoRow(Icons.numbers_outlined, 'Employee ID', user.employeeId!),
                 _buildInfoRow(Icons.calendar_today_outlined, 'Terdaftar',
                     DateFormatter.fullDate(user.joinDate)),
               ],

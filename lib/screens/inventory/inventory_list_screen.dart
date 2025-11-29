@@ -10,9 +10,15 @@ import '../../providers/riverpod/inventory_selection_provider.dart';
 import '../../widgets/inventory/inventory_card.dart';
 import '../../widgets/inventory/batch_action_bar.dart';
 import '../../widgets/inventory/inventory_detail_dialog.dart';
+import '../../widgets/inventory/category_filter_chips.dart';
+import '../../widgets/inventory/inventory_stats_card.dart';
+import '../../widgets/inventory/low_stock_alert_banner.dart';
+import '../../widgets/inventory/inventory_empty_state.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
+import '../../core/constants/app_constants.dart';
 import '../../utils/responsive_ui_helper.dart';
+import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import './inventory_detail_screen.dart';
 
 class InventoryListScreen extends ConsumerStatefulWidget {
@@ -24,7 +30,7 @@ class InventoryListScreen extends ConsumerStatefulWidget {
 
 class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
   String _searchQuery = '';
-  String? _selectedCategory;
+  InventoryCategory _selectedCategory = InventoryCategory.all;
   StockStatus? _selectedStatus;
   String _sortBy = 'name'; // 'name', 'stock', 'category'
 
@@ -33,7 +39,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     final itemsAsync = ref.watch(allInventoryItemsProvider);
     final isSelectionMode = ref.watch(selectionModeProvider);
     final selectedIds = ref.watch(inventorySelectionProvider);
-    final isInDialog = ResponsiveHelper.isDesktop(context);
+    final isDesktop = ResponsiveHelper.isDesktop(context);
 
     return Scaffold(
       appBar: AppBar(
@@ -60,7 +66,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                           style: TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontSize: 18,
+                            fontSize: 16,
                           ),
                         ),
                         Text(
@@ -86,16 +92,16 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
             ),
           ),
         ),
-        // Sembunyikan back button jika di web/dialog
-        automaticallyImplyLeading: !isInDialog,
+        // Hapus tombol back
+        automaticallyImplyLeading: false,
         leading: isSelectionMode
             ? IconButton(
-                icon: const Icon(Icons.close),
+                icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () {
                   ref.read(selectionModeProvider.notifier).disable();
                 },
               )
-            : (isInDialog ? null : null),
+            : null,
         actions: [
           if (isSelectionMode)
             TextButton(
@@ -111,72 +117,46 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 'Pilih Semua',
                 style: TextStyle(color: Colors.white),
               ),
-            )
-          else ...[
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert),
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'select',
-                  child: Row(
-                    children: [
-                      Icon(Icons.checklist, size: 20),
-                      SizedBox(width: 12),
-                      Text('Mode Pilih'),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                CheckedPopupMenuItem(
-                  value: 'sort_name',
-                  checked: _sortBy == 'name',
-                  child: const Text('Urutkan: Nama A-Z'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'sort_stock',
-                  checked: _sortBy == 'stock',
-                  child: const Text('Urutkan: Stok Terendah'),
-                ),
-                CheckedPopupMenuItem(
-                  value: 'sort_category',
-                  checked: _sortBy == 'category',
-                  child: const Text('Urutkan: Kategori'),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'select') {
-                  ref.read(selectionModeProvider.notifier).enable();
-                } else if (value == 'sort_name') {
-                  setState(() => _sortBy = 'name');
-                } else if (value == 'sort_stock') {
-                  setState(() => _sortBy = 'stock');
-                } else if (value == 'sort_category') {
-                  setState(() => _sortBy = 'category');
-                }
-              },
             ),
-            // Tambahkan tombol close untuk dialog
-            if (isInDialog)
-              IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
-                tooltip: 'Tutup',
-              ),
-          ],
         ],
       ),
       body: Column(
         children: [
-          _buildSearchBar(),
-          _buildCompactFilters(),
+          // Compact search bar with filter & sort icons
+          _buildCompactSearchBar(),
           const SizedBox(height: 8),
           Expanded(
             child: itemsAsync.when(
               data: (items) {
                 final filtered = _filterItems(items);
-                
+
+                // Calculate stats
+                final lowStockItems = items.where((item) =>
+                  item.status == StockStatus.lowStock
+                ).toList();
+                final outOfStockItems = items.where((item) =>
+                  item.status == StockStatus.outOfStock
+                ).toList();
+
                 if (filtered.isEmpty) {
-                  return _buildEmptyState();
+                  // Show appropriate empty state
+                  final hasFilters = _searchQuery.isNotEmpty ||
+                    _selectedCategory != InventoryCategory.all ||
+                    _selectedStatus != null;
+
+                  if (hasFilters) {
+                    return InventoryEmptyState.filtered(
+                      onClearFilter: () {
+                        setState(() {
+                          _searchQuery = '';
+                          _selectedCategory = InventoryCategory.all;
+                          _selectedStatus = null;
+                        });
+                      },
+                    );
+                  } else {
+                    return InventoryEmptyState.noItems();
+                  }
                 }
 
                 return RefreshIndicator(
@@ -184,13 +164,41 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                     ref.invalidate(allInventoryItemsProvider);
                   },
                   child: ListView.builder(
-                    itemCount: filtered.length,
+                    itemCount: filtered.length + 2, // +2 for stats card and alert banner
                     itemBuilder: (context, index) {
-                      final item = filtered[index];
+                      // Stats card at index 0
+                      if (index == 0) {
+                        return InventoryStatsCard(
+                          totalItems: items.length,
+                          lowStockCount: lowStockItems.length,
+                          outOfStockCount: outOfStockItems.length,
+                          totalValue: 0, // TODO: Calculate total value
+                        );
+                      }
+
+                      // Alert banner at index 1 (only if there are low stock items)
+                      if (index == 1) {
+                        if (lowStockItems.isEmpty) {
+                          return const SizedBox.shrink();
+                        }
+                        return LowStockAlertBanner(
+                          lowStockItems: lowStockItems,
+                          onViewAll: () {
+                            setState(() {
+                              _selectedStatus = StockStatus.lowStock;
+                            });
+                          },
+                        );
+                      }
+
+                      // Inventory cards start from index 2
+                      final itemIndex = index - 2;
+                      final item = filtered[itemIndex];
                       final isSelected = selectedIds.contains(item.id);
 
                       return InventoryCard(
                         item: item,
+                        index: itemIndex, // For pastel background rotation
                         isSelectionMode: isSelectionMode,
                         isSelected: isSelected,
                         onTap: () {
@@ -206,6 +214,24 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                               webDialog: InventoryDetailDialog(item: item),
                             );
                           }
+                        },
+                        onAddStock: () {
+                          // TODO: Implement add stock dialog
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Tambah stok - coming soon')),
+                          );
+                        },
+                        onEdit: () {
+                          // TODO: Navigate to edit screen
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Edit - coming soon')),
+                          );
+                        },
+                        onMore: () {
+                          // TODO: Show more options
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('More options - coming soon')),
+                          );
                         },
                         onLongPress: () {
                           if (!isSelectionMode) {
@@ -226,120 +252,371 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: itemsAsync.maybeWhen(
-        data: (items) => BatchActionBar(
-          allItems: items,
-          onActionComplete: () {
-            ref.invalidate(allInventoryItemsProvider);
-          },
-        ),
-        orElse: () => const SizedBox.shrink(),
-      ),
+      bottomNavigationBar: isSelectionMode
+          ? itemsAsync.maybeWhen(
+              data: (items) => BatchActionBar(
+                allItems: items,
+                onActionComplete: () {
+                  ref.invalidate(allInventoryItemsProvider);
+                },
+              ),
+              orElse: () => const SizedBox.shrink(),
+            )
+          : (!isDesktop ? _buildBottomNavBar() : null),
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        decoration: InputDecoration(
-          hintText: 'Cari item...',
-          prefixIcon: const Icon(Icons.search),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+  // ==================== BOTTOM NAVIGATION BAR ====================
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(
+                icon: Icons.home_rounded,
+                label: 'Home',
+                isActive: false,
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
+              ),
+              _buildNavItem(
+                icon: Icons.assignment_rounded,
+                label: 'Laporan',
+                isActive: false,
+                onTap: () => Navigator.pushReplacementNamed(
+                  context,
+                  '/reports_management',
+                ),
+              ),
+              _buildNavItem(
+                icon: Icons.chat_bubble_rounded,
+                label: 'Chat',
+                isActive: false,
+                onTap: () {
+                  Navigator.pushNamed(context, '/chat');
+                },
+              ),
+              _buildNavItem(
+                icon: Icons.more_horiz_rounded,
+                label: 'Lainnya',
+                isActive: false,
+                onTap: () {
+                  AdminMoreBottomSheet.show(context);
+                },
+              ),
+            ],
           ),
         ),
-        onChanged: (value) => setState(() => _searchQuery = value),
       ),
     );
   }
 
-  Widget _buildCompactFilters() {
+  Widget _buildNavItem({
+    required IconData icon,
+    required String label,
+    required bool isActive,
+    required VoidCallback onTap,
+  }) {
+    const activeColor = Color(0xFF5D5FEF);
+    final inactiveColor = Colors.grey[600]!;
+
+    return Expanded(
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? activeColor : inactiveColor,
+                size: 26,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                  color: isActive ? activeColor : inactiveColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Compact search bar with filter & sort icons
+  Widget _buildCompactSearchBar() {
+    final hasActiveFilters = _selectedCategory != InventoryCategory.all || _selectedStatus != null;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          // Category Dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          children: [
+            // Search icon
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Icon(Icons.search, color: Colors.grey[400], size: 22),
+            ),
+            // Search input
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Cari item inventaris...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  hintStyle: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+                onChanged: (value) => setState(() => _searchQuery = value),
               ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String?>(
-                  value: _selectedCategory,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, size: 20),
-                  items: [
-                    const DropdownMenuItem(
-                      value: null,
+            ),
+            // Clear button (if searching)
+            if (_searchQuery.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                onPressed: () {
+                  setState(() => _searchQuery = '');
+                },
+              ),
+            // Divider
+            Container(
+              height: 24,
+              width: 1,
+              color: Colors.grey[300],
+            ),
+            // Filter icon button with badge
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: _showFilterDialog,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(8),
+                  bottomRight: Radius.circular(8),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Stack(
+                    children: [
+                      Icon(
+                        Icons.tune,
+                        color: hasActiveFilters ? AppTheme.primary : Colors.grey[600],
+                        size: 22,
+                      ),
+                      if (hasActiveFilters)
+                        Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primary,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Show filter dialog (centered, scrollable)
+  void _showFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            contentPadding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Filter Inventaris',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setModalState(() {
+                          _selectedCategory = InventoryCategory.all;
+                          _selectedStatus = null;
+                        });
+                        setState(() {
+                          _selectedCategory = InventoryCategory.all;
+                          _selectedStatus = null;
+                        });
+                      },
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                const Divider(height: 1, thickness: 1),
+                const SizedBox(height: 20),
+
+                // Category dropdown
+                const Text(
+                  'Kategori',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<InventoryCategory>(
+                    initialValue: _selectedCategory,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
+                      value: InventoryCategory.all,
                       child: Row(
                         children: [
-                          Icon(Icons.grid_view, size: 18, color: Colors.grey),
-                          SizedBox(width: 8),
+                          Icon(Icons.select_all, size: 20, color: Colors.grey),
+                          SizedBox(width: 12),
                           Text('Semua Kategori'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'alat',
+                      value: InventoryCategory.alat,
                       child: Row(
                         children: [
-                          Icon(Icons.cleaning_services, size: 18, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          const Text('Alat Kebersihan'),
+                          Icon(Icons.cleaning_services, size: 20, color: Color(0xFF3B82F6)),
+                          SizedBox(width: 12),
+                          Text('Alat Kebersihan'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'consumable',
+                      value: InventoryCategory.consumable,
                       child: Row(
                         children: [
-                          Icon(Icons.water_drop, size: 18, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          const Text('Bahan Habis Pakai'),
+                          Icon(Icons.inventory, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Bahan Habis Pakai'),
                         ],
                       ),
                     ),
                     DropdownMenuItem(
-                      value: 'ppe',
+                      value: InventoryCategory.ppe,
                       child: Row(
                         children: [
-                          Icon(Icons.security, size: 18, color: Colors.green),
-                          const SizedBox(width: 8),
-                          const Text('Alat Pelindung Diri'),
+                          Icon(Icons.safety_check, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('APD'),
                         ],
                       ),
                     ),
                   ],
-                  onChanged: (value) => setState(() => _selectedCategory = value),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setModalState(() => _selectedCategory = value);
+                        setState(() => _selectedCategory = value);
+                      }
+                    },
+                  ),
                 ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          // Status Dropdown
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey[300]!),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<StockStatus?>(
-                  value: _selectedStatus,
-                  isExpanded: true,
-                  icon: const Icon(Icons.arrow_drop_down, size: 20),
-                  items: [
-                    const DropdownMenuItem(
+
+                const SizedBox(height: 20),
+
+                // Status dropdown
+                const Text(
+                  'Status Stok',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<StockStatus?>(
+                    initialValue: _selectedStatus,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
                       value: null,
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle_outline, size: 18, color: Colors.grey),
-                          SizedBox(width: 8),
+                          Icon(Icons.all_inclusive, size: 20, color: Colors.grey),
+                          SizedBox(width: 12),
                           Text('Semua Status'),
                         ],
                       ),
@@ -348,9 +625,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                       value: StockStatus.inStock,
                       child: Row(
                         children: [
-                          Icon(Icons.check_circle, size: 18, color: AppTheme.success),
-                          const SizedBox(width: 8),
-                          const Text('Stok Cukup'),
+                          Icon(Icons.check_circle, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Stok Cukup'),
                         ],
                       ),
                     ),
@@ -358,9 +635,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                       value: StockStatus.lowStock,
                       child: Row(
                         children: [
-                          Icon(Icons.warning, size: 18, color: AppTheme.warning),
-                          const SizedBox(width: 8),
-                          const Text('Stok Rendah'),
+                          Icon(Icons.warning_amber, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('Stok Rendah'),
                         ],
                       ),
                     ),
@@ -368,19 +645,118 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                       value: StockStatus.outOfStock,
                       child: Row(
                         children: [
-                          Icon(Icons.cancel, size: 18, color: AppTheme.error),
-                          const SizedBox(width: 8),
-                          const Text('Habis'),
+                          Icon(Icons.cancel, size: 20, color: Color(0xFFEF4444)),
+                          SizedBox(width: 12),
+                          Text('Habis'),
                         ],
                       ),
                     ),
+                    ],
+                    onChanged: (value) {
+                      setModalState(() => _selectedStatus = value);
+                      setState(() => _selectedStatus = value);
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
+                // Sort dropdown
+                const Text(
+                  'Urutkan Berdasarkan',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Theme(
+                  data: Theme.of(context).copyWith(
+                    highlightColor: Colors.grey[200],
+                    hoverColor: Colors.grey[100],
+                    focusColor: Colors.grey[200],
+                    splashColor: Colors.grey[100],
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _sortBy,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    dropdownColor: Colors.white,
+                    items: const [
+                    DropdownMenuItem(
+                      value: 'name',
+                      child: Row(
+                        children: [
+                          Icon(Icons.sort_by_alpha, size: 20, color: Color(0xFF3B82F6)),
+                          SizedBox(width: 12),
+                          Text('Nama A-Z'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'stock',
+                      child: Row(
+                        children: [
+                          Icon(Icons.trending_down, size: 20, color: Color(0xFFF59E0B)),
+                          SizedBox(width: 12),
+                          Text('Stok Terendah'),
+                        ],
+                      ),
+                    ),
+                    DropdownMenuItem(
+                      value: 'category',
+                      child: Row(
+                        children: [
+                          Icon(Icons.category, size: 20, color: Color(0xFF10B981)),
+                          SizedBox(width: 12),
+                          Text('Kategori'),
+                        ],
+                      ),
+                    ),
+                    ],
+                    onChanged: (value) {
+                      if (value != null) {
+                        setModalState(() => _sortBy = value);
+                        setState(() => _sortBy = value);
+                      }
+                    },
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Apply button
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Terapkan',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
                   ],
-                  onChanged: (value) => setState(() => _selectedStatus = value),
                 ),
               ),
             ),
-          ),
-        ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -389,10 +765,16 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     var filtered = items.where((item) {
       final matchesSearch = _searchQuery.isEmpty ||
           item.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesCategory = _selectedCategory == null ||
-          item.category == _selectedCategory;
+
+      // Convert enum to category string for comparison
+      final matchesCategory = _selectedCategory == InventoryCategory.all ||
+          (_selectedCategory == InventoryCategory.alat && item.category == 'alat') ||
+          (_selectedCategory == InventoryCategory.consumable && item.category == 'consumable') ||
+          (_selectedCategory == InventoryCategory.ppe && item.category == 'ppe');
+
       final matchesStatus = _selectedStatus == null ||
           item.status == _selectedStatus;
+
       return matchesSearch && matchesCategory && matchesStatus;
     }).toList();
 
@@ -412,16 +794,4 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     return filtered;
   }
 
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.inventory_2, size: 64, color: Colors.grey),
-          SizedBox(height: 16),
-          Text('Tidak ada item', style: TextStyle(color: Colors.grey)),
-        ],
-      ),
-    );
-  }
 }

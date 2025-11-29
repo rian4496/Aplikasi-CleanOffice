@@ -34,7 +34,13 @@
       "Bash(timeout 90 flutter analyze:*)",
       "Bash(tree:*)",
       "Bash(flutter pub run build_runner clean:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(del \"d:\\Flutter\\Aplikasi-CleanOffice\\lib\\widgets\\shared\\admin_drawer_helper.dart\")",
+      "Bash(del \"d:\\Flutter\\Aplikasi-CleanOffice\\lib\\screens\\chat\\conversation_list_screen.dart\")",
+      "Bash(del /q libmodels*_freezed.dart libmodels*.g.dart)",
+      "Bash(timeout 60 ping:*)",
+      "Bash(timeout 10 ping:*)",
+      "Bash(clip:*)"
     ],
     "deny": [],
     "ask": []

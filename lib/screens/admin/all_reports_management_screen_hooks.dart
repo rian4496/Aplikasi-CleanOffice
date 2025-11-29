@@ -196,7 +196,7 @@ class AllReportsManagementScreen extends HookConsumerWidget {
                 child: Column(
                   children: [
                     // Search bar
-                    _buildSearchBar(searchController, searchQuery),
+                    _buildSearchBar(searchController, searchQuery, context, ref),
 
                     // Filter chips
                     if (filterStatus.value != null || showUrgentOnly.value)
@@ -236,7 +236,7 @@ class AllReportsManagementScreen extends HookConsumerWidget {
     return Column(
       children: [
         // Search bar
-        _buildSearchBar(searchController, searchQuery),
+        _buildSearchBar(searchController, searchQuery, context, ref),
 
         // Filter chips
         if (filterStatus.value != null || showUrgentOnly.value)
@@ -373,38 +373,483 @@ class AllReportsManagementScreen extends HookConsumerWidget {
   static Widget _buildSearchBar(
     TextEditingController searchController,
     ValueNotifier<String> searchQuery,
+    BuildContext context,
+    WidgetRef ref,
   ) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: TextField(
-        controller: searchController,
-        decoration: InputDecoration(
-          hintText: 'Cari lokasi, judul, atau deskripsi...',
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: searchQuery.value.isNotEmpty
-              ? IconButton(
-                  icon: const Icon(Icons.clear),
-                  onPressed: () {
-                    searchController.clear();
-                    searchQuery.value = '';
-                  },
-                )
-              : null,
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide.none,
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey[300]!),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: AppTheme.primary, width: 2),
-          ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
         ),
+        child: Row(
+          children: [
+            // Search icon
+            Padding(
+              padding: const EdgeInsets.only(left: 12),
+              child: Icon(Icons.search, color: Colors.grey[400], size: 22),
+            ),
+            // Search input
+            Expanded(
+              child: TextField(
+                controller: searchController,
+                decoration: const InputDecoration(
+                  hintText: 'Cari laporan...',
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 12),
+                  hintStyle: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                ),
+                onChanged: (value) {
+                  searchQuery.value = value;
+                },
+              ),
+            ),
+            // Clear button (if searching)
+            if (searchQuery.value.isNotEmpty)
+              IconButton(
+                icon: Icon(Icons.clear, color: Colors.grey[400], size: 20),
+                onPressed: () {
+                  searchController.clear();
+                  searchQuery.value = '';
+                },
+              ),
+            // Divider
+            Container(
+              height: 24,
+              width: 1,
+              color: Colors.grey[300],
+            ),
+            // Filter icon button with badge
+            Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showFilterDialog(context, ref),
+                borderRadius: const BorderRadius.horizontal(right: Radius.circular(8)),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: _buildFilterIconWithBadge(ref),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Build filter icon with badge
+  static Widget _buildFilterIconWithBadge(WidgetRef ref) {
+    final filterState = ref.watch(reportFilterProvider);
+    final activeCount = filterState.activeFilterCount;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(Icons.tune, color: Colors.grey[600], size: 22),
+        if (activeCount > 0)
+          Positioned(
+            top: -4,
+            right: -4,
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(
+                minWidth: 16,
+                minHeight: 16,
+              ),
+              child: Text(
+                activeCount.toString(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  /// Show filter dialog (dropdown style)
+  static void _showFilterDialog(BuildContext context, WidgetRef ref) {
+    final filterState = ref.read(reportFilterProvider);
+
+    // Local state variables
+    ReportStatus? selectedStatus = filterState.statusFilter?.isNotEmpty == true
+        ? filterState.statusFilter!.first
+        : null;
+    ReportSortBy selectedSort = filterState.sortBy;
+    DateTime? startDate = filterState.startDate;
+    DateTime? endDate = filterState.endDate;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            contentPadding: EdgeInsets.zero,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            content: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.85,
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Header
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Filter Laporan',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                selectedStatus = null;
+                                selectedSort = ReportSortBy.newest;
+                                startDate = null;
+                                endDate = null;
+                              });
+                            },
+                            child: const Text('Reset'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(height: 1, thickness: 1),
+                      const SizedBox(height: 20),
+
+                      // Status dropdown
+                      const Text(
+                        'Status Laporan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          highlightColor: Colors.grey[200],
+                          hoverColor: Colors.grey[100],
+                          focusColor: Colors.grey[200],
+                          splashColor: Colors.grey[100],
+                        ),
+                        child: DropdownButtonFormField<ReportStatus?>(
+                          initialValue: selectedStatus,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          dropdownColor: Colors.white,
+                          items: [
+                            const DropdownMenuItem(
+                              value: null,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.select_all, size: 20, color: Colors.grey),
+                                  SizedBox(width: 12),
+                                  Text('Semua Status'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.pending,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.pending.icon, size: 20, color: ReportStatus.pending.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.pending.displayName),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.assigned,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.assigned.icon, size: 20, color: ReportStatus.assigned.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.assigned.displayName),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.inProgress,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.inProgress.icon, size: 20, color: ReportStatus.inProgress.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.inProgress.displayName),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.completed,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.completed.icon, size: 20, color: ReportStatus.completed.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.completed.displayName),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.verified,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.verified.icon, size: 20, color: ReportStatus.verified.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.verified.displayName),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportStatus.rejected,
+                              child: Row(
+                                children: [
+                                  Icon(ReportStatus.rejected.icon, size: 20, color: ReportStatus.rejected.color),
+                                  const SizedBox(width: 12),
+                                  Text(ReportStatus.rejected.displayName),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            setModalState(() => selectedStatus = value);
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Sort dropdown
+                      const Text(
+                        'Urutkan Berdasarkan',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Theme(
+                        data: Theme.of(context).copyWith(
+                          highlightColor: Colors.grey[200],
+                          hoverColor: Colors.grey[100],
+                          focusColor: Colors.grey[200],
+                          splashColor: Colors.grey[100],
+                        ),
+                        child: DropdownButtonFormField<ReportSortBy>(
+                          initialValue: selectedSort,
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          ),
+                          dropdownColor: Colors.white,
+                          items: const [
+                            DropdownMenuItem(
+                              value: ReportSortBy.newest,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.schedule, size: 20, color: Color(0xFF3B82F6)),
+                                  SizedBox(width: 12),
+                                  Text('Terbaru'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportSortBy.oldest,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.history, size: 20, color: Color(0xFF6B7280)),
+                                  SizedBox(width: 12),
+                                  Text('Terlama'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportSortBy.urgent,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.priority_high, size: 20, color: Color(0xFFEF4444)),
+                                  SizedBox(width: 12),
+                                  Text('Urgent'),
+                                ],
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: ReportSortBy.location,
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_on, size: 20, color: Color(0xFF10B981)),
+                                  SizedBox(width: 12),
+                                  Text('Lokasi'),
+                                ],
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) {
+                              setModalState(() => selectedSort = value);
+                            }
+                          },
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Rentang Tanggal
+                      const Text(
+                        'Rentang Tanggal',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          // Tanggal Mulai
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: startDate ?? DateTime.now(),
+                                  firstDate: DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => startDate = picked);
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text(
+                                startDate != null
+                                    ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
+                                    : 'Dari',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 16, color: Colors.grey),
+                          const SizedBox(width: 8),
+                          // Tanggal Akhir
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: endDate ?? DateTime.now(),
+                                  firstDate: startDate ?? DateTime(2020),
+                                  lastDate: DateTime.now(),
+                                );
+                                if (picked != null) {
+                                  setModalState(() => endDate = picked);
+                                }
+                              },
+                              icon: const Icon(Icons.calendar_today, size: 16),
+                              label: Text(
+                                endDate != null
+                                    ? '${endDate!.day}/${endDate!.month}/${endDate!.year}'
+                                    : 'Sampai',
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                                side: BorderSide(color: Colors.grey[300]!),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // Clear date button
+                      if (startDate != null || endDate != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: TextButton.icon(
+                            onPressed: () {
+                              setModalState(() {
+                                startDate = null;
+                                endDate = null;
+                              });
+                            },
+                            icon: const Icon(Icons.clear, size: 16),
+                            label: const Text('Hapus Tanggal'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: Colors.grey[600],
+                              padding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 24),
+
+                      // Apply button
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            // Apply filters to provider
+                            ref.read(reportFilterProvider.notifier).setStatusFilter(
+                              selectedStatus != null ? [selectedStatus!] : null,
+                            );
+                            ref.read(reportFilterProvider.notifier).setSortBy(selectedSort);
+                            ref.read(reportFilterProvider.notifier).setDateRange(startDate, endDate);
+                            Navigator.pop(context);
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          child: const Text(
+                            'Terapkan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

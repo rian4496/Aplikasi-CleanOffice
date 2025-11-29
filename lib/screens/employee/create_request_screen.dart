@@ -122,38 +122,81 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
     });
   }
 
-  // ==================== DATE TIME PICKER ====================
+  // ==================== TIME PICKER (TODAY ONLY) ====================
   Future<void> _selectDateTime() async {
-    // Pick date first
-    final DateTime? date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 30)),
-      locale: const Locale('id', 'ID'),
-    );
-
-    if (date == null) return;
-
-    // Pick time second
-    if (!mounted) return;
-
-    // Use BuildContext to ensure MaterialLocalizations is available
-    final BuildContext dialogContext = context;
+    // Pick time only - request is for TODAY
     final TimeOfDay? time = await showTimePicker(
-      context: dialogContext,
+      context: context,
       initialTime: TimeOfDay.now(),
+      initialEntryMode: TimePickerEntryMode.inputOnly,
+      helpText: 'Pilih jam layanan',
+      cancelText: 'Batal',
+      confirmText: 'OK',
+      hourLabelText: 'Jam',
+      minuteLabelText: 'Menit',
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.light().copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.grey[600]!,  // Grey cursor
+              onSurface: Colors.black87,
+            ),
+            // Time picker specific theme
+            timePickerTheme: TimePickerThemeData(
+              backgroundColor: Colors.white,
+              hourMinuteTextColor: Colors.black87,
+              dayPeriodTextColor: Colors.black87,
+              dayPeriodColor: Colors.transparent,
+              helpTextStyle: TextStyle(
+                color: Colors.black87,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,  // Bold "Pilih jam layanan"
+              ),
+              cancelButtonStyle: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all(Colors.grey[700]),
+              ),
+              confirmButtonStyle: ButtonStyle(
+                foregroundColor: WidgetStateProperty.all(Colors.grey[700]),
+              ),
+              hourMinuteColor: WidgetStateColor.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.grey[200]!;
+                }
+                return Colors.transparent;
+              }),
+              inputDecorationTheme: InputDecorationTheme(
+                border: InputBorder.none,  // Remove border completely
+                enabledBorder: InputBorder.none,  // Remove border
+                focusedBorder: InputBorder.none,  // Remove border on focus
+                filled: false,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+              ),
+            ),
+            // Center text in input fields
+            textTheme: TextTheme(
+              headlineMedium: TextStyle(
+                fontSize: 48,
+                fontWeight: FontWeight.normal,
+                color: Colors.black,
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (time != null) {
+      final now = DateTime.now();
       final selectedDateTime = DateTime(
-        date.year,
-        date.month,
-        date.day,
+        now.year,
+        now.month,
+        now.day,
         time.hour,
         time.minute,
       );
 
+      // Check if selected time is in the past (only for today)
       if (selectedDateTime.isBefore(DateTime.now())) {
         _showError('Waktu tidak boleh di masa lalu');
         return;
@@ -572,9 +615,8 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
                     const Divider(),
                     _buildConfirmationRow(
                       Icons.access_time,
-                      'Waktu',
-                      DateFormat('EEEE, dd MMM yyyy - HH:mm', 'id_ID')
-                          .format(_preferredDateTime!),
+                      'Jam Layanan',
+                      'Hari ini, ${DateFormat('HH:mm', 'id_ID').format(_preferredDateTime!)}',
                     ),
                   ],
                   if (_isUrgent) ...[
@@ -953,14 +995,13 @@ class _CreateRequestScreenState extends ConsumerState<CreateRequestScreen> {
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: Icon(Icons.access_time, color: AppConstants.primaryColor),
         title: const Text(
-          'Waktu Diinginkan (Opsional)',
+          'Jam Layanan Diinginkan (Opsional)',
           style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
         ),
         subtitle: Text(
           _preferredDateTime != null
-              ? DateFormat('EEEE, dd MMM yyyy - HH:mm', 'id_ID')
-                  .format(_preferredDateTime!)
-              : 'Pilih waktu yang Anda inginkan',
+              ? 'Hari ini, ${DateFormat('HH:mm', 'id_ID').format(_preferredDateTime!)}'
+              : 'Pilih jam berapa Anda ingin layanan dilakukan',
           style: TextStyle(fontSize: 13, color: Colors.grey[600]),
         ),
         trailing: _preferredDateTime != null

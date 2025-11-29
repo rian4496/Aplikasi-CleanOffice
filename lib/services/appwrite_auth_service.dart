@@ -105,6 +105,7 @@ class AppwriteAuthService {
   }) async {
     try {
       _logger.info('Creating new account: $email');
+      print('🔵 DEBUG: Attempting to create account for: $email'); // DEBUG
 
       // Clear any existing session first
       try {
@@ -115,6 +116,7 @@ class AppwriteAuthService {
       }
 
       // Create account
+      print('🔵 DEBUG: Calling _account.create()...'); // DEBUG
       final account = await _account.create(
         userId: ID.unique(),
         email: email,
@@ -139,7 +141,8 @@ class AppwriteAuthService {
         joinDate: DateTime.now(),
         departmentId: departmentId,
         phoneNumber: phoneNumber,
-        status: 'active',
+        status: 'inactive',
+        verificationStatus: 'pending',
       );
 
       await _createUserProfile(userProfile);
@@ -148,9 +151,16 @@ class AppwriteAuthService {
 
       return userProfile;
     } on AppwriteException catch (e) {
+      print('🔴 DEBUG: AppwriteException caught!');
+      print('🔴 DEBUG: Error code: ${e.code}');
+      print('🔴 DEBUG: Error message: ${e.message}');
+      print('🔴 DEBUG: Error type: ${e.type}');
       _logger.severe('❌ Sign up failed: ${e.message}', e);
       throw _handleAuthException(e);
     } catch (e, stackTrace) {
+      print('🔴 DEBUG: Generic exception caught!');
+      print('🔴 DEBUG: Exception: $e');
+      print('🔴 DEBUG: Stack: $stackTrace');
       _logger.severe('❌ Sign up error', e, stackTrace);
       rethrow;
     }
@@ -284,25 +294,29 @@ class AppwriteAuthService {
   /// Create user profile document in database
   Future<void> _createUserProfile(UserProfile profile) async {
     try {
+      // Build data with only non-null values
+      final data = <String, dynamic>{
+        'uid': profile.uid,
+        'displayName': profile.displayName,
+        'email': profile.email,
+        'role': profile.role,
+        'joinDate': profile.joinDate.toIso8601String(),
+        'status': profile.status,
+      };
+
+      // Add optional fields only if not null
+      if (profile.photoURL != null) data['photoURL'] = profile.photoURL;
+      if (profile.phoneNumber != null) data['phoneNumber'] = profile.phoneNumber;
+      if (profile.departmentId != null) data['departmentId'] = profile.departmentId;
+      if (profile.employeeId != null) data['employeeId'] = profile.employeeId;
+      if (profile.location != null) data['location'] = profile.location;
+      if (profile.verificationStatus != null) data['verificationStatus'] = profile.verificationStatus;
+
       await _databases.createDocument(
         databaseId: AppwriteConfig.databaseId,
         collectionId: AppwriteConfig.usersCollectionId,
-        documentId: profile.uid, // Use same ID as account
-        data: {
-          'uid': profile.uid,
-          'displayName': profile.displayName,
-          'email': profile.email,
-          'photoURL': profile.photoURL,
-          'phoneNumber': profile.phoneNumber,
-          'role': profile.role,
-          'joinDate': profile.joinDate.toIso8601String(),
-          'departmentId': profile.departmentId,
-          'staffId': profile.staffId,
-          'status': profile.status,
-          'location': profile.location,
-          'deletedAt': null,
-          'deletedBy': null,
-        },
+        documentId: profile.uid,
+        data: data,
       );
     } on AppwriteException catch (e) {
       _logger.severe('Error creating user profile: ${e.message}', e);
@@ -317,7 +331,7 @@ class AppwriteAuthService {
     String? phoneNumber,
     String? photoURL,
     String? departmentId,
-    String? staffId,
+    String? employeeId,
     String? location,
   }) async {
     try {
@@ -327,7 +341,7 @@ class AppwriteAuthService {
       if (phoneNumber != null) updates['phoneNumber'] = phoneNumber;
       if (photoURL != null) updates['photoURL'] = photoURL;
       if (departmentId != null) updates['departmentId'] = departmentId;
-      if (staffId != null) updates['staffId'] = staffId;
+      if (employeeId != null) updates['employeeId'] = employeeId;
       if (location != null) updates['location'] = location;
 
       await _databases.updateDocument(

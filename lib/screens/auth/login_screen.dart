@@ -56,8 +56,46 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      debugPrint('Login successful! Role: ${userProfile.role}');
+      debugPrint('Login successful! Role: ${userProfile.role}, Status: ${userProfile.status}, Verification: ${userProfile.verificationStatus}');
 
+      // ✅ Check if user account is pending approval
+      if (userProfile.verificationStatus == 'pending') {
+        // Force logout
+        await _authService.signOut();
+        
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Akun Anda menunggu verifikasi admin. Silakan coba lagi nanti.',
+            ),
+            backgroundColor: Colors.orange,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;  // Stop login process
+      }
+
+      // ✅ Check if user account was rejected
+      if (userProfile.verificationStatus == 'rejected') {
+        await _authService.signOut();
+        
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Akun Anda ditolak oleh admin. Hubungi administrator untuk info lebih lanjut.',
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
+      }
+
+      // Continue with normal routing for approved users
       String route;
       switch (userProfile.role) {
         case 'admin':

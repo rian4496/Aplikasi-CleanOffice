@@ -15,9 +15,9 @@ class EmployeeColors {
   static const Color primaryPastel = Color(0xFFEFF6FF); // Blue 50
 
   // ==================== GRADIENT ====================
-  /// AppBar gradient (Blue to Purple)
-  static const Color gradientStart = Color(0xFF3B82F6); // Blue 500
-  static const Color gradientEnd = Color(0xFF8B5CF6); // Purple 500
+  /// AppBar gradient (Light Blue - matching screenshot)
+  static const Color gradientStart = Color(0xFF64B5F6); // Light Blue 400
+  static const Color gradientEnd = Color(0xFF42A5F5);   // Lighter Blue 400
 
   static const LinearGradient appBarGradient = LinearGradient(
     colors: [gradientStart, gradientEnd],

@@ -60,12 +60,12 @@ class DrawerMenuWidget extends StatelessWidget {
                 // Divider sebelum logout
                 const Divider(),
 
-                // Logout button
+                // Logout button with confirmation
                 _buildMenuItem(
                   DrawerMenuItem(
                     icon: Icons.logout,
                     title: 'Keluar',
-                    onTap: onLogout,
+                    onTap: () => _showLogoutConfirmation(context),
                     isDestructive: true,
                   ),
                 ),
@@ -128,6 +128,53 @@ class DrawerMenuWidget extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
+        ],
+      ),
+    );
+  }
+
+  /// Show logout confirmation dialog
+  void _showLogoutConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text(
+          'Konfirmasi Logout',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Apakah anda ingin logout?',
+          style: TextStyle(fontSize: 15),
+        ),
+        actions: [
+          // BATAL button (Blue)
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'BATAL',
+              style: TextStyle(
+                color: Colors.blue,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          // KELUAR button (Red)
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Close dialog
+              onLogout(); // Call logout callback
+            },
+            child: const Text(
+              'KELUAR',
+              style: TextStyle(
+                color: Colors.red,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         ],
       ),
     );

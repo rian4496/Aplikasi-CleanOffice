@@ -8,6 +8,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/report.dart';
 import '../../services/export_service.dart';
+import './export_dialog.dart';
 import './charts/chart_container.dart';
 import './charts/reports_trend_chart.dart';
 import './charts/location_bar_chart.dart';
@@ -40,37 +41,27 @@ class AdminAnalyticsWidget extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Data Visualization & Analytics',
-                style: TextStyle(
-                  fontSize: ResponsiveHelper.headingFontSize(context),
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
+              Flexible(
+                child: Text(
+                  'Data Visualization & Analytics',
+                  style: TextStyle(
+                    fontSize: isMobile ? 16 : ResponsiveHelper.headingFontSize(context),
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.file_download_outlined),
-                    tooltip: 'Export PDF',
-                    onPressed: () {
-                      ref.read(exportServiceProvider).exportToPdf(reports);
-                    },
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.table_view_outlined),
-                    tooltip: 'Export Excel',
-                    onPressed: () {
-                      ref.read(exportServiceProvider).exportToExcel(reports);
-                    },
-                  ),
-                  const SizedBox(width: 8),
-                  Icon(
-                    Icons.bar_chart,
-                    color: AppTheme.primary,
-                    size: 24,
-                  ),
-                ],
+              IconButton(
+                icon: Icon(Icons.file_download_outlined, color: Colors.grey[700]),
+                tooltip: 'Export',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (_) => const ExportDialog(),
+                  );
+                },
               ),
             ],
           ),

@@ -15,10 +15,15 @@ import '../../models/conversation.dart';
 import '../../models/user_profile.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/chat_providers.dart';
-import '../../services/appwrite_database_service.dart';
+import '../../providers/riverpod/chat_selection_provider.dart';
+import '../../services/supabase_database_service.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
+import '../../widgets/navigation/cleaner_more_bottom_sheet.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../widgets/shared/notification_bell.dart';
+import '../../widgets/chat/selection_app_bar.dart';
 import 'chat_room_screen.dart';
+import '../cleaner/cleaner_inbox_screen.dart';
 
 final _logger = AppLogger('ConversationListScreen');
 
@@ -58,75 +63,62 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
   Widget build(BuildContext context) {
     final currentUser = ref.watch(currentUserProfileProvider);
     final isDesktop = ResponsiveHelper.isDesktop(context);
+    final selectionState = ref.watch(chatSelectionProvider);
 
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AdminColors.background,
-      appBar: AppBar(
-        title: const Text(
-          'Chat',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        automaticallyImplyLeading: false,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
-        actions: [
-          // Total unread badge
-          currentUser.when(
-            data: (user) {
-              if (user == null) return const SizedBox.shrink();
-
-              final totalUnreadAsync = ref.watch(totalUnreadCountProvider(user.uid));
-              return totalUnreadAsync.when(
-                data: (count) {
-                  if (count == 0) return const SizedBox.shrink();
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: AdminColors.error,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          count > 99 ? '99+' : '$count',
-                          style: AdminTypography.caption.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  );
-                },
-                loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
-          // Hamburger Menu Icon to open endDrawer
-          if (!isDesktop)
-            IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () {
-                _scaffoldKey.currentState?.openEndDrawer();
+      appBar: selectionState.isSelectionMode
+          ? SelectionAppBar(
+              selectedCount: selectionState.selectedCount,
+              onClose: () {
+                ref.read(chatSelectionProvider.notifier).clearSelection();
               },
-              tooltip: 'Menu',
+              onDelete: () {
+                _handleDeleteSelected(context, ref, selectionState.selectedIds);
+              },
+              onPin: () {
+                _handlePinSelected(context, ref, selectionState.selectedIds);
+              },
+              onMute: () {
+                _handleMuteSelected(context, ref, selectionState.selectedIds);
+              },
+              onMarkRead: () {
+                _handleMarkReadSelected(context, ref, selectionState.selectedIds);
+              },
+            )
+          : AppBar(
+              title: const Text(
+                'Chat',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              automaticallyImplyLeading: false,
+              flexibleSpace: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+              ),
+              actions: [
+                // Notification bell
+                const NotificationBell(iconColor: Colors.white),
+                const SizedBox(width: 8),
+                // Hamburger Menu Icon to open endDrawer
+                if (!isDesktop)
+                  IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: () {
+                      _scaffoldKey.currentState?.openEndDrawer();
+                    },
+                    tooltip: 'Menu',
+                  ),
+              ],
             ),
-        ],
-      ),
       endDrawer: isDesktop
           ? null
           : Drawer(
@@ -163,7 +155,7 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
         data: (user) {
           if (user == null) {
             return const Center(
-              child: Text('Silakan login terlebih dahulu'),
+              child: Text('Belum ada obrolan'),
             );
           }
 
@@ -251,19 +243,35 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                             separatorBuilder: (context, index) => const Divider(height: 1),
                             itemBuilder: (context, index) {
                               final conversation = filteredConversations[index];
+                              final isSelected = selectionState.isSelected(conversation.id);
+                              final isSelectionMode = selectionState.isSelectionMode;
+                              
                               return _ConversationListItem(
                                 conversation: conversation,
                                 currentUserId: user.uid,
+                                isSelected: isSelected,
+                                isSelectionMode: isSelectionMode,
                                 onTap: () {
-                                  _logger.info('Opening conversation: ${conversation.id}');
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => ChatRoomScreen(
-                                        conversationId: conversation.id,
+                                  if (isSelectionMode) {
+                                    // In selection mode, tap toggles selection
+                                    ref.read(chatSelectionProvider.notifier).toggleSelection(conversation.id);
+                                  } else {
+                                    // Normal mode, open chat
+                                    _logger.info('Opening conversation: ${conversation.id}');
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => ChatRoomScreen(
+                                          conversationId: conversation.id,
+                                          otherUserName: conversation.getDisplayName(user.uid),
+                                        ),
                                       ),
-                                    ),
-                                  );
+                                    );
+                                  }
+                                },
+                                onLongPress: () {
+                                  // Start selection mode
+                                  ref.read(chatSelectionProvider.notifier).startSelection(conversation.id);
                                 },
                               );
                             },
@@ -318,16 +326,18 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
       floatingActionButton: !isDesktop
           ? FloatingActionButton(
               onPressed: () => _showNewChatDialog(context, currentUser.asData?.value),
-              backgroundColor: AppTheme.primary,
+              backgroundColor: AppTheme.headerGradientEnd,
               tooltip: 'Obrolan Baru',
-              child: const Icon(Icons.message, color: Colors.white),
+              child: const Icon(Icons.chat_bubble_outline, color: Colors.white),
             )
           : null,
     );
   }
 
-  /// Build Bottom Navigation Bar
+  /// Build Bottom Navigation Bar - ROLE AWARE
   Widget _buildBottomNavBar(BuildContext context) {
+    final userRole = ref.watch(currentUserRoleProvider);
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -350,22 +360,14 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.homeAdminRoute,
-                  (route) => false,
-                ),
+                onTap: () => _navigateToHome(context, userRole),
               ),
               _buildNavItem(
                 context: context,
-                icon: Icons.assessment_rounded,
-                label: 'Laporan',
+                icon: userRole == 'cleaner' ? Icons.inbox_rounded : Icons.assignment_rounded,
+                label: userRole == 'cleaner' ? 'Inbox' : 'Laporan',
                 isActive: false,
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  '/reports_management',
-                  (route) => false,
-                ),
+                onTap: () => _navigateToReports(context, userRole),
               ),
               _buildNavItem(
                 context: context,
@@ -379,19 +381,76 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
                 icon: Icons.more_horiz_rounded,
                 label: 'Lainnya',
                 isActive: false,
-                onTap: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => const AdminMoreBottomSheet(),
-                  );
-                },
+                onTap: () => _showMoreMenu(context, userRole),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// Navigate to Home based on role
+  void _navigateToHome(BuildContext context, String? role) {
+    // Normalize role to lowercase for comparison
+    final normalizedRole = role?.toLowerCase();
+    _logger.info('🏠 Navigating to home - role: $role (normalized: $normalizedRole)');
+    
+    String route;
+    switch (normalizedRole) {
+      case 'admin':
+        route = AppConstants.homeAdminRoute;
+        break;
+      case 'cleaner':
+        route = AppConstants.homeCleanerRoute;
+        break;
+      case 'employee':
+        route = AppConstants.homeEmployeeRoute;
+        break;
+      default:
+        _logger.warning('⚠️ Unknown role: $role - defaulting to login');
+        route = '/login'; // Safer default
+    }
+    Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
+  }
+
+  /// Navigate to Reports/Inbox based on role
+  void _navigateToReports(BuildContext context, String? role) {
+    final normalizedRole = role?.toLowerCase();
+    _logger.info('📋 Navigating to reports - role: $role (normalized: $normalizedRole)');
+    
+    if (normalizedRole == 'cleaner') {
+      // Cleaner goes to Inbox
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CleanerInboxScreen()),
+      );
+    } else {
+      // Admin/Employee go to reports management
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/reports_management',
+        (route) => false,
+      );
+    }
+  }
+
+  /// Show More menu based on role
+  void _showMoreMenu(BuildContext context, String? role) {
+    final normalizedRole = role?.toLowerCase();
+    _logger.info('📱 Showing more menu - role: $role (normalized: $normalizedRole)');
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        if (normalizedRole == 'cleaner') {
+          return const CleanerMoreBottomSheet();
+        } else {
+          return const AdminMoreBottomSheet();
+        }
+      },
     );
   }
 
@@ -403,6 +462,10 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
     required bool isActive,
     required VoidCallback onTap,
   }) {
+    // Light blue gradient color for active state
+    final activeColor = AppTheme.headerGradientStart;
+    final inactiveColor = Colors.grey[600]!;
+    
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -413,14 +476,14 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
           children: [
             Icon(
               icon,
-              color: isActive ? AppTheme.primary : Colors.grey[600],
+              color: isActive ? activeColor : inactiveColor,
               size: 24,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                color: isActive ? AppTheme.primary : Colors.grey[600],
+                color: isActive ? activeColor : inactiveColor,
                 fontSize: 12,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
@@ -439,6 +502,65 @@ class _ConversationListScreenState extends ConsumerState<ConversationListScreen>
       context: context,
       builder: (context) => _NewChatDialog(currentUserId: currentUser.uid),
     );
+  }
+
+  // ==================== SELECTION ACTIONS ====================
+  
+  /// Handle delete selected conversations
+  void _handleDeleteSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus Percakapan'),
+        content: Text('Hapus ${selectedIds.length} percakapan yang dipilih?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // TODO: Implement delete via ChatService
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${selectedIds.length} percakapan dihapus')),
+      );
+      ref.read(chatSelectionProvider.notifier).clearSelection();
+    }
+  }
+
+  /// Handle pin selected conversations
+  void _handlePinSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) {
+    // TODO: Implement pin via ChatService
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${selectedIds.length} percakapan dipin')),
+    );
+    ref.read(chatSelectionProvider.notifier).clearSelection();
+  }
+
+  /// Handle mute selected conversations
+  void _handleMuteSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) {
+    // TODO: Implement mute via ChatService
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${selectedIds.length} percakapan dibisukan')),
+    );
+    ref.read(chatSelectionProvider.notifier).clearSelection();
+  }
+
+  /// Handle mark read selected conversations
+  void _handleMarkReadSelected(BuildContext context, WidgetRef ref, Set<String> selectedIds) {
+    // TODO: Implement mark read via ChatService
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${selectedIds.length} percakapan ditandai dibaca')),
+    );
+    ref.read(chatSelectionProvider.notifier).clearSelection();
   }
 }
 
@@ -514,7 +636,7 @@ class _NewChatDialog extends HookConsumerWidget {
             // User list
             Expanded(
               child: FutureBuilder<List<UserProfile>>(
-                future: AppwriteDatabaseService().getAllUserProfiles(),
+                future: SupabaseDatabaseService().getAllUserProfiles(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator());
@@ -617,8 +739,8 @@ class _NewChatDialog extends HookConsumerWidget {
       final conversation = await chatService.getOrCreateDirectConversation(
         currentUserId: currentUser.uid,
         otherUserId: otherUser.uid,
-        currentUser: currentUser,
-        otherUser: otherUser,
+        currentUserName: currentUser.displayName ?? 'User',
+        otherUserName: otherUser.displayName,
       );
 
       if (!context.mounted) return;
@@ -645,6 +767,7 @@ class _NewChatDialog extends HookConsumerWidget {
         MaterialPageRoute(
           builder: (context) => ChatRoomScreen(
             conversationId: conversation.id,
+            otherUserName: otherUser.displayName,
           ),
         ),
       );
@@ -670,11 +793,17 @@ class _ConversationListItem extends HookConsumerWidget {
   final Conversation conversation;
   final String currentUserId;
   final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelected;
+  final bool isSelectionMode;
 
   const _ConversationListItem({
     required this.conversation,
     required this.currentUserId,
     required this.onTap,
+    this.onLongPress,
+    this.isSelected = false,
+    this.isSelectionMode = false,
   });
 
   @override
@@ -697,27 +826,48 @@ class _ConversationListItem extends HookConsumerWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Container(
-        color: Colors.white,
+        color: isSelected ? Colors.blue.withOpacity(0.15) : Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
+            // Selection checkbox (only in selection mode)
+            if (isSelectionMode)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: isSelected ? AppTheme.primary : Colors.transparent,
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primary : Colors.grey[400]!,
+                      width: 2,
+                    ),
+                  ),
+                  child: isSelected
+                      ? const Icon(Icons.check, size: 16, color: Colors.white)
+                      : null,
+                ),
+              ),
             // Avatar with online status indicator
             Stack(
               children: [
                 CircleAvatar(
                   radius: 28,
-                  backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+                  backgroundColor: Colors.grey[200],
                   child: conversation.type == ConversationType.group
-                      ? const Icon(
+                      ? Icon(
                           Icons.group,
                           size: 28,
-                          color: AdminColors.primary,
+                          color: Colors.grey[700],
                         )
                       : Text(
                           conversation.getDisplayName(currentUserId)[0].toUpperCase(),
                           style: AdminTypography.h3.copyWith(
-                            color: AdminColors.primary,
+                            color: Colors.grey[700],
                           ),
                         ),
                 ),

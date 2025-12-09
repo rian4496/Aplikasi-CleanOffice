@@ -110,6 +110,43 @@ class UserProfile {
     };
   }
 
+  /// Factory constructor for Supabase document
+  factory UserProfile.fromSupabase(Map<String, dynamic> data) {
+    return UserProfile(
+      // Supabase uses 'id' directly (Auth ID = Database ID)
+      uid: data['id'] as String? ?? '',
+      displayName: data['display_name'] as String? ?? '',
+      email: data['email'] as String? ?? '',
+      photoURL: data['photo_url'] as String?,
+      phoneNumber: data['phone_number'] as String?,
+      role: data['role'] as String? ?? UserRole.employee,
+      joinDate: DateTime.tryParse(data['created_at'] as String? ?? '') ??
+          DateTime.tryParse(data['join_date'] as String? ?? '') ??
+          DateTime.now(),
+      departmentId: data['department_id'] as String?,
+      employeeId: data['employee_id'] as String?,
+      status: data['status'] as String? ?? 'inactive',
+      verificationStatus: data['verification_status'] as String? ?? 'pending',
+      location: data['location'] as String?,
+    );
+  }
+
+  /// Convert to Supabase document format
+  Map<String, dynamic> toSupabase() {
+    return {
+      'display_name': displayName,
+      'email': email,
+      'photo_url': photoURL,
+      'phone_number': phoneNumber,
+      'role': role,
+      'department_id': departmentId,
+      'employee_id': employeeId,
+      'status': status,
+      'verification_status': verificationStatus,
+      'location': location,
+    };
+  }
+
   UserProfile copyWith({
     String? displayName,
     String? photoURL,

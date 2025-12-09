@@ -10,6 +10,7 @@ import '../../models/user_profile.dart';
 import '../../providers/riverpod/admin_providers.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../widgets/admin/role_selector_widget.dart';
 
 class AccountVerificationScreen extends ConsumerStatefulWidget {
   const AccountVerificationScreen({super.key});
@@ -30,6 +31,11 @@ class _AccountVerificationScreenState
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+
+    // ✅ Auto-refresh data saat screen dibuka
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(pendingVerificationUsersProvider);
+    });
   }
 
   @override
@@ -305,21 +311,34 @@ class _AccountVerificationScreenState
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        // Role badge
+                        // Role Badge with Icon
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryLight,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            roleLabel,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: AppTheme.primary,
+                            color: _getRoleColor(user.role).withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: _getRoleColor(user.role).withValues(alpha: 0.3),
                             ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                _getRoleIcon(user.role),
+                                size: 14,
+                                color: _getRoleColor(user.role),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                roleLabel,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: _getRoleColor(user.role),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -507,6 +526,30 @@ class _AccountVerificationScreenState
     }
   }
 
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return AppTheme.primary;
+      case 'cleaner':
+        return AppTheme.success;
+      case 'employee':
+      default:
+        return AppTheme.info;
+    }
+  }
+
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case 'admin':
+        return Icons.admin_panel_settings_outlined;
+      case 'cleaner':
+        return Icons.cleaning_services_outlined;
+      case 'employee':
+      default:
+        return Icons.person_outline;
+    }
+  }
+
   // ==================== BOTTOM NAVIGATION BAR ====================
   Widget _buildEndDrawer() {
     return DrawerMenuWidget(
@@ -645,7 +688,7 @@ class _AccountVerificationScreenState
 }
 
 // ==================== USER DETAIL BOTTOM SHEET ====================
-class _UserDetailSheet extends StatelessWidget {
+class _UserDetailSheet extends ConsumerStatefulWidget {
   final UserProfile user;
   final VoidCallback onApprove;
   final VoidCallback onReject;
@@ -657,8 +700,92 @@ class _UserDetailSheet extends StatelessWidget {
   });
 
   @override
+  ConsumerState<_UserDetailSheet> createState() => _UserDetailSheetState();
+}
+
+class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
+  late String _selectedRole;
+  bool _hasRoleChanged = false;
+  bool _isUpdating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedRole = widget.user.role;
+  }
+
+  void _onRoleChanged(String newRole) {
+    setState(() {
+      _selectedRole = newRole;
+      _hasRoleChanged = newRole != widget.user.role;
+    });
+  }
+
+  Future<void> _handleApprove() async {
+    try {
+      setState(() => _isUpdating = true);
+
+      // If role changed, update it first
+      if (_hasRoleChanged) {
+        await ref.read(updateUserRoleProvider((widget.user.uid, _selectedRole)).future);
+      }
+
+      // Then approve user
+      if (mounted) {
+        widget.onApprove();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengubah role: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdating = false);
+      }
+    }
+  }
+
+  Future<void> _handleSaveRole() async {
+    if (!_hasRoleChanged) return;
+
+    try {
+      setState(() => _isUpdating = true);
+
+      await ref.read(updateUserRoleProvider((widget.user.uid, _selectedRole)).future);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Role berhasil diubah'),
+            backgroundColor: AppTheme.success,
+          ),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengubah role: $e'),
+            backgroundColor: AppTheme.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isUpdating = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isPending = user.verificationStatus == 'pending';
+    final isPending = widget.user.verificationStatus == 'pending';
 
     return Container(
       decoration: const BoxDecoration(
@@ -707,100 +834,181 @@ class _UserDetailSheet extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar & Name
-                CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppTheme.primaryLight,
-                  backgroundImage:
-                      user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                  child: user.photoURL == null
-                      ? Text(
-                          user.displayName.isNotEmpty
-                              ? user.displayName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  user.displayName,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  user.email,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
+                // Avatar & Name (centered)
+                Center(
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 40,
+                        backgroundColor: AppTheme.primaryLight,
+                        backgroundImage:
+                            widget.user.photoURL != null ? NetworkImage(widget.user.photoURL!) : null,
+                        child: widget.user.photoURL == null
+                            ? Text(
+                                widget.user.displayName.isNotEmpty
+                                    ? widget.user.displayName[0].toUpperCase()
+                                    : '?',
+                                style: const TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primary,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        widget.user.displayName,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.user.email,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 
                 const SizedBox(height: 24),
 
-                // Info rows
-                _buildInfoRow(Icons.badge_outlined, 'Role', _getRoleLabel(user.role)),
-                if (user.phoneNumber != null)
-                  _buildInfoRow(Icons.phone_outlined, 'Telepon', user.phoneNumber!),
-                if (user.departmentId != null)
-                  _buildInfoRow(Icons.business_outlined, 'Departemen', user.departmentId!),
-                if (user.employeeId != null)
-                  _buildInfoRow(Icons.numbers_outlined, 'Employee ID', user.employeeId!),
+                // Role Selector - Always enabled (per user request: "keduanya")
+                RoleSelectorWidget(
+                  selectedRole: _selectedRole,
+                  onRoleChanged: _onRoleChanged,
+                  enabled: !_isUpdating,
+                ),
+
+                const SizedBox(height: 20),
+
+                // Other info
+                if (widget.user.phoneNumber != null)
+                  _buildInfoRow(Icons.phone_outlined, 'Telepon', widget.user.phoneNumber!),
+                if (widget.user.departmentId != null)
+                  _buildInfoRow(Icons.business_outlined, 'Departemen', widget.user.departmentId!),
+                if (widget.user.employeeId != null)
+                  _buildInfoRow(Icons.numbers_outlined, 'Employee ID', widget.user.employeeId!),
                 _buildInfoRow(Icons.calendar_today_outlined, 'Terdaftar',
-                    DateFormatter.fullDate(user.joinDate)),
+                    DateFormatter.fullDate(widget.user.joinDate)),
+
+                // Show role change warning
+                if (_hasRoleChanged)
+                  Container(
+                    margin: const EdgeInsets.only(top: 12),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.warning.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppTheme.warning.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 20, color: AppTheme.warning),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'Role akan diubah dari ${_getRoleLabel(widget.user.role)} ke ${_getRoleLabel(_selectedRole)}',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey[800],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
 
-          // Action buttons (only for pending)
-          if (isPending)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: onReject,
-                      icon: const Icon(Icons.close),
-                      label: const Text('Tolak'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.error,
-                        side: const BorderSide(color: AppTheme.error),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+          // Action buttons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+            child: isPending
+                ? Row(
+                    children: [
+                      // Reject Button
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _isUpdating ? null : widget.onReject,
+                          icon: const Icon(Icons.close),
+                          label: const Text('Tolak'),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.error,
+                            side: const BorderSide(color: AppTheme.error),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: onApprove,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Verifikasi'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 16),
+                      // Approve Button (with role save)
+                      Expanded(
+                        flex: _hasRoleChanged ? 2 : 1,
+                        child: ElevatedButton.icon(
+                          onPressed: _isUpdating ? null : _handleApprove,
+                          icon: _isUpdating
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.check_circle_outline),
+                          label: Text(_hasRoleChanged ? 'Verifikasi & Simpan Role' : 'Verifikasi'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.success,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+                    ],
+                  )
+                : _hasRoleChanged
+                    ? SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          onPressed: _isUpdating ? null : _handleSaveRole,
+                          icon: _isUpdating
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Icon(Icons.save),
+                          label: const Text('Simpan Role'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.primary,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+          ),
 
           // Safe area padding
           SizedBox(height: MediaQuery.of(context).padding.bottom),

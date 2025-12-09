@@ -40,7 +40,18 @@
       "Bash(del /q libmodels*_freezed.dart libmodels*.g.dart)",
       "Bash(timeout 60 ping:*)",
       "Bash(timeout 10 ping:*)",
-      "Bash(clip:*)"
+      "Bash(clip:*)",
+      "Bash(dart run:*)",
+      "Bash(timeout:*)",
+      "Bash(adb logcat:*)",
+      "Bash(java -version:*)",
+      "Bash(flutter doctor:*)",
+      "Bash(flutter create:*)",
+      "Bash(dart format:*)",
+      "Bash(dart compile kernel:*)",
+      "Bash(git restore:*)",
+      "Bash(gradlew:*)",
+      "Bash(.gradlew.bat --stop)"
     ],
     "deny": [],
     "ask": []

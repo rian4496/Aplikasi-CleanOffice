@@ -112,9 +112,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             'Settings',
             style: TextStyle(color: Colors.white),
           ),
-          backgroundColor: AppTheme.primary,
+          backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,
           elevation: 0,
+          flexibleSpace: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+            ),
+          ),
         ),
         body: Center(
           child: Column(
@@ -145,9 +154,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _t('title', lang),
           style: const TextStyle(color: Colors.white),
         ),
-        backgroundColor: AppTheme.primary,
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: ListView(
         children: [
@@ -263,7 +281,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: SwitchListTile(
-        secondary: Icon(icon, color: enabled ? AppTheme.primary : Colors.grey),
+        secondary: Icon(icon, color: enabled ? Colors.grey[700] : Colors.grey),
         title: Text(
           title,
           style: TextStyle(
@@ -285,7 +303,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
-        leading: const Icon(Icons.language, color: AppTheme.primary),
+        leading: Icon(Icons.language, color: Colors.grey[700]),
         title: Text(
           _t('language', currentLang),
           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -321,7 +339,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primary),
+        leading: Icon(icon, color: Colors.grey[700]),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.w600),
@@ -341,7 +359,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primary),
+        leading: Icon(icon, color: Colors.grey[700]),
         title: Text(
           title,
           style: const TextStyle(fontWeight: FontWeight.w600),

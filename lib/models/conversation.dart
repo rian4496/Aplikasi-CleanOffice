@@ -121,6 +121,102 @@ class Conversation {
     );
   }
 
+  /// Create from Supabase (snake_case)
+  factory Conversation.fromSupabase(Map<String, dynamic> data) {
+    Map<String, int> unreadCountsMap = {};
+    if (data['unread_counts'] != null) {
+      try {
+        if (data['unread_counts'] is String) {
+          final decoded = jsonDecode(data['unread_counts']) as Map<String, dynamic>;
+          unreadCountsMap = decoded.map((key, value) => MapEntry(key, value as int));
+        } else if (data['unread_counts'] is Map) {
+          unreadCountsMap = (data['unread_counts'] as Map).map(
+            (key, value) => MapEntry(key.toString(), value as int));
+        }
+      } catch (e) {
+        unreadCountsMap = {};
+      }
+    }
+
+    return Conversation(
+      id: data['id']?.toString() ?? '',
+      type: ConversationType.fromFirestore(data['type'] ?? 'direct'),
+      name: data['name'],
+      participantIds: data['participant_ids'] != null
+          ? List<String>.from(data['participant_ids'])
+          : data['participant_1'] != null && data['participant_2'] != null
+              ? [data['participant_1'], data['participant_2']]
+              : [],
+      participantNames: data['participant_names'] != null
+          ? List<String>.from(data['participant_names'])
+          : [],
+      participantRoles: data['participant_roles'] != null
+          ? List<String>.from(data['participant_roles'])
+          : [],
+      createdBy: data['created_by'] ?? '',
+      lastMessageText: data['last_message'] ?? data['last_message_text'],
+      lastMessageAt: data['last_message_at'] != null
+          ? DateTime.parse(data['last_message_at'])
+          : null,
+      lastMessageBy: data['last_message_by'],
+      groupAvatarUrl: data['group_avatar_url'],
+      isArchived: data['is_archived'] ?? false,
+      contextType: ChatContextType.fromFirestore(data['context_type']),
+      contextId: data['context_id'],
+      unreadCounts: unreadCountsMap,
+      createdAt: data['created_at'] != null 
+          ? DateTime.parse(data['created_at']) 
+          : DateTime.now(),
+      updatedAt: data['updated_at'] != null 
+          ? DateTime.parse(data['updated_at']) 
+          : DateTime.now(),
+    );
+  }
+
+  /// Create from 'chats' table (simplified schema with participant_ids array)
+  factory Conversation.fromChatsTable(Map<String, dynamic> data) {
+    // Parse participant_ids from the array
+    List<String> participantIds = [];
+    if (data['participant_ids'] != null) {
+      participantIds = (data['participant_ids'] as List).map((e) => e.toString()).toList();
+    }
+
+    // Determine context type from report_id or request_id
+    ChatContextType? contextType;
+    String? contextId;
+    if (data['report_id'] != null) {
+      contextType = ChatContextType.report;
+      contextId = data['report_id'].toString();
+    } else if (data['request_id'] != null) {
+      contextType = ChatContextType.request;
+      contextId = data['request_id'].toString();
+    }
+
+    return Conversation(
+      id: data['id']?.toString() ?? '',
+      type: participantIds.length == 2 ? ConversationType.direct : ConversationType.group,
+      name: null, // No name column in chats table
+      participantIds: participantIds,
+      participantNames: [], // Not stored in chats table
+      participantRoles: [], // Not stored in chats table
+      createdBy: participantIds.isNotEmpty ? participantIds.first : '',
+      lastMessageText: null,
+      lastMessageAt: null,
+      lastMessageBy: null,
+      groupAvatarUrl: null,
+      isArchived: false,
+      contextType: contextType,
+      contextId: contextId,
+      unreadCounts: {},
+      createdAt: data['created_at'] != null 
+          ? DateTime.parse(data['created_at']) 
+          : DateTime.now(),
+      updatedAt: data['updated_at'] != null 
+          ? DateTime.parse(data['updated_at']) 
+          : DateTime.now(),
+    );
+  }
+
   /// Convert to Appwrite document data
   Map<String, dynamic> toAppwrite() {
     return {

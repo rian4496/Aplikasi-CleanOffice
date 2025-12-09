@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/responsive_helper.dart';
@@ -84,12 +85,26 @@ class _AllReportsManagementScreenState
 
       // ====================FAB (Mobile Only) ====================
       floatingActionButton: !isDesktop
-          ? FloatingActionButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/create_report');
-              },
-              backgroundColor: AppTheme.primary,
-              child: const Icon(Icons.add, color: Colors.white),
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: FloatingActionButton(
+                onPressed: () {
+                  Navigator.pushNamed(context, '/create_report');
+                },
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
             )
           : null,
     );
@@ -986,16 +1001,17 @@ class _AllReportsManagementScreenState
                                   setModalState(() => startDate = picked);
                                 }
                               },
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: const Icon(Icons.calendar_today, size: 16, color: Colors.black),
                               label: Text(
                                 startDate != null
                                     ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
                                     : 'Dari',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(fontSize: 13, color: Colors.black),
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                side: BorderSide(color: Colors.grey[300]!),
+                                side: BorderSide(color: Colors.grey[400]!),
+                                foregroundColor: Colors.black,
                               ),
                             ),
                           ),
@@ -1016,16 +1032,17 @@ class _AllReportsManagementScreenState
                                   setModalState(() => endDate = picked);
                                 }
                               },
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: const Icon(Icons.calendar_today, size: 16, color: Colors.black),
                               label: Text(
                                 endDate != null
                                     ? '${endDate!.day}/${endDate!.month}/${endDate!.year}'
                                     : 'Sampai',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(fontSize: 13, color: Colors.black),
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                side: BorderSide(color: Colors.grey[300]!),
+                                side: BorderSide(color: Colors.grey[400]!),
+                                foregroundColor: Colors.black,
                               ),
                             ),
                           ),
@@ -1056,28 +1073,40 @@ class _AllReportsManagementScreenState
                       // Apply button
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Apply filters to provider
-                            ref.read(reportFilterProvider.notifier).setStatusFilter(
-                              selectedStatus != null ? [selectedStatus!] : null,
-                            );
-                            ref.read(reportFilterProvider.notifier).setSortBy(selectedSort);
-                            ref.read(reportFilterProvider.notifier).setDateRange(startDate, endDate);
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text(
-                            'Terapkan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Apply filters to provider
+                              ref.read(reportFilterProvider.notifier).setStatusFilter(
+                                selectedStatus != null ? [selectedStatus!] : null,
+                              );
+                              ref.read(reportFilterProvider.notifier).setSortBy(selectedSort);
+                              ref.read(reportFilterProvider.notifier).setDateRange(startDate, endDate);
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Terapkan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -1163,7 +1192,11 @@ class _AllReportsManagementScreenState
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pop(context), // Kembali ke Dashboard
+                onTap: () => Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  AppConstants.homeAdminRoute,
+                  (route) => false,
+                ),
               ),
               _buildNavItem(
                 icon: Icons.assignment_rounded,
@@ -1200,7 +1233,8 @@ class _AllReportsManagementScreenState
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    final activeColor = AppTheme.primary;
+    // Light blue gradient color for active state
+    final activeColor = AppTheme.headerGradientStart;
     final inactiveColor = Colors.grey[600]!;
 
     return Expanded(

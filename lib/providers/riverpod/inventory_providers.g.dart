@@ -8,62 +8,6 @@ part of 'inventory_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Provider untuk AppwriteDatabaseService singleton
-/// Digunakan di seluruh inventory providers
-
-@ProviderFor(appwriteDatabaseService)
-const appwriteDatabaseServiceProvider = AppwriteDatabaseServiceProvider._();
-
-/// Provider untuk AppwriteDatabaseService singleton
-/// Digunakan di seluruh inventory providers
-
-final class AppwriteDatabaseServiceProvider
-    extends
-        $FunctionalProvider<
-          AppwriteDatabaseService,
-          AppwriteDatabaseService,
-          AppwriteDatabaseService
-        >
-    with $Provider<AppwriteDatabaseService> {
-  /// Provider untuk AppwriteDatabaseService singleton
-  /// Digunakan di seluruh inventory providers
-  const AppwriteDatabaseServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'appwriteDatabaseServiceProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$appwriteDatabaseServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<AppwriteDatabaseService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  AppwriteDatabaseService create(Ref ref) {
-    return appwriteDatabaseService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AppwriteDatabaseService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<AppwriteDatabaseService>(value),
-    );
-  }
-}
-
-String _$appwriteDatabaseServiceHash() =>
-    r'1494f51b806808b4d193c4564fa18494e9388490';
-
 /// Stream all inventory items
 
 @ProviderFor(allInventoryItems)
@@ -108,7 +52,7 @@ final class AllInventoryItemsProvider
   }
 }
 
-String _$allInventoryItemsHash() => r'1a1158c7e5814ae854384e851be54ee100184083';
+String _$allInventoryItemsHash() => r'0011fd6d9063fddcd34b2ec61a3c20164fb40fc6';
 
 /// Stream low stock items
 
@@ -154,7 +98,7 @@ final class LowStockItemsProvider
   }
 }
 
-String _$lowStockItemsHash() => r'74179369ace6c2e85a6d5a722e5f811a4b738bd6';
+String _$lowStockItemsHash() => r'b39491889488e314682c4421f5d98660fcb262c0';
 
 /// Get low stock count
 
@@ -239,7 +183,7 @@ final class PendingStockRequestsProvider
 }
 
 String _$pendingStockRequestsHash() =>
-    r'883fe4e169b15adbba685be388f2dc598667f9e3';
+    r'43c236be6f35c1df615a1060561918ce116a5607';
 
 /// Stream user's stock requests
 
@@ -285,7 +229,7 @@ final class MyStockRequestsProvider
   }
 }
 
-String _$myStockRequestsHash() => r'949f6b52e8e62d69b8718cdb5bd6ddde1e646d7c';
+String _$myStockRequestsHash() => r'6559bf12454eb6fb8f96021c87ebd74deb94f7e9';
 
 /// Get pending requests count
 
@@ -325,3 +269,58 @@ final class PendingRequestsCountProvider
 
 String _$pendingRequestsCountHash() =>
     r'2c7a9636c9e29f9a60d49f1f3aa4e49efbbc003a';
+
+/// Legacy provider - redirects to supabaseDatabaseServiceProvider
+
+@ProviderFor(appwriteDatabaseService)
+@Deprecated('Use supabaseDatabaseServiceProvider instead')
+const appwriteDatabaseServiceProvider = AppwriteDatabaseServiceProvider._();
+
+/// Legacy provider - redirects to supabaseDatabaseServiceProvider
+
+@Deprecated('Use supabaseDatabaseServiceProvider instead')
+final class AppwriteDatabaseServiceProvider
+    extends
+        $FunctionalProvider<
+          SupabaseDatabaseService,
+          SupabaseDatabaseService,
+          SupabaseDatabaseService
+        >
+    with $Provider<SupabaseDatabaseService> {
+  /// Legacy provider - redirects to supabaseDatabaseServiceProvider
+  const AppwriteDatabaseServiceProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'appwriteDatabaseServiceProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$appwriteDatabaseServiceHash();
+
+  @$internal
+  @override
+  $ProviderElement<SupabaseDatabaseService> $createElement(
+    $ProviderPointer pointer,
+  ) => $ProviderElement(pointer);
+
+  @override
+  SupabaseDatabaseService create(Ref ref) {
+    return appwriteDatabaseService(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(SupabaseDatabaseService value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<SupabaseDatabaseService>(value),
+    );
+  }
+}
+
+String _$appwriteDatabaseServiceHash() =>
+    r'60846aab1a2737a00b926b44d47609bc50587f15';

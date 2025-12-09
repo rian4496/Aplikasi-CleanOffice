@@ -56,9 +56,13 @@ class ModernDashboardScreen extends HookConsumerWidget {
       sidebarItems: sidebarItems,
       headerTitle: 'Dashboard',
       headerSubtitle: 'Overview & Statistics',
-      userPhotoUrl: userProfileAsync.value?.photoUrl,
-      onLogout: () {
-        ref.read(authControllerProvider.notifier).signOut(context);
+      userPhotoUrl: userProfileAsync.value?.photoURL,
+      onLogout: () async {
+        await ref.read(authActionsProvider.notifier).logout();
+        // ignore: use_build_context_synchronously
+        if (context.mounted) {
+          context.go('/login');
+        }
       },
       // Mobile Navigation Logic
       bottomNavIndex: 0, // 0 = Home/Dashboard
@@ -70,6 +74,7 @@ class ModernDashboardScreen extends HookConsumerWidget {
           case 3: break; // More (handled by MainLayout)
         }
       },
+
       child: Stack(
         children: [
           Column(

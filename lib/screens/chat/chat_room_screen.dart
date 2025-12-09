@@ -7,6 +7,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 
 import '../../core/design/admin_colors.dart';
 import '../../core/design/admin_typography.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/logging/app_logger.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
@@ -21,10 +22,12 @@ final _logger = AppLogger('ChatRoomScreen');
 /// Chat Room Screen - Detail conversation dengan messages
 class ChatRoomScreen extends HookConsumerWidget {
   final String conversationId;
+  final String? otherUserName; // Optional - for when participant names aren't in DB
 
   const ChatRoomScreen({
     super.key,
     required this.conversationId,
+    this.otherUserName,
   });
 
   @override
@@ -68,17 +71,33 @@ class ChatRoomScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AdminColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                AppTheme.headerGradientStart,
+                AppTheme.headerGradientEnd,
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: conversationAsync.when(
           data: (conversation) {
             if (conversation == null) {
-              return const Text('Chat', style: AdminTypography.h4);
+              return const Text('Chat', style: TextStyle(color: Colors.white));
             }
 
             return currentUser.when(
               data: (user) {
-                if (user == null) return const Text('Chat');
+                if (user == null) return const Text('Chat', style: TextStyle(color: Colors.white));
 
                 // Get other user ID for direct conversations
                 final otherUserId = conversation.type == ConversationType.direct
@@ -93,74 +112,90 @@ class ChatRoomScreen extends HookConsumerWidget {
                     ? ref.watch(userOnlineStatusProvider(otherUserId))
                     : const AsyncValue<bool>.data(false);
 
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                return Row(
                   children: [
-                    Text(
-                      conversation.getDisplayName(user.uid),
-                      style: AdminTypography.h4,
+                    // Avatar
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.person, color: AppTheme.primary, size: 20),
                     ),
-                    // Online status or context badge
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Online status for direct conversations
-                        if (conversation.type == ConversationType.direct)
-                          onlineStatusAsync.when(
-                            data: (isOnline) => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: isOnline ? AdminColors.success : Colors.grey[400],
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  isOnline ? 'Online' : 'Offline',
-                                  style: AdminTypography.caption.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                              ],
-                            ),
-                            loading: () => const SizedBox.shrink(),
-                            error: (error, _) => const SizedBox.shrink(),
-                          ),
-                        // Context badge if linked
-                        if (conversation.hasContext) ...[
-                          if (conversation.type == ConversationType.direct) const SizedBox(width: 8),
+                    const SizedBox(width: 12),
+                    // Name + Status
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           Text(
-                            conversation.getContextDisplay() ?? '',
-                            style: AdminTypography.caption.copyWith(
-                              color: AdminColors.info,
+                            // Use passed otherUserName if available, otherwise try from conversation
+                            otherUserName ?? conversation.getDisplayName(user.uid),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          // Online status
+                          if (conversation.type == ConversationType.direct)
+                            onlineStatusAsync.when(
+                              data: (isOnline) => Text(
+                                isOnline ? 'online' : 'offline',
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              loading: () => const SizedBox.shrink(),
+                              error: (error, _) => const SizedBox.shrink(),
+                            ),
                         ],
-                      ],
+                      ),
                     ),
                   ],
                 );
               },
-              loading: () => const Text('Chat'),
-              error: (error, _) => const Text('Chat'),
+              loading: () => const Text('Chat', style: TextStyle(color: Colors.white)),
+              error: (error, _) => const Text('Chat', style: TextStyle(color: Colors.white)),
             );
           },
-          loading: () => const Text('Loading...', style: AdminTypography.h4),
-          error: (_, __) => const Text('Error', style: AdminTypography.h4),
+          loading: () => const Text('Loading...', style: TextStyle(color: Colors.white)),
+          error: (_, __) => const Text('Error', style: TextStyle(color: Colors.white)),
         ),
         actions: [
+          // Video call button
+          IconButton(
+            icon: const Icon(Icons.videocam_outlined, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fitur video call dalam pengembangan'),
+                ),
+              );
+            },
+            tooltip: 'Video Call',
+          ),
+          // Voice call button
+          IconButton(
+            icon: const Icon(Icons.call_outlined, color: Colors.white),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Fitur voice call dalam pengembangan'),
+                ),
+              );
+            },
+            tooltip: 'Voice Call',
+          ),
           // More actions menu
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               switch (value) {
                 case 'info':
                   _logger.info('Show conversation info');
-                  // TODO: Show conversation info
+                  _showConversationInfoDialog(context, ref);
                   break;
                 case 'archive':
                   _logger.info('Archive conversation');
@@ -355,29 +390,32 @@ class ChatRoomScreen extends HookConsumerWidget {
     String dateText;
 
     if (_isSameDay(date, now)) {
-      dateText = 'Hari Ini';
+      dateText = 'Hari ini';
     } else if (_isSameDay(date, now.subtract(const Duration(days: 1)))) {
       dateText = 'Kemarin';
     } else {
-      dateText = '${date.day}/${date.month}/${date.year}';
+      // Format: 07/12/2025 with padded zeros
+      final day = date.day.toString().padLeft(2, '0');
+      final month = date.month.toString().padLeft(2, '0');
+      dateText = '$day/$month/${date.year}';
     }
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Row(
-        children: [
-          const Expanded(child: Divider()),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              dateText,
-              style: AdminTypography.caption.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          dateText,
+          style: AdminTypography.caption.copyWith(
+            color: Colors.grey[700],
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
           ),
-          const Expanded(child: Divider()),
-        ],
+        ),
       ),
     );
   }
@@ -493,15 +531,15 @@ class ChatRoomScreen extends HookConsumerWidget {
     final message = await chatService.sendMessage(
       conversationId: conversationId,
       senderId: user.uid,
-      senderName: user.displayName,
-      senderRole: user.role,
-      senderAvatarUrl: user.photoURL,
+      senderName: user.displayName ?? 'User',
       content: text,
     );
 
     if (message != null) {
       controller.clear();
       _logger.info('Text message sent successfully');
+      // Invalidate to refresh messages (fallback if realtime not enabled)
+      ref.invalidate(messagesStreamProvider(conversationId));
     } else {
       _logger.error('Failed to send text message');
     }
@@ -586,10 +624,7 @@ class ChatRoomScreen extends HookConsumerWidget {
               _logger.info('Deleting message: ${message.id}');
 
               final chatService = ref.read(chatServiceProvider);
-              await chatService.deleteMessage(
-                messageId: message.id,
-                userId: currentUser.uid,
-              );
+              await chatService.deleteMessage(message.id);
 
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -678,5 +713,228 @@ class ChatRoomScreen extends HookConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// Show conversation info dialog
+  void _showConversationInfoDialog(BuildContext context, WidgetRef ref) {
+    final conversationAsync = ref.read(conversationProvider(conversationId));
+    final currentUser = ref.read(currentUserProfileProvider);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.white,
+      isScrollControlled: true,
+      builder: (context) {
+        return conversationAsync.when(
+          data: (conversation) {
+            if (conversation == null) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: Text('Tidak ada data percakapan')),
+              );
+            }
+
+            final currentUserId = currentUser.maybeWhen(
+              data: (user) => user?.uid ?? '',
+              orElse: () => '',
+            );
+
+            // Get other participant ID
+            final otherParticipantId = conversation.participantIds
+                .firstWhere((id) => id != currentUserId, orElse: () => '');
+
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Handle bar
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Title
+                    Text(
+                      'Info Percakapan',
+                      style: AdminTypography.h2.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Avatar
+                    CircleAvatar(
+                      radius: 40,
+                      backgroundColor: AppTheme.primaryLight,
+                      child: Icon(
+                        conversation.type == ConversationType.group
+                            ? Icons.group
+                            : Icons.person,
+                        color: AppTheme.primary,
+                        size: 40,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Display name or other user name
+                    Text(
+                      otherUserName ?? conversation.getDisplayName(currentUserId),
+                      style: AdminTypography.h3.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    // Chat type badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: conversation.type == ConversationType.group
+                            ? AdminColors.info.withValues(alpha: 0.1)
+                            : AdminColors.success.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        conversation.type == ConversationType.group
+                            ? 'Grup Chat'
+                            : 'Chat Pribadi',
+                        style: TextStyle(
+                          color: conversation.type == ConversationType.group
+                              ? AdminColors.info
+                              : AdminColors.success,
+                          fontWeight: FontWeight.w500,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Info items
+                    _buildInfoItem(
+                      icon: Icons.calendar_today,
+                      label: 'Dibuat',
+                      value: _formatDate(conversation.createdAt),
+                    ),
+                    const Divider(height: 24),
+                    _buildInfoItem(
+                      icon: Icons.people_outline,
+                      label: 'Peserta',
+                      value: '${conversation.participantIds.length} orang',
+                    ),
+                    if (conversation.contextType != null) ...[
+                      const Divider(height: 24),
+                      _buildInfoItem(
+                        icon: conversation.contextType == ChatContextType.report
+                            ? Icons.description
+                            : Icons.task_alt,
+                        label: 'Konteks',
+                        value: conversation.contextType == ChatContextType.report
+                            ? 'Laporan #${conversation.contextId?.substring(0, 8) ?? ''}'
+                            : 'Permintaan #${conversation.contextId?.substring(0, 8) ?? ''}',
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+
+                    // Close button
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text('Tutup'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+          loading: () => const Padding(
+            padding: EdgeInsets.all(48),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(child: Text('Error: $e')),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Build info item row
+  Widget _buildInfoItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryLight,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppTheme.primary, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Format date for display
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+
+    if (diff.inDays == 0) {
+      return 'Hari ini, ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    } else if (diff.inDays == 1) {
+      return 'Kemarin';
+    } else if (diff.inDays < 7) {
+      return '${diff.inDays} hari lalu';
+    } else {
+      return '${date.day}/${date.month}/${date.year}';
+    }
   }
 }

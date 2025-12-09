@@ -1,9 +1,9 @@
 // lib/screens/auth/login_screen.dart
-// ✅ MIGRATED TO APPWRITE
+// ✅ MIGRATED TO SUPABASE
 
 import 'package:flutter/material.dart';
-import 'package:appwrite/appwrite.dart';
-import '../../services/appwrite_auth_service.dart';
+import '../../services/supabase_auth_service.dart';
+import '../../core/error/exceptions.dart';
 import '../../core/constants/app_constants.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,7 +17,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AppwriteAuthService();
+  final _authService = SupabaseAuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -47,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      debugPrint('Attempting login with Appwrite...');
+      debugPrint('Attempting login with Supabase...');
 
       final userProfile = await _authService.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
@@ -58,42 +58,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       debugPrint('Login successful! Role: ${userProfile.role}, Status: ${userProfile.status}, Verification: ${userProfile.verificationStatus}');
 
-      // ✅ Check if user account is pending approval
-      if (userProfile.verificationStatus == 'pending') {
-        // Force logout
-        await _authService.signOut();
-        
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Akun Anda menunggu verifikasi admin. Silakan coba lagi nanti.',
-            ),
-            backgroundColor: Colors.orange,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        return;  // Stop login process
-      }
-
-      // ✅ Check if user account was rejected
-      if (userProfile.verificationStatus == 'rejected') {
-        await _authService.signOut();
-        
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Akun Anda ditolak oleh admin. Hubungi administrator untuk info lebih lanjut.',
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        return;
-      }
+      // Note: Verification checks are now handled in SupabaseAuthService.signInWithEmailAndPassword()
+      // The service will throw AuthException if user is not verified or inactive
 
       // Continue with normal routing for approved users
       String route;
@@ -112,16 +78,37 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, route);
-    } on AppwriteException catch (e) {
+    } on AuthException catch (e) {
       if (!mounted) return;
-      _handleAppwriteError(e);
+
+      debugPrint('Login auth error: ${e.message}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: e.code == 'not-verified' ? Colors.orange : Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    } on DatabaseException catch (e) {
+      if (!mounted) return;
+
+      debugPrint('Login database error: ${e.message}');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 4),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
       debugPrint('Login error: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error: ${e.toString()}'),
+          content: Text('Terjadi kesalahan saat login: ${e.toString()}'),
           backgroundColor: Colors.red,
           behavior: SnackBarBehavior.floating,
           duration: const Duration(seconds: 4),
@@ -136,82 +123,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  /// Handle Appwrite authentication errors
-  /// Maps Appwrite error codes to user-friendly Indonesian messages
-  /// Similar to Firebase error handling but with Appwrite codes:
-  /// - 401: Invalid credentials (user-not-found or wrong-password equivalent)
-  /// - 404: User not found
-  /// - 429: Too many requests (too-many-requests equivalent)
-  /// - 400: Invalid data (invalid-email equivalent)
-  /// - 0/null: Network error (network-request-failed equivalent)
-  void _handleAppwriteError(AppwriteException e) {
-    String errorMessage;
-    String actionLabel = 'OK';
-    VoidCallback? actionCallback;
-
-    debugPrint('Appwrite error code: ${e.code}, message: ${e.message}');
-
-    switch (e.code) {
-      case 401:
-        // Equivalent to Firebase 'user-not-found' or 'wrong-password'
-        errorMessage = 'Email atau password salah';
-        break;
-
-      case 404:
-        // Equivalent to Firebase 'user-not-found'
-        errorMessage = 'Email belum terdaftar';
-        actionLabel = 'DAFTAR';
-        actionCallback = () {
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          Navigator.pushNamed(context, AppConstants.registerRoute);
-        };
-        break;
-
-      case 429:
-        // Equivalent to Firebase 'too-many-requests'
-        errorMessage = 'Terlalu banyak percobaan. Tunggu sebentar';
-        break;
-
-      case 400:
-        // Equivalent to Firebase 'invalid-email' or validation errors
-        if (e.message?.contains('password') ?? false) {
-          errorMessage = 'Password tidak valid';
-        } else if (e.message?.contains('email') ?? false) {
-          errorMessage = 'Format email tidak valid';
-        } else {
-          errorMessage = 'Data tidak valid';
-        }
-        break;
-
-      case 0:
-      case null:
-        // Equivalent to Firebase 'network-request-failed'
-        errorMessage = 'Koneksi internet bermasalah';
-        break;
-
-      default:
-        errorMessage = e.message ?? 'Terjadi kesalahan saat login';
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(errorMessage),
-        backgroundColor: Colors.red,
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
-        action: SnackBarAction(
-          label: actionLabel,
-          textColor: Colors.white,
-          onPressed:
-              actionCallback ??
-              () {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-              },
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -254,6 +165,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _emailController,
+                      cursorColor: Colors.black,
                       style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Email',
@@ -264,11 +176,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide: BorderSide(color: Colors.grey[400]!),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                          borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
                         ),
                         prefixIcon: const Icon(Icons.email, color: Colors.black),
                       ),
@@ -292,6 +204,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: MediaQuery.of(context).size.width * 0.85,
                     child: TextFormField(
                       controller: _passwordController,
+                      cursorColor: Colors.black,
                       style: const TextStyle(color: Colors.black),
                       decoration: InputDecoration(
                         labelText: 'Password',
@@ -302,11 +215,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black),
+                          borderSide: BorderSide(color: Colors.grey[400]!),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black, width: 2),
+                          borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
                         ),
                         prefixIcon: const Icon(Icons.lock, color: Colors.black),
                         suffixIcon: IconButton(

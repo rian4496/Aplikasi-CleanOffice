@@ -241,6 +241,36 @@ class Report {
     );
   }
 
+  /// Convert dari Supabase database ke Report object (snake_case)
+  factory Report.fromSupabase(Map<String, dynamic> data) {
+    return Report(
+      id: data['id'] as String? ?? '',
+      title: data['title'] as String? ?? '',
+      location: data['location'] as String? ?? '',
+      date: _parseDate(data['date']) ?? DateTime.now(),
+      status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
+      userId: data['user_id'] as String? ?? '',
+      userName: data['user_name'] as String? ?? '',
+      userEmail: data['user_email'] as String?,
+      cleanerId: data['cleaner_id'] as String?,
+      cleanerName: data['cleaner_name'] as String?,
+      verifiedBy: data['verified_by'] as String?,
+      verifiedByName: data['verified_by_name'] as String?,
+      verifiedAt: _parseDate(data['verified_at']),
+      verificationNotes: data['verification_notes'] as String?,
+      imageUrl: data['image_url'] as String?,
+      completionImageUrl: data['completion_image_url'] as String?,
+      description: data['description'] as String?,
+      isUrgent: data['is_urgent'] as bool? ?? false,
+      assignedAt: _parseDate(data['assigned_at']),
+      startedAt: _parseDate(data['started_at']),
+      completedAt: _parseDate(data['completed_at']),
+      departmentId: data['department_id'] as String?,
+      deletedAt: _parseDate(data['deleted_at']),
+      deletedBy: data['deleted_by'] as String?,
+    );
+  }
+
   /// Convert Report object ke Map
   Map<String, dynamic> toMap() {
     return {
@@ -297,6 +327,35 @@ class Report {
       'departmentId': departmentId,
       'deletedAt': deletedAt?.toIso8601String(),
       'deletedBy': deletedBy,
+    };
+  }
+
+  /// Convert Report object ke Map untuk Supabase (snake_case)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'title': title,
+      'location': location,
+      'date': date.toIso8601String(),
+      'status': status.toDatabase(),
+      'user_id': userId,
+      'user_name': userName,
+      'user_email': userEmail,
+      'cleaner_id': cleanerId,
+      'cleaner_name': cleanerName,
+      'verified_by': verifiedBy,
+      'verified_by_name': verifiedByName,
+      'verified_at': verifiedAt?.toIso8601String(),
+      'verification_notes': verificationNotes,
+      'image_url': imageUrl,
+      'completion_image_url': completionImageUrl,
+      'description': description,
+      'is_urgent': isUrgent,
+      'assigned_at': assignedAt?.toIso8601String(),
+      'started_at': startedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'department_id': departmentId,
+      'deleted_at': deletedAt?.toIso8601String(),
+      'deleted_by': deletedBy,
     };
   }
 

@@ -1,21 +1,23 @@
 // lib/providers/riverpod/admin_providers.dart
-// ✅ ADMIN PROVIDERS - Migrated to Appwrite
+// ✅ MIGRATED TO SUPABASE
 //
 // FEATURES:
 // - Dashboard summary providers
 // - Report verification actions
 // - Urgent reports tracking
 // - Department-based filtering
+// - Account verification
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
 import '../../models/user_profile.dart';
-import '../../services/appwrite_database_service.dart';
+import '../../services/supabase_database_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import './auth_providers.dart';
-import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
-import './report_providers.dart' hide appwriteDatabaseServiceProvider;
+import './supabase_service_providers.dart';
+import './report_providers.dart';
+import './request_providers.dart' show availableCleanersProvider;
 
 final _logger = AppLogger('AdminProviders');
 
@@ -161,8 +163,8 @@ class VerificationActions {
 
   VerificationActions(this.ref);
 
-  AppwriteDatabaseService get _service =>
-      ref.read(appwriteDatabaseServiceProvider);
+  SupabaseDatabaseService get _service =>
+      ref.read(supabaseDatabaseServiceProvider);
 
   Future<void> approveReport(Report report, {String? notes}) async {
     try {
@@ -172,11 +174,11 @@ class VerificationActions {
       }
 
       await _service.verifyReport(
-        report.id,
-        userProfile.uid,
-        userProfile.displayName,
-        notes: notes,
-        approved: true,
+        reportId: report.id,
+        status: 'verified',
+        verifiedBy: userProfile.uid,
+        verifiedByName: userProfile.displayName,
+        verificationNotes: notes,
       );
 
       _logger.info('Report approved: ${report.id}');
@@ -198,11 +200,11 @@ class VerificationActions {
       }
 
       await _service.verifyReport(
-        report.id,
-        userProfile.uid,
-        userProfile.displayName,
-        notes: reason,
-        approved: false,
+        reportId: report.id,
+        status: 'rejected',
+        verifiedBy: userProfile.uid,
+        verifiedByName: userProfile.displayName,
+        verificationNotes: reason,
       );
 
       _logger.info('Report rejected: ${report.id}');
@@ -222,7 +224,11 @@ class VerificationActions {
     String cleanerName,
   ) async {
     try {
-      await _service.assignReportToCleaner(report.id, cleanerId, cleanerName);
+      await _service.assignReportToCleaner(
+        reportId: report.id, 
+        cleanerId: cleanerId, 
+        cleanerName: cleanerName,
+      );
       _logger.info('Report assigned to cleaner: ${report.id} -> $cleanerName');
     } catch (e) {
       _logger.error('Error assigning report to cleaner', e);
@@ -258,14 +264,14 @@ final urgentReportsCountProvider = Provider<int>((ref) {
 
 /// Provider untuk mendapatkan semua user (untuk verifikasi akun)
 final pendingVerificationUsersProvider = FutureProvider<List<UserProfile>>((ref) async {
-  final service = ref.read(appwriteDatabaseServiceProvider);
+  final service = ref.read(supabaseDatabaseServiceProvider);
   try {
-    // Ambil semua user profiles
+    // Ambil semua user profiles dari Supabase
     final users = await service.getAllUserProfiles();
-    _logger.info('Loaded ${users.length} users for verification');
+    _logger.info('✅ Loaded ${users.length} users for verification from Supabase');
     return users;
   } catch (e) {
-    _logger.error('Error loading users for verification', e);
+    _logger.error('❌ Error loading users for verification', e);
     rethrow;
   }
 });
@@ -273,21 +279,54 @@ final pendingVerificationUsersProvider = FutureProvider<List<UserProfile>>((ref)
 /// Provider untuk verifikasi user (approve/reject)
 final verifyUserProvider = FutureProvider.family<void, (String, String)>((ref, params) async {
   final (userId, action) = params;  // action: 'approve' or 'reject'
-  final service = ref.read(appwriteDatabaseServiceProvider);
+  final service = ref.read(supabaseDatabaseServiceProvider);
 
   try {
     if (action == 'approve' || action == 'approved') {
-      // Set status to 'active' and verificationStatus to 'approved'
-      await service.updateUserVerificationStatus(userId, 'approved');
-      await service.updateUserStatus(userId, 'active');
-      _logger.info('User $userId approved');
+      // Update verification status to 'approved' (also sets status to 'active')
+      await service.updateUserVerificationStatus(
+        userId: userId,
+        status: 'approved',
+      );
+      _logger.info('✅ User $userId approved via Supabase');
     } else if (action == 'reject' || action == 'rejected') {
-      // Set verificationStatus to 'rejected', keep status as 'inactive'
-      await service.updateUserVerificationStatus(userId, 'rejected');
-      _logger.info('User $userId rejected');
+      // Update verification status to 'rejected' (sets status to 'inactive')
+      await service.updateUserVerificationStatus(
+        userId: userId,
+        status: 'rejected',
+      );
+      _logger.info('✅ User $userId rejected via Supabase');
     }
   } catch (e) {
-    _logger.error('Error updating user verification', e);
+    _logger.error('❌ Error updating user verification', e);
     rethrow;
   }
 });
+
+/// Provider untuk update user role (admin only)
+final updateUserRoleProvider = FutureProvider.family<void, (String, String)>((ref, params) async {
+  final (userId, newRole) = params;
+  final service = ref.read(supabaseDatabaseServiceProvider);
+
+  try {
+    _logger.info('📝 Updating role for user: $userId to $newRole');
+
+    await service.updateUserProfile(
+      userId: userId,
+      role: newRole,
+    );
+
+    _logger.info('✅ User role updated successfully');
+
+    // Refresh user lists
+    ref.invalidate(pendingVerificationUsersProvider);
+    ref.invalidate(availableCleanersProvider);
+  } catch (e) {
+    _logger.error('❌ Error updating user role', e);
+    rethrow;
+  }
+});
+
+// ==================== LEGACY COMPATIBILITY ====================
+// NOTE: supabaseDatabaseServiceProvider is now imported from supabase_service_providers.dart
+// The import at the top of this file handles this.

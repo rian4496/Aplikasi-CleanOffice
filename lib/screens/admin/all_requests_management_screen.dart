@@ -64,10 +64,24 @@ class _AllRequestsManagementScreenState
 
       // ==================== FAB (Mobile Only) ====================
       floatingActionButton: !isDesktop
-          ? FloatingActionButton(
-              onPressed: () => Navigator.pushNamed(context, '/create_request'),
-              backgroundColor: AppTheme.primary,
-              child: const Icon(Icons.add, color: Colors.white),
+          ? Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: FloatingActionButton(
+                onPressed: () => Navigator.pushNamed(context, '/create_request'),
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.add, color: Colors.white),
+              ),
             )
           : null,
 
@@ -791,16 +805,17 @@ class _AllRequestsManagementScreenState
                                   setModalState(() => startDate = picked);
                                 }
                               },
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: const Icon(Icons.calendar_today, size: 16, color: Colors.black),
                               label: Text(
                                 startDate != null
                                     ? '${startDate!.day}/${startDate!.month}/${startDate!.year}'
                                     : 'Dari',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(fontSize: 13, color: Colors.black),
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                side: BorderSide(color: Colors.grey[300]!),
+                                side: BorderSide(color: Colors.grey[400]!),
+                                foregroundColor: Colors.black,
                               ),
                             ),
                           ),
@@ -821,16 +836,17 @@ class _AllRequestsManagementScreenState
                                   setModalState(() => endDate = picked);
                                 }
                               },
-                              icon: const Icon(Icons.calendar_today, size: 16),
+                              icon: const Icon(Icons.calendar_today, size: 16, color: Colors.black),
                               label: Text(
                                 endDate != null
                                     ? '${endDate!.day}/${endDate!.month}/${endDate!.year}'
                                     : 'Sampai',
-                                style: const TextStyle(fontSize: 13),
+                                style: const TextStyle(fontSize: 13, color: Colors.black),
                               ),
                               style: OutlinedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                side: BorderSide(color: Colors.grey[300]!),
+                                side: BorderSide(color: Colors.grey[400]!),
+                                foregroundColor: Colors.black,
                               ),
                             ),
                           ),
@@ -861,29 +877,41 @@ class _AllRequestsManagementScreenState
                       // Apply button
                       SizedBox(
                         width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // Apply filters to widget state
-                            setState(() {
-                              _filterStatus = selectedStatus;
-                              _sortBy = selectedSort;
-                              _startDate = startDate;
-                              _endDate = endDate;
-                            });
-                            Navigator.pop(context);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
                             ),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Text(
-                            'Terapkan',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              // Apply filters to widget state
+                              setState(() {
+                                _filterStatus = selectedStatus;
+                                _sortBy = selectedSort;
+                                _startDate = startDate;
+                                _endDate = endDate;
+                              });
+                              Navigator.pop(context);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: const Text(
+                              'Terapkan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -1161,7 +1189,8 @@ class _AllRequestsManagementScreenState
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    final activeColor = const Color(0xFF5D5FEF);
+    // Light blue gradient color for active state
+    final activeColor = AppTheme.headerGradientStart;
     final inactiveColor = Colors.grey[600]!;
 
     return Expanded(

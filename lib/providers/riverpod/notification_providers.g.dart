@@ -8,24 +8,24 @@ part of 'notification_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Stream of user notifications
+/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
 
 @ProviderFor(userNotifications)
 const userNotificationsProvider = UserNotificationsProvider._();
 
-/// Stream of user notifications
+/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
 
 final class UserNotificationsProvider
     extends
         $FunctionalProvider<
           AsyncValue<List<AppNotification>>,
           List<AppNotification>,
-          Stream<List<AppNotification>>
+          FutureOr<List<AppNotification>>
         >
     with
         $FutureModifier<List<AppNotification>>,
-        $StreamProvider<List<AppNotification>> {
-  /// Stream of user notifications
+        $FutureProvider<List<AppNotification>> {
+  /// Future-based user notifications (Supabase doesn't support real-time streams the same way)
   const UserNotificationsProvider._()
     : super(
         from: null,
@@ -42,29 +42,29 @@ final class UserNotificationsProvider
 
   @$internal
   @override
-  $StreamProviderElement<List<AppNotification>> $createElement(
+  $FutureProviderElement<List<AppNotification>> $createElement(
     $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
+  ) => $FutureProviderElement(pointer);
 
   @override
-  Stream<List<AppNotification>> create(Ref ref) {
+  FutureOr<List<AppNotification>> create(Ref ref) {
     return userNotifications(ref);
   }
 }
 
-String _$userNotificationsHash() => r'97e14f9a4cf89dc0da53cd822c1cde73b84c6315';
+String _$userNotificationsHash() => r'e41ca26a960a5bc8ed9039c27ba74735fe325cc1';
 
-/// Stream of unread notification count
+/// Unread notification count
 
 @ProviderFor(unreadNotificationCount)
 const unreadNotificationCountProvider = UnreadNotificationCountProvider._();
 
-/// Stream of unread notification count
+/// Unread notification count
 
 final class UnreadNotificationCountProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, Stream<int>>
-    with $FutureModifier<int>, $StreamProvider<int> {
-  /// Stream of unread notification count
+    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
+    with $FutureModifier<int>, $FutureProvider<int> {
+  /// Unread notification count
   const UnreadNotificationCountProvider._()
     : super(
         from: null,
@@ -81,27 +81,27 @@ final class UnreadNotificationCountProvider
 
   @$internal
   @override
-  $StreamProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $StreamProviderElement(pointer);
+  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  Stream<int> create(Ref ref) {
+  FutureOr<int> create(Ref ref) {
     return unreadNotificationCount(ref);
   }
 }
 
 String _$unreadNotificationCountHash() =>
-    r'40a46308fc9b6df77bd75201dce98889761eaa18';
+    r'48badcebb243ee9ecdef5d6280ba68862f5a436b';
 
 /// Notification settings - stored locally for now
-/// Note: Appwrite simplified schema doesn't include notification_settings collection
+/// Note: Supabase schema doesn't include notification_settings table
 /// This could be added later or stored in user preferences
 
 @ProviderFor(notificationSettings)
 const notificationSettingsProvider = NotificationSettingsProvider._();
 
 /// Notification settings - stored locally for now
-/// Note: Appwrite simplified schema doesn't include notification_settings collection
+/// Note: Supabase schema doesn't include notification_settings table
 /// This could be added later or stored in user preferences
 
 final class NotificationSettingsProvider
@@ -109,13 +109,13 @@ final class NotificationSettingsProvider
         $FunctionalProvider<
           AsyncValue<NotificationSettings>,
           NotificationSettings,
-          Stream<NotificationSettings>
+          FutureOr<NotificationSettings>
         >
     with
         $FutureModifier<NotificationSettings>,
-        $StreamProvider<NotificationSettings> {
+        $FutureProvider<NotificationSettings> {
   /// Notification settings - stored locally for now
-  /// Note: Appwrite simplified schema doesn't include notification_settings collection
+  /// Note: Supabase schema doesn't include notification_settings table
   /// This could be added later or stored in user preferences
   const NotificationSettingsProvider._()
     : super(
@@ -133,18 +133,18 @@ final class NotificationSettingsProvider
 
   @$internal
   @override
-  $StreamProviderElement<NotificationSettings> $createElement(
+  $FutureProviderElement<NotificationSettings> $createElement(
     $ProviderPointer pointer,
-  ) => $StreamProviderElement(pointer);
+  ) => $FutureProviderElement(pointer);
 
   @override
-  Stream<NotificationSettings> create(Ref ref) {
+  FutureOr<NotificationSettings> create(Ref ref) {
     return notificationSettings(ref);
   }
 }
 
 String _$notificationSettingsHash() =>
-    r'e140fb5e7a19e6ca5c0efd8b9c2c6b3121413c67';
+    r'b814010b2ebf3e0c0235fb393a50f876f68ab3f6';
 
 /// Mark notification as read
 
@@ -202,7 +202,7 @@ final class MarkNotificationAsReadProvider
 }
 
 String _$markNotificationAsReadHash() =>
-    r'c726fa542d1fe4866c837c797103304b76a75c9b';
+    r'd129cf7ac9f1cbbce4a1def02dc08e3f64fab902';
 
 /// Mark notification as read
 
@@ -264,7 +264,7 @@ final class MarkAllNotificationsAsReadProvider
 }
 
 String _$markAllNotificationsAsReadHash() =>
-    r'a77e7beb36dd36cbd089db46c652d1d68b6f1370';
+    r'5571e22d6f726ad799fff5ec449e27a9804ce1bf';
 
 /// Delete notification
 
@@ -321,7 +321,7 @@ final class DeleteNotificationProvider
 }
 
 String _$deleteNotificationHash() =>
-    r'84273d5b849bad6a527c44943f0872013fe869cd';
+    r'f0a90cd97650088a8aa8e08189751b42504db18e';
 
 /// Delete notification
 
@@ -347,21 +347,21 @@ final class DeleteNotificationFamily extends $Family
 
 /// Save notification settings
 /// Note: For now, settings are handled locally
-/// Can be enhanced to store in Appwrite later
+/// Can be enhanced to store in Supabase later
 
 @ProviderFor(saveNotificationSettings)
 const saveNotificationSettingsProvider = SaveNotificationSettingsFamily._();
 
 /// Save notification settings
 /// Note: For now, settings are handled locally
-/// Can be enhanced to store in Appwrite later
+/// Can be enhanced to store in Supabase later
 
 final class SaveNotificationSettingsProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
   /// Save notification settings
   /// Note: For now, settings are handled locally
-  /// Can be enhanced to store in Appwrite later
+  /// Can be enhanced to store in Supabase later
   const SaveNotificationSettingsProvider._({
     required SaveNotificationSettingsFamily super.from,
     required NotificationSettings super.argument,
@@ -411,7 +411,7 @@ String _$saveNotificationSettingsHash() =>
 
 /// Save notification settings
 /// Note: For now, settings are handled locally
-/// Can be enhanced to store in Appwrite later
+/// Can be enhanced to store in Supabase later
 
 final class SaveNotificationSettingsFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<void>, NotificationSettings> {
@@ -426,7 +426,7 @@ final class SaveNotificationSettingsFamily extends $Family
 
   /// Save notification settings
   /// Note: For now, settings are handled locally
-  /// Can be enhanced to store in Appwrite later
+  /// Can be enhanced to store in Supabase later
 
   SaveNotificationSettingsProvider call(NotificationSettings settings) =>
       SaveNotificationSettingsProvider._(argument: settings, from: this);

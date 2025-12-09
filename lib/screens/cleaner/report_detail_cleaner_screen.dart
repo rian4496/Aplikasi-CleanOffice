@@ -15,6 +15,7 @@ import '../../models/report.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
 import '../../services/storage_service.dart'; // ← IMPORT STORAGE
+import '../../core/config/supabase_config.dart';
 import '../../widgets/completion_photo_dialog.dart';
 
 final _logger = AppLogger('CleanerReportDetailScreen');
@@ -39,8 +40,28 @@ class _CleanerReportDetailScreenState
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Detail Laporan'),
-        backgroundColor: AppTheme.primary,
+        title: const Text(
+          'Detail Laporan',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        actionsIconTheme: const IconThemeData(color: Colors.white),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: reportAsync.when(
         data: (report) {
@@ -666,7 +687,7 @@ class _CleanerReportDetailScreenState
 
       final uploadResult = await storageService.uploadImage(
         bytes: imageBytes,
-        folder: 'report_completions',
+        bucket: SupabaseConfig.reportImagesBucket,
         userId: userId,
       );
 

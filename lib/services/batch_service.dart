@@ -1,36 +1,30 @@
-import 'package:appwrite/appwrite.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/config/appwrite_config.dart';
-import '../core/services/appwrite_client.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/logging/app_logger.dart';
 
 /// Service responsible for handling batch operations on reports.
-/// Follows SRP by focusing solely on bulk actions.
+/// Uses Supabase for database operations.
 class BatchService {
-  final Databases _databases;
+  final SupabaseClient _supabase;
   final _logger = AppLogger('BatchService');
 
-  BatchService(this._databases);
+  BatchService(this._supabase);
 
   /// Verifies multiple reports at once.
-  /// Note: Appwrite does not support atomic batch writes natively in Client SDK yet.
-  /// We execute these in parallel.
   Future<void> bulkVerifyReports(List<String> reportIds, String adminId) async {
     _logger.info('Batch verifying ${reportIds.length} reports');
     
-    final futures = reportIds.map((id) => _databases.updateDocument(
-      databaseId: AppwriteConfig.databaseId,
-      collectionId: AppwriteConfig.reportsCollectionId,
-      documentId: id,
-      data: {
-        'status': 'verified',
-        'verifiedAt': DateTime.now().toIso8601String(),
-        'verifiedBy': adminId,
-      },
-    ));
-
     try {
-      await Future.wait(futures);
+      // Supabase supports batch updates via .in_() filter
+      await _supabase
+          .from('reports')
+          .update({
+            'status': 'verified',
+            'verified_at': DateTime.now().toIso8601String(),
+            'verified_by': adminId,
+          })
+          .inFilter('id', reportIds);
+      
       _logger.info('Batch verification successful');
     } catch (e) {
       _logger.error('Batch verification failed', e);
@@ -38,18 +32,20 @@ class BatchService {
     }
   }
 
-  /// Deletes multiple reports at once.
-  Future<void> bulkDeleteReports(List<String> reportIds) async {
+  /// Deletes multiple reports at once (soft delete).
+  Future<void> bulkDeleteReports(List<String> reportIds, String deletedBy) async {
     _logger.info('Batch deleting ${reportIds.length} reports');
     
-    final futures = reportIds.map((id) => _databases.deleteDocument(
-      databaseId: AppwriteConfig.databaseId,
-      collectionId: AppwriteConfig.reportsCollectionId,
-      documentId: id,
-    ));
-
     try {
-      await Future.wait(futures);
+      // Soft delete by setting deleted_at
+      await _supabase
+          .from('reports')
+          .update({
+            'deleted_at': DateTime.now().toIso8601String(),
+            'deleted_by': deletedBy,
+          })
+          .inFilter('id', reportIds);
+      
       _logger.info('Batch deletion successful');
     } catch (e) {
       _logger.error('Batch deletion failed', e);
@@ -58,35 +54,55 @@ class BatchService {
   }
   
   /// Assigns multiple reports to a cleaner.
-  Future<void> bulkAssignReports(List<String> reportIds, String cleanerId, String cleanerName) async {
+  Future<void> bulkAssignReports(
+    List<String> reportIds, 
+    String cleanerId, 
+    String cleanerName,
+  ) async {
     _logger.info('Batch assigning ${reportIds.length} reports to $cleanerName');
     
-    final futures = reportIds.map((id) => _databases.updateDocument(
-      databaseId: AppwriteConfig.databaseId,
-      collectionId: AppwriteConfig.reportsCollectionId,
-      documentId: id,
-      data: {
-        'cleanerId': cleanerId,
-        'cleanerName': cleanerName,
-        'status': 'pending', 
-        'assignedAt': DateTime.now().toIso8601String(),
-      },
-    ));
-
     try {
-      await Future.wait(futures);
+      await _supabase
+          .from('reports')
+          .update({
+            'cleaner_id': cleanerId,
+            'cleaner_name': cleanerName,
+            'status': 'assigned',
+            'assigned_at': DateTime.now().toIso8601String(),
+          })
+          .inFilter('id', reportIds);
+      
       _logger.info('Batch assignment successful');
     } catch (e) {
       _logger.error('Batch assignment failed', e);
       rethrow;
     }
   }
+
+  /// Bulk approve requests
+  Future<void> bulkApproveRequests(List<String> requestIds, String approvedBy) async {
+    _logger.info('Batch approving ${requestIds.length} requests');
+    
+    try {
+      await _supabase
+          .from('requests')
+          .update({
+            'status': 'approved',
+            'approved_at': DateTime.now().toIso8601String(),
+            'approved_by': approvedBy,
+          })
+          .inFilter('id', requestIds);
+      
+      _logger.info('Batch approval successful');
+    } catch (e) {
+      _logger.error('Batch approval failed', e);
+      rethrow;
+    }
+  }
 }
 
-/// Provider for BatchService.
-/// Follows DIP by injecting dependencies.
+/// Provider for BatchService using Supabase.
 final batchServiceProvider = Provider<BatchService>((ref) {
-  final client = AppwriteClient().client;
-  final databases = Databases(client);
-  return BatchService(databases);
+  final supabase = Supabase.instance.client;
+  return BatchService(supabase);
 });

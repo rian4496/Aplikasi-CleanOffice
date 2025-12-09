@@ -30,9 +30,9 @@ class AppTheme {
 
   // ==================== DASHBOARD SPECIFIC COLORS ====================
 
-  // Header Gradient (Light Blue)
+  // Header Gradient (Light Blue - Softer)
   static const Color headerGradientStart = Color(0xFF64B5F6); // Light Blue
-  static const Color headerGradientEnd = Color(0xFF1976D2);   // Blue
+  static const Color headerGradientEnd = Color(0xFF42A5F5);   // Medium Blue (lighter, less dominant)
 
   // Stat Card Gradients
   static const List<Color> blueGradient = [Color(0xFF4481EB), Color(0xFF04BEFE)];
@@ -192,9 +192,16 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: const BorderSide(color: primary, width: 1),
+          borderSide: const BorderSide(color: Colors.black, width: 1), // Black, normal weight
         ),
         hintStyle: const TextStyle(color: textSecondary, fontSize: 14),
+      ),
+      
+      // Text Selection (Cursor & Selection Color)
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: Colors.black, // Black cursor
+        selectionColor: Color(0x40000000), // Light black selection
+        selectionHandleColor: Colors.black,
       ),
     );
   }

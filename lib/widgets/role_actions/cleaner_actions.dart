@@ -11,6 +11,7 @@ import '../../../../../models/report.dart';
 import '../../../../../providers/riverpod/auth_providers.dart';
 import '../../../../../providers/riverpod/cleaner_providers.dart';
 import '../../../../../services/storage_service.dart';
+import '../../../../../core/config/supabase_config.dart';
 import '../../../../../widgets/completion_photo_dialog.dart';
 
 final _logger = AppLogger('CleanerActions');
@@ -251,7 +252,7 @@ class _CleanerActionsState extends ConsumerState<CleanerActions> {
 
       final uploadResult = await storageService.uploadImage(
         bytes: imageBytes,
-        folder: 'report_completions',
+        bucket: SupabaseConfig.reportImagesBucket,
         userId: userId,
       );
 

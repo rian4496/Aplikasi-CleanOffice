@@ -9,7 +9,6 @@ import '../../screens/admin/all_requests_management_screen.dart';
 import '../../screens/admin/cleaner_management_screen.dart';
 import '../../screens/admin/account_verification_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
-import '../../screens/dev/seed_data_screen.dart';
 
 class AdminMoreBottomSheet extends StatelessWidget {
   const AdminMoreBottomSheet({super.key});
@@ -198,11 +197,8 @@ class AdminMoreBottomSheet extends StatelessWidget {
                   color: Colors.deepPurple,
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SeedDataScreen(),
-                      ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Fitur ini dinonaktifkan sementara')),
                     );
                   },
                 ),

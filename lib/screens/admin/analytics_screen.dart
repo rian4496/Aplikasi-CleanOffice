@@ -67,16 +67,13 @@ class AnalyticsScreen extends ConsumerWidget {
       ),
       centerTitle: false,
       actions: [
-        // Export button
+        // Notification button
         IconButton(
-          icon: const Icon(Icons.download, color: Colors.white),
+          icon: const Icon(Icons.notifications_outlined, color: Colors.white),
           onPressed: () {
-            showDialog(
-              context: context,
-              builder: (_) => const ExportDialog(),
-            );
+            Navigator.pushNamed(context, '/notifications');
           },
-          tooltip: 'Export Data',
+          tooltip: 'Notifikasi',
         ),
         // Menu button untuk buka endDrawer
         IconButton(
@@ -201,27 +198,10 @@ class AnalyticsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-
-            const Spacer(flex: 3),
-
-            // Download/Export button
+            // Notification Icon
             IconButton(
-              icon: const Icon(Icons.download, color: Colors.white, size: 22),
-              onPressed: () {
-                // Show export dialog - need context
-              },
-              tooltip: 'Export Data',
-            ),
-            const SizedBox(width: 8),
-
-            // Notification Icon (placeholder)
-            Stack(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
-                  onPressed: () {},
-                ),
-              ],
+              icon: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+              onPressed: () {},
             ),
             const SizedBox(width: 16),
 

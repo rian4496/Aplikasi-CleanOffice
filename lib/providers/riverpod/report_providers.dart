@@ -1,55 +1,61 @@
+// lib/providers/riverpod/report_providers.dart
+// ✅ MIGRATED TO SUPABASE
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
-import '../../services/appwrite_database_service.dart';
+import './supabase_service_providers.dart';
 
-// ==================== SERVICE PROVIDER ====================
-
-/// Provider untuk AppwriteDatabaseService singleton instance
-final appwriteDatabaseServiceProvider = Provider<AppwriteDatabaseService>((ref) {
-  return AppwriteDatabaseService();
-});
-
-// ==================== STREAM PROVIDERS ====================
+// ==================== STREAM/FUTURE PROVIDERS ====================
 
 /// Provider untuk stream semua laporan
 /// Digunakan oleh supervisor untuk melihat semua laporan
-final allReportsProvider = StreamProvider.family<List<Report>, String?>((
+/// Note: Converted from Stream to FutureProvider for Supabase compatibility
+final allReportsProvider = FutureProvider.family<List<Report>, String?>((
   ref,
   departmentId,
-) {
+) async {
   // Keep provider alive for caching
   ref.keepAlive();
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getAllReports(departmentId: departmentId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  final reports = await service.getAllReports();
+  
+  // Filter by department if specified
+  if (departmentId != null && departmentId.isNotEmpty) {
+    return reports.where((r) => r.departmentId == departmentId).toList();
+  }
+  return reports;
 });
 
 /// Provider untuk stream laporan berdasarkan user ID
-final userReportsProvider = StreamProvider.autoDispose.family<List<Report>, String>((
+final userReportsProvider = FutureProvider.autoDispose.family<List<Report>, String>((
   ref,
   userId,
-) {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getReportsByUser(userId);
+) async {
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getReportsByUserId(userId);
 });
 
 /// Provider untuk stream laporan berdasarkan cleaner ID
-final cleanerReportsProvider = StreamProvider.autoDispose.family<List<Report>, String>((
+final cleanerReportsProvider = FutureProvider.autoDispose.family<List<Report>, String>((
   ref,
   cleanerId,
-) {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getReportsByCleaner(cleanerId);
+) async {
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getReportsByCleanerId(cleanerId);
 });
 
 /// Provider untuk stream laporan berdasarkan status
 final reportsByStatusProvider =
-    StreamProvider.autoDispose.family<List<Report>, ReportStatusQuery>((ref, query) {
-      final service = ref.watch(appwriteDatabaseServiceProvider);
-      return service.getReportsByStatus(
-        query.status,
-        departmentId: query.departmentId,
-      );
+    FutureProvider.autoDispose.family<List<Report>, ReportStatusQuery>((ref, query) async {
+      final service = ref.watch(supabaseDatabaseServiceProvider);
+      final reports = await service.getReportsByStatus(query.status.toDatabase());
+      
+      // Filter by department if specified
+      if (query.departmentId != null && query.departmentId!.isNotEmpty) {
+        return reports.where((r) => r.departmentId == query.departmentId).toList();
+      }
+      return reports;
     });
 
 /// Helper class untuk query dengan status dan departmentId
@@ -73,16 +79,50 @@ class ReportStatusQuery {
 
 /// Provider untuk summary report berdasarkan status
 final reportSummaryProvider =
-    StreamProvider.autoDispose.family<Map<ReportStatus, int>, String?>((ref, departmentId) {
-      final service = ref.watch(appwriteDatabaseServiceProvider);
-      return service.getReportSummary(departmentId: departmentId);
+    FutureProvider.autoDispose.family<Map<ReportStatus, int>, String?>((ref, departmentId) async {
+      final service = ref.watch(supabaseDatabaseServiceProvider);
+      final allReports = await service.getAllReports();
+      
+      // Filter by department if specified
+      final reports = departmentId != null && departmentId.isNotEmpty
+          ? allReports.where((r) => r.departmentId == departmentId).toList()
+          : allReports;
+      
+      // Build summary map
+      final summary = <ReportStatus, int>{};
+      for (final status in ReportStatus.values) {
+        summary[status] = reports.where((r) => r.status == status).length;
+      }
+      return summary;
     });
 
 /// Provider untuk laporan yang selesai hari ini
 final todayCompletedReportsProvider =
-    StreamProvider.autoDispose.family<List<Report>, String?>((ref, departmentId) {
-      final service = ref.watch(appwriteDatabaseServiceProvider);
-      return service.getTodayCompletedReports(departmentId: departmentId);
+    FutureProvider.autoDispose.family<List<Report>, String?>((ref, departmentId) async {
+      final service = ref.watch(supabaseDatabaseServiceProvider);
+      final allReports = await service.getAllReports();
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tomorrow = today.add(const Duration(days: 1));
+      
+      return allReports.where((r) {
+        // Check if completed or verified today
+        if (r.status != ReportStatus.completed && r.status != ReportStatus.verified) {
+          return false;
+        }
+        
+        // Check department filter
+        if (departmentId != null && r.departmentId != departmentId) {
+          return false;
+        }
+        
+        // Check if completed today
+        final completedAt = r.completedAt;
+        if (completedAt == null) return false;
+        
+        return completedAt.isAfter(today) && completedAt.isBefore(tomorrow);
+      }).toList();
     });
 
 // ==================== FUTURE PROVIDERS ====================
@@ -92,23 +132,56 @@ final reportByIdProvider = FutureProvider.family<Report?, String>((
   ref,
   reportId,
 ) async {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
   return service.getReportById(reportId);
 });
 
 /// Provider untuk average completion time
 final averageCompletionTimeProvider = FutureProvider.family<Duration?, String?>(
   (ref, departmentId) async {
-    final service = ref.watch(appwriteDatabaseServiceProvider);
-    return service.getAverageCompletionTime(departmentId: departmentId);
+    final service = ref.watch(supabaseDatabaseServiceProvider);
+    final allReports = await service.getAllReports();
+    
+    // Filter verified reports
+    final reports = allReports.where((r) {
+      if (r.status != ReportStatus.verified) return false;
+      if (departmentId != null && r.departmentId != departmentId) return false;
+      return r.completedAt != null;
+    }).toList();
+    
+    if (reports.isEmpty) return null;
+    
+    // Calculate average completion time
+    int totalMinutes = 0;
+    int count = 0;
+    
+    for (final report in reports) {
+      if (report.completedAt != null) {
+        final duration = report.completedAt!.difference(report.date);
+        totalMinutes += duration.inMinutes;
+        count++;
+      }
+    }
+    
+    if (count == 0) return null;
+    
+    return Duration(minutes: totalMinutes ~/ count);
   },
 );
 
 /// Provider untuk cleaner statistics
 final cleanerStatsProvider =
     FutureProvider.family<Map<String, dynamic>, String>((ref, cleanerId) async {
-      final service = ref.watch(appwriteDatabaseServiceProvider);
-      return service.getCleanerStats(cleanerId);
+      final service = ref.watch(supabaseDatabaseServiceProvider);
+      final reports = await service.getReportsByCleanerId(cleanerId);
+      
+      return {
+        'totalAssigned': reports.length,
+        'completed': reports.where((r) => r.status == ReportStatus.completed).length,
+        'verified': reports.where((r) => r.status == ReportStatus.verified).length,
+        'inProgress': reports.where((r) => r.status == ReportStatus.inProgress).length,
+        'pending': reports.where((r) => r.status == ReportStatus.assigned).length,
+      };
     });
 
 // ==================== NOTIFIER PROVIDERS (Riverpod 3.0+) ====================
@@ -317,3 +390,10 @@ final filteredReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
     return filtered;
   });
 });
+
+// ==================== LEGACY COMPATIBILITY ====================
+// TODO: Remove after all screens are migrated
+
+/// Legacy provider - redirects to supabaseDatabaseServiceProvider
+@Deprecated('Use supabaseDatabaseServiceProvider instead')
+final appwriteDatabaseServiceProvider = supabaseDatabaseServiceProvider;

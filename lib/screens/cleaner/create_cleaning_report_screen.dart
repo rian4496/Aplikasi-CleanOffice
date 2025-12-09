@@ -7,7 +7,8 @@ import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/cleaner_providers.dart';
-import '../../providers/riverpod/request_providers.dart' show appwriteStorageServiceProvider;
+import '../../providers/riverpod/supabase_service_providers.dart';
+import '../../core/config/supabase_config.dart';
 
 final _logger = AppLogger('CreateCleaningReportScreen');
 
@@ -79,10 +80,10 @@ class _CreateCleaningReportScreenState
 
       _logger.info('Uploading cleaning report image');
 
-      final storageService = ref.read(appwriteStorageServiceProvider);
+      final storageService = ref.read(supabaseStorageServiceProvider);
       final result = await storageService.uploadImage(
         bytes: _imageBytes!,
-        folder: 'cleaning_reports',
+        bucket: SupabaseConfig.reportImagesBucket,
         userId: userProfile.uid,
       );
 

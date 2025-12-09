@@ -11,7 +11,8 @@ import '../../core/error/exceptions.dart';
 import '../../core/logging/app_logger.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/employee_providers.dart';
-import '../../providers/riverpod/request_providers.dart' show appwriteStorageServiceProvider;
+import '../../providers/riverpod/supabase_service_providers.dart';
+import '../../core/config/supabase_config.dart';
 
 final _logger = AppLogger('CreateReportScreen');
 
@@ -98,10 +99,10 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen> {
       _logger.info('Uploading report image for user: ${userProfile.uid}');
 
       // ✅ Use Appwrite storage service with bytes (Web-compatible!)
-      final storageService = ref.read(appwriteStorageServiceProvider);
+      final storageService = ref.read(supabaseStorageServiceProvider);
       final result = await storageService.uploadImage(
         bytes: _imageBytes!, // Use bytes instead of file
-        folder: 'reports',
+        bucket: SupabaseConfig.reportImagesBucket,
         userId: userProfile.uid,
       );
 

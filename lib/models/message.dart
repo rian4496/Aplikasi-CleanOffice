@@ -139,6 +139,41 @@ class Message {
     );
   }
 
+  /// Create from Supabase (snake_case)
+  factory Message.fromSupabase(Map<String, dynamic> data) {
+    return Message(
+      id: data['id']?.toString() ?? '',
+      conversationId: data['chat_id']?.toString() ?? data['conversation_id']?.toString() ?? '',
+      senderId: data['sender_id'] ?? '',
+      senderName: data['sender_name'] ?? '',
+      senderRole: data['sender_role'] ?? '',
+      senderAvatarUrl: data['sender_avatar_url'],
+      type: MessageType.fromFirestore(data['type'] ?? 'text'),
+      content: data['content'] ?? '',
+      mediaUrl: data['media_url'] ?? data['image_url'],
+      mediaFileName: data['media_file_name'],
+      mediaFileSize: data['media_file_size'],
+      mediaMimeType: data['media_mime_type'],
+      replyToMessageId: data['reply_to_message_id'],
+      replyToText: data['reply_to_text'],
+      reactions: {},
+      readBy: data['read_by'] != null ? List<String>.from(data['read_by']) : [],
+      deliveredTo: data['delivered_to'] != null ? List<String>.from(data['delivered_to']) : [],
+      isEdited: data['is_edited'] ?? false,
+      editedAt: data['edited_at'] != null ? DateTime.parse(data['edited_at']) : null,
+      isDeleted: data['is_deleted'] ?? false,
+      deletedAt: data['deleted_at'] != null ? DateTime.parse(data['deleted_at']) : null,
+      deletedBy: data['deleted_by'],
+      createdAt: data['created_at'] != null 
+          ? DateTime.parse(data['created_at']) 
+          : DateTime.now(),
+      updatedAt: data['updated_at'] != null 
+          ? DateTime.parse(data['updated_at']) 
+          : DateTime.now(),
+    );
+  }
+
+
   /// Convert to Appwrite document data
   Map<String, dynamic> toAppwrite() {
     return {

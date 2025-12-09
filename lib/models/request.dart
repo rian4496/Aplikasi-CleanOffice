@@ -219,6 +219,33 @@ class Request {
     );
   }
 
+  /// Convert dari Supabase database ke Request object (snake_case)
+  factory Request.fromSupabase(Map<String, dynamic> data) {
+    return Request(
+      id: data['id'] as String? ?? '',
+      location: data['location'] as String? ?? '',
+      description: data['description'] as String? ?? '',
+      requestedBy: data['requested_by'] as String? ?? '',
+      requestedByName: data['requested_by_name'] as String? ?? '',
+      requestedByRole: data['requested_by_role'] as String? ?? 'employee',
+      status: RequestStatus.fromString(data['status'] as String? ?? 'pending'),
+      createdAt: _parseDate(data['created_at']) ?? DateTime.now(),
+      isUrgent: data['is_urgent'] as bool? ?? false,
+      preferredDateTime: _parseDate(data['preferred_date_time']),
+      assignedTo: data['assigned_to'] as String?,
+      assignedToName: data['assigned_to_name'] as String?,
+      assignedAt: _parseDate(data['assigned_at']),
+      assignedBy: data['assigned_by'] as String?,
+      imageUrl: data['image_url'] as String?,
+      completionImageUrl: data['completion_image_url'] as String?,
+      completionNotes: data['completion_notes'] as String?,
+      startedAt: _parseDate(data['started_at']),
+      completedAt: _parseDate(data['completed_at']),
+      deletedAt: _parseDate(data['deleted_at']),
+      deletedBy: data['deleted_by'] as String?,
+    );
+  }
+
   /// Convert Request object ke Map untuk Appwrite
   Map<String, dynamic> toAppwrite() {
     return {
@@ -239,6 +266,31 @@ class Request {
       'completionNotes': completionNotes,
       'deletedAt': deletedAt?.toIso8601String(),
       'deletedBy': deletedBy,
+    };
+  }
+
+  /// Convert Request object ke Map untuk Supabase (snake_case)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'location': location,
+      'description': description,
+      'requested_by': requestedBy,
+      'requested_by_name': requestedByName,
+      'requested_by_role': requestedByRole,
+      'is_urgent': isUrgent,
+      'preferred_date_time': preferredDateTime?.toIso8601String(),
+      'status': status.toDatabase(),
+      'assigned_to': assignedTo,
+      'assigned_to_name': assignedToName,
+      'assigned_at': assignedAt?.toIso8601String(),
+      'assigned_by': assignedBy,
+      'image_url': imageUrl,
+      'completion_image_url': completionImageUrl,
+      'completion_notes': completionNotes,
+      'started_at': startedAt?.toIso8601String(),
+      'completed_at': completedAt?.toIso8601String(),
+      'deleted_at': deletedAt?.toIso8601String(),
+      'deleted_by': deletedBy,
     };
   }
 

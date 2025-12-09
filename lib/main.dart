@@ -1,6 +1,6 @@
 // lib/main.dart
 // Clean Office Management System - Main Entry Point
-// ✅ MIGRATED TO APPWRITE (No Firebase)
+// ✅ MIGRATED TO SUPABASE
 
 import 'dart:async';
 import 'package:flutter/foundation.dart';
@@ -8,11 +8,12 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Core
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
-import 'core/services/appwrite_client.dart';
+import 'core/config/supabase_config.dart';
 
 // Auth Screens
 import 'screens/auth/login_screen.dart';
@@ -27,7 +28,7 @@ import 'screens/employee/create_request_screen.dart';
 // Cleaner Screens
 import 'screens/cleaner/cleaner_home_screen.dart';
 
-// Admin Screens (OLD - Working)
+// Admin Screens
 import 'screens/admin/admin_dashboard_screen.dart';
 import 'screens/admin/analytics_screen.dart';
 import 'screens/admin/all_reports_management_screen.dart';
@@ -74,14 +75,18 @@ void main() async {
   runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // ==================== APPWRITE INITIALIZATION ====================
+    // ==================== SUPABASE INITIALIZATION ====================
     try {
-      await AppwriteClient().initialize();
-      debugPrint('✅ Appwrite initialized successfully');
+      await Supabase.initialize(
+        url: SupabaseConfig.supabaseUrl,
+        anonKey: SupabaseConfig.supabaseAnonKey,
+        debug: kDebugMode,
+      );
+      debugPrint('✅ Supabase initialized successfully');
     } catch (e, stackTrace) {
-      debugPrint('❌ Appwrite initialization failed: $e');
+      debugPrint('❌ Supabase initialization failed: $e');
       debugPrint('Stack trace: $stackTrace');
-      // Continue app execution even if Appwrite fails (for development)
+      // Continue app execution even if Supabase fails (for development)
     }
 
     // Initialize Indonesian locale for date formatting
@@ -141,6 +146,7 @@ class MyApp extends StatelessWidget {
         '/admin/analytics': (context) => const AnalyticsScreen(),
         '/analytics': (context) => const AnalyticsScreen(),
         '/reports_management': (context) => const AllReportsManagementScreen(),
+        '/chat': (context) => const ConversationListScreen(),
 
         // ==================== EMPLOYEE ROUTES ====================
         '/create_report': (context) => const CreateReportScreen(),

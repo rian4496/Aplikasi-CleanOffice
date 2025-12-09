@@ -5,8 +5,7 @@ import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
 import '../../screens/cleaner/my_tasks_screen.dart';
 import '../../screens/cleaner/available_requests_list_screen.dart';
-import '../../screens/cleaner/create_cleaning_report_screen.dart';
-import '../../screens/cleaner/pending_reports_list_screen.dart';
+import '../../screens/cleaner/cleaner_inbox_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
 
 class CleanerMoreBottomSheet extends StatelessWidget {
@@ -107,38 +106,22 @@ class CleanerMoreBottomSheet extends StatelessWidget {
                 _buildMenuItem(
                   context: context,
                   icon: Icons.inbox_outlined,
-                  title: 'Laporan Masuk',
-                  subtitle: 'Laporan yang perlu ditindaklanjuti',
+                  title: 'Inbox',
+                  subtitle: 'Laporan dan permintaan masuk',
                   color: AppTheme.warning,
                   onTap: () {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const PendingReportsListScreen(),
+                        builder: (context) => const CleanerInboxScreen(),
                       ),
                     );
                   },
                 ),
 
                 const SizedBox(height: 16),
-                _buildSectionTitle('Laporan & Inventaris'),
-                _buildMenuItem(
-                  context: context,
-                  icon: Icons.add_circle_outline,
-                  title: 'Buat Laporan',
-                  subtitle: 'Buat laporan pembersihan baru',
-                  color: AppTheme.info,
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CreateCleaningReportScreen(),
-                      ),
-                    );
-                  },
-                ),
+                _buildSectionTitle('Inventaris'),
                 _buildMenuItem(
                   context: context,
                   icon: Icons.inventory_2_outlined,

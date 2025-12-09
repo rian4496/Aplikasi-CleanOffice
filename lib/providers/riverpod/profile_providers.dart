@@ -1,5 +1,5 @@
 // lib/providers/riverpod/profile_providers.dart
-// ✅ PROFILE PROVIDERS - Migrated to Appwrite
+// ✅ PROFILE PROVIDERS - Migrated to Supabase
 //
 // FEATURES:
 // - Profile update actions
@@ -11,13 +11,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_profile.dart';
 import '../../models/work_schedule.dart';
-import '../../services/appwrite_database_service.dart';
-import '../../services/appwrite_storage_service.dart';
+import '../../services/supabase_database_service.dart';
+import '../../services/supabase_storage_service.dart' hide StorageException;
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
+import '../../core/config/supabase_config.dart';
 import './auth_providers.dart';
-import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
-import './request_providers.dart' show appwriteStorageServiceProvider;
+import './supabase_service_providers.dart';
 
 final _logger = AppLogger('ProfileProviders');
 
@@ -29,10 +29,10 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     return const AsyncValue.data(null);
   }
 
-  AppwriteDatabaseService get _database =>
-      ref.read(appwriteDatabaseServiceProvider);
-  AppwriteStorageService get _storage =>
-      ref.read(appwriteStorageServiceProvider);
+  SupabaseDatabaseService get _database =>
+      ref.read(supabaseDatabaseServiceProvider);
+  SupabaseStorageService get _storage =>
+      ref.read(supabaseStorageServiceProvider);
 
   /// Update user profile
   Future<void> updateProfile(UserProfile updatedProfile) async {
@@ -41,7 +41,13 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Updating profile for user: ${updatedProfile.uid}');
 
-      await _database.updateUserProfile(updatedProfile);
+      await _database.updateUserProfile(
+        userId: updatedProfile.uid,
+        displayName: updatedProfile.displayName,
+        phoneNumber: updatedProfile.phoneNumber,
+        photoUrl: updatedProfile.photoURL,
+        location: updatedProfile.location,
+      );
 
       _logger.info('Profile updated successfully');
       state = const AsyncValue.data(null);
@@ -79,7 +85,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
 
       final result = await _storage.uploadImage(
         bytes: bytes,
-        folder: 'profile_pictures',
+        bucket: SupabaseConfig.profileImagesBucket,
         userId: userId,
       );
 
@@ -107,8 +113,10 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
       // Update user profile to remove photo URL
       final currentProfile = ref.read(currentUserProfileProvider).value;
       if (currentProfile != null) {
-        final updatedProfile = currentProfile.copyWith(photoURL: null);
-        await _database.updateUserProfile(updatedProfile);
+        await _database.updateUserProfile(
+          userId: currentProfile.uid,
+          photoUrl: '', // Clear the photo URL
+        );
       }
 
       _logger.info('Profile picture deleted successfully');

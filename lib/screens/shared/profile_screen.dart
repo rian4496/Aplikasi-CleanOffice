@@ -24,16 +24,26 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar( // Gunakan AppBar standar
+      appBar: AppBar(
         title: const Text('Profil'),
-        backgroundColor: AppTheme.primaryDark, // Atau AppTheme.primary
+        backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
-        iconTheme: const IconThemeData(color: Colors.white), // Tombol back putih
-        titleTextStyle: const TextStyle( // Pastikan title putih
+        elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
+        titleTextStyle: const TextStyle(
               color: Colors.white,
               fontSize: 20,
               fontWeight: FontWeight.w600,
             ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
       body: profileAsyncValue.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -78,7 +88,7 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
       children: [
         CircleAvatar(
           radius: 50, // Ukuran avatar
-          backgroundColor: AppTheme.primaryLight,
+          backgroundColor: AppTheme.headerGradientStart.withOpacity(0.2),
           backgroundImage: (photoURL != null && photoURL.isNotEmpty)
               ? CachedNetworkImageProvider(photoURL)
               : null,
@@ -87,7 +97,7 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
                   firstLetter,
                   style: const TextStyle(
                     fontSize: 40,
-                    color: AppTheme.primaryDark,
+                    color: AppTheme.headerGradientStart,
                     fontWeight: FontWeight.bold,
                   ),
                 )
@@ -125,14 +135,14 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
           icon: Icons.work_outline,
           label: 'Jabatan',
           value: jobTitle,
-          iconColor: AppTheme.primary,
+          iconColor: Colors.grey[700]!,
         ),
         const SizedBox(height: 16),
         _buildInfoItem(
           icon: Icons.calendar_today_outlined,
           label: 'Bergabung Sejak',
           value: joinDateFormatted,
-          iconColor: AppTheme.secondary,
+          iconColor: Colors.grey[700]!,
         ),
          // Tambahkan lokasi jika ada dan tidak kosong
          if (userProfile.location != null && userProfile.location!.isNotEmpty) ...[
@@ -141,7 +151,7 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
              icon: Icons.location_on_outlined,
              label: 'Lokasi Kerja',
              value: userProfile.location!,
-             iconColor: AppTheme.success, // Atau warna lain
+             iconColor: Colors.grey[700]!,
            ),
          ]
       ],
@@ -216,7 +226,7 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
       child: Column(
         children: [
           ListTile(
-            leading: const Icon(Icons.edit_outlined, color: AppTheme.primary),
+            leading: Icon(Icons.edit_outlined, color: Colors.grey[700]),
             title: const Text('Edit Profil'),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {
@@ -230,7 +240,7 @@ class ProfileScreen extends ConsumerWidget { // Ubah jadi ConsumerWidget
           ),
           const Divider(height: 1, indent: 16, endIndent: 16), // Divider di dalam Card
           ListTile(
-            leading: const Icon(Icons.lock_outline, color: AppTheme.primary),
+            leading: Icon(Icons.lock_outline, color: Colors.grey[700]),
             title: const Text('Ubah Password'),
             trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: () {

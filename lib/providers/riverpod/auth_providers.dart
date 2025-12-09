@@ -1,29 +1,29 @@
+// lib/providers/riverpod/auth_providers.dart
+// ✅ MIGRATED TO SUPABASE
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:appwrite/models.dart' as models;
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 import '../../models/user_profile.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
-import '../../services/appwrite_auth_service.dart';
+import './supabase_service_providers.dart';
 
 /// Logger untuk auth
 final _logger = AppLogger('AuthProviders');
 
 // ==================== AUTH STATE PROVIDERS ====================
 
-/// Provider untuk Appwrite Auth Service instance
-final appwriteAuthServiceProvider = Provider<AppwriteAuthService>((ref) {
-  return AppwriteAuthService();
-});
-
-/// Provider untuk current Appwrite user
+/// Provider untuk current Supabase user
 /// Mengambil user sekali dan bisa di-invalidate manual jika perlu
-final authStateProvider = FutureProvider<models.User?>((ref) async {
-  final authService = ref.watch(appwriteAuthServiceProvider);
-
+final authStateProvider = FutureProvider<supabase.User?>((ref) async {
+  final authService = ref.watch(supabaseAuthServiceProvider);
+  
   try {
-    final user = await authService.getCurrentUser();
-    return user;
+    // Get current session from Supabase
+    final session = supabase.Supabase.instance.client.auth.currentSession;
+    return session?.user;
   } catch (e) {
+    _logger.error('Error getting auth state', e);
     return null;
   }
 });
@@ -31,7 +31,7 @@ final authStateProvider = FutureProvider<models.User?>((ref) async {
 /// Provider untuk current user UID
 final currentUserIdProvider = Provider<String?>((ref) {
   final authState = ref.watch(authStateProvider);
-  return authState.whenData((user) => user?.$id).value;
+  return authState.whenData((user) => user?.id).value;
 });
 
 // ==================== USER PROFILE PROVIDERS ====================
@@ -39,21 +39,23 @@ final currentUserIdProvider = Provider<String?>((ref) {
 /// Provider untuk current user profile
 /// Mengambil profile sekali dan bisa di-invalidate manual jika perlu
 final currentUserProfileProvider = FutureProvider<UserProfile?>((ref) async {
-  final authService = ref.watch(appwriteAuthServiceProvider);
+  final authService = ref.watch(supabaseAuthServiceProvider);
 
   try {
-    final user = await authService.getCurrentUser();
+    // Get current user from Supabase Auth
+    final session = supabase.Supabase.instance.client.auth.currentSession;
+    final user = session?.user;
 
     if (user == null) {
       _logger.info('No authenticated user');
       return null;
     }
 
-    _logger.info('Loading profile for user: ${user.$id}');
-    final profile = await authService.getUserProfile(user.$id);
+    _logger.info('Loading profile for user: ${user.id}');
+    final profile = await authService.getUserProfile(user.id);
 
     if (profile == null) {
-      _logger.warning('User profile not found for: ${user.$id}');
+      _logger.warning('User profile not found for: ${user.id}');
       return null;
     }
 
@@ -86,8 +88,6 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     return const AsyncValue.data(null);
   }
 
-  AppwriteAuthService get _authService => ref.read(appwriteAuthServiceProvider);
-
   /// Login with email and password
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
@@ -95,7 +95,8 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Attempting login for: $email');
 
-      final userProfile = await _authService.signInWithEmailAndPassword(
+      final authService = ref.read(supabaseAuthServiceProvider);
+      final userProfile = await authService.signInWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
       );
@@ -128,13 +129,12 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     try {
       _logger.info('Attempting registration for: $email');
 
-      final userProfile = await _authService.signUpWithEmailAndPassword(
+      final authService = ref.read(supabaseAuthServiceProvider);
+      final userProfile = await authService.signUpWithEmailAndPassword(
         email: email.trim(),
         password: password.trim(),
         name: displayName.trim(),
         role: role,
-        departmentId: departmentId,
-        phoneNumber: phoneNumber,
       );
 
       _logger.logAuth('registration_success', userId: userProfile.uid);
@@ -155,7 +155,8 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
   Future<void> logout() async {
     try {
       _logger.info('Logging out user');
-      await _authService.signOut();
+      final authService = ref.read(supabaseAuthServiceProvider);
+      await authService.signOut();
       _logger.logAuth('logout_success');
       state = const AsyncValue.data(null);
 
@@ -175,7 +176,8 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
 
     try {
       _logger.info('Sending password reset email to: $email');
-      await _authService.sendPasswordResetEmail(email.trim());
+      final authService = ref.read(supabaseAuthServiceProvider);
+      await authService.sendPasswordResetEmail(email.trim());
       _logger.info('Password reset email sent');
       state = const AsyncValue.data(null);
     } catch (e, stackTrace) {
@@ -194,17 +196,15 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
 
     try {
-      final user = await _authService.getCurrentUser();
-      if (user == null) {
+      final session = supabase.Supabase.instance.client.auth.currentSession;
+      if (session?.user == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
-      _logger.info('Changing password for user: ${user.$id}');
+      _logger.info('Changing password for user: ${session!.user.id}');
 
-      await _authService.changePassword(
-        currentPassword: currentPassword,
-        newPassword: newPassword,
-      );
+      final authService = ref.read(supabaseAuthServiceProvider);
+      await authService.updatePassword(newPassword);
 
       _logger.info('Password changed successfully');
       state = const AsyncValue.data(null);
@@ -218,15 +218,15 @@ class AuthActionsNotifier extends Notifier<AsyncValue<void>> {
   /// Update display name
   Future<void> updateDisplayName(String displayName) async {
     try {
-      final user = await _authService.getCurrentUser();
-      if (user == null) {
+      final session = supabase.Supabase.instance.client.auth.currentSession;
+      if (session?.user == null) {
         throw const AuthException(message: 'User not logged in');
       }
 
-      _logger.info('Updating display name for user: ${user.$id}');
+      _logger.info('Updating display name for user: ${session!.user.id}');
 
-      await _authService.updateUserProfile(
-        userId: user.$id,
+      final authService = ref.read(supabaseAuthServiceProvider);
+      await authService.updateUserProfile(
         displayName: displayName.trim(),
       );
 
@@ -272,3 +272,20 @@ final isEmployeeProvider = Provider<bool>((ref) {
   final role = ref.watch(currentUserRoleProvider);
   return role == 'employee';
 });
+
+// ==================== LEGACY COMPATIBILITY ====================
+// These are kept for backward compatibility during migration
+// TODO: Remove after all screens are migrated
+
+/// Legacy provider - redirects to supabaseAuthServiceProvider
+@Deprecated('Use supabaseAuthServiceProvider instead')
+final appwriteAuthServiceProvider = supabaseAuthServiceProvider;
+
+/// Legacy alias for screens using old authControllerProvider name
+@Deprecated('Use authActionsProvider instead')
+final authControllerProvider = authActionsProvider;
+
+/// Legacy alias for screens using currentUserProvider
+@Deprecated('Use currentUserProfileProvider instead')
+final currentUserProvider = currentUserProfileProvider;
+

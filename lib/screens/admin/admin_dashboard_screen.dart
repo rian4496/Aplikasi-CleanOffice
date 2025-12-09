@@ -14,8 +14,11 @@ import '../../providers/riverpod/auth_providers.dart';
 import '../../providers/riverpod/notification_providers.dart';
 import '../../providers/riverpod/request_providers.dart';
 import '../../providers/riverpod/dummy_providers.dart';
+import '../../providers/riverpod/supabase_report_providers.dart';
+import '../../providers/riverpod/connectivity_provider.dart';
 
 import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../widgets/shared/offline_banner.dart';
 import '../../widgets/admin/admin_sidebar.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 
@@ -28,7 +31,6 @@ import '../../widgets/admin/advanced_filter_dialog.dart';
 import './all_reports_management_screen.dart';
 import './all_requests_management_screen.dart';
 import './cleaner_management_screen.dart';
-import '../dev/seed_data_screen.dart';
 import '../chat/conversation_list_screen.dart';
 
 // 🎨 NEW: Modern Dashboard Widgets
@@ -79,8 +81,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       // ==================== END DRAWER (Mobile Right Side Menu) ====================
       endDrawer: !isDesktop ? Drawer(child: _buildMobileDrawer()) : null,
 
-      // ==================== BODY ====================
-      body: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      // ==================== BODY (with Offline Banner) ====================
+      body: _OfflineBannerBody(
+        child: isDesktop ? _buildDesktopLayout() : _buildMobileLayout(),
+      ),
 
       // ==================== BOTTOM NAV (Mobile Only) ====================
       bottomNavigationBar: !isDesktop ? _buildBottomNavBar() : null,
@@ -418,12 +422,14 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     final cleanersAsync = ref.watch(
       USE_DUMMY_DATA ? dummyCleanersProvider(null) : availableCleanersProvider
     );
+    final allReportsAsync = ref.watch(allReportsProvider);
 
     return RefreshIndicator(
       onRefresh: () async {
         ref.invalidate(needsVerificationReportsProvider);
         ref.invalidate(allRequestsProvider);
         ref.invalidate(availableCleanersProvider);
+        ref.invalidate(allReportsProvider);
         await Future.delayed(const Duration(milliseconds: 500));
       },
       child: CustomScrollView(
@@ -434,23 +440,23 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ),
 
 
-          // Stats Cards (2x2 Grid)
+          // Stats Cards (3 in a row)
           SliverToBoxAdapter(
             child: _buildMobileStats(
+              allReportsAsync,
               needsVerificationAsync,
-              allRequestsAsync,
               cleanersAsync,
             ),
           ),
 
           // Weekly Trends Section
           SliverToBoxAdapter(
-            child: _buildMobileWeeklyTrends(needsVerificationAsync),
+            child: _buildMobileWeeklyTrends(allReportsAsync),
           ),
 
           // Recent Activities Section
           SliverToBoxAdapter(
-            child: _buildMobileRecentActivities(needsVerificationAsync),
+            child: _buildMobileRecentActivities(allReportsAsync),
           ),
 
           // Bottom padding for FAB
@@ -714,31 +720,127 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     );
   */
   
-  // TEMPORARY PLACEHOLDER - Simple stats display
+  // STATS CARDS - 3 in a row
   Widget _buildMobileStats(
+    AsyncValue allReportsAsync,
     AsyncValue needsVerificationAsync,
-    AsyncValue allRequestsAsync,
     AsyncValue cleanersAsync,
   ) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: Text(
-          '📊 Stats temporarily disabled\nWill be rebuilt soon',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          // Card 1: Total Laporan
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.assignment_rounded,
+              label: 'Total Laporan',
+              asyncValue: allReportsAsync,
+              bgColor: const Color(0xFFFFF1F2), // Rose 50
+              iconColor: const Color(0xFFBE123C), // Rose 700
+            ),
           ),
-        ),
+          const SizedBox(width: 8),
+          // Card 2: Menunggu Verifikasi
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.pending_actions_rounded,
+              label: 'Verifikasi',
+              asyncValue: needsVerificationAsync,
+              bgColor: const Color(0xFFFEFCE8), // Yellow 50
+              iconColor: const Color(0xFFA16207), // Yellow 700
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Card 3: Cleaner Aktif
+          Expanded(
+            child: _buildStatCard(
+              icon: Icons.cleaning_services_rounded,
+              label: 'Cleaner',
+              asyncValue: cleanersAsync,
+              bgColor: const Color(0xFFF0FDF4), // Green 50
+              iconColor: const Color(0xFF15803D), // Green 700
+            ),
+          ),
+        ],
       ),
     );
   }
+
+  /// Build individual stat card
+  Widget _buildStatCard({
+    required IconData icon,
+    required String label,
+    required AsyncValue asyncValue,
+    required Color bgColor,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white, // White background
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon - keeps pastel color
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: bgColor, // Pastel background for icon
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(height: 8),
+          // Value - black text
+          asyncValue.when(
+            data: (data) {
+              final count = (data is List) ? data.length : 0;
+              return Text(
+                count.toString(),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              );
+            },
+            loading: () => const SizedBox(
+              height: 24,
+              width: 24,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            error: (_, __) => const Text(
+              '-',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+            ),
+          ),
+          const SizedBox(height: 4),
+          // Label - dark grey text
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
 
   // ==================== MOBILE WEEKLY TRENDS ====================
   Widget _buildMobileWeeklyTrends(AsyncValue reportsAsync) {
@@ -896,12 +998,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
   Widget _buildEmptyActivities() {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 32),
+      width: double.infinity,
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Icon(Icons.history, size: 48, color: Colors.grey[300]),
           const SizedBox(height: 12),
           Text(
             'Belum ada aktivitas',
+            textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 14,
               color: Colors.grey[600],
@@ -1008,45 +1114,6 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           onTap: () => Navigator.pop(context),
         ),
         DrawerMenuItem(
-          icon: Icons.assignment_outlined,
-          title: 'Kelola Laporan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AllReportsManagementScreen(),
-              ),
-            );
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.room_service_outlined,
-          title: 'Kelola Permintaan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const AllRequestsManagementScreen(),
-              ),
-            );
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.people_outline,
-          title: 'Kelola Petugas',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const CleanerManagementScreen(),
-              ),
-            );
-          },
-        ),
-        DrawerMenuItem(
           icon: Icons.person_outline,
           title: 'Profil',
           onTap: () {
@@ -1136,7 +1203,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
     required bool isActive,
     required VoidCallback onTap,
   }) {
-    final activeColor = const Color(0xFF5D5FEF); // Blue color
+    // Light blue gradient color for active state
+    final activeColor = AppTheme.headerGradientStart;
     final inactiveColor = Colors.grey[600]!;
     
     return Expanded(
@@ -1307,12 +1375,11 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                   icon: Icons.data_object,
                   label: 'Generate Sample Data',
                   color: Colors.deepPurple,
-                  onTap: () => Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SeedDataScreen(),
-                    ),
-                  ),
+                  onTap: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Fitur ini dinonaktifkan sementara')),
+                    );
+                  },
                 ),
               ),
             ],
@@ -1565,5 +1632,50 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         );
       }
     }
+  }
+}
+
+// ==================== OFFLINE BANNER BODY ====================
+/// Widget wrapper yang menampilkan banner offline di atas body
+class _OfflineBannerBody extends ConsumerWidget {
+  final Widget child;
+
+  const _OfflineBannerBody({required this.child});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Import connectivity provider
+    final isConnected = ref.watch(
+      connectivityProvider,
+    );
+
+    return Column(
+      children: [
+        // Offline Banner
+        if (!isConnected)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            color: Colors.red[700],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.wifi_off, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                const Text(
+                  'Anda sedang offline',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // Main content
+        Expanded(child: child),
+      ],
+    );
   }
 }

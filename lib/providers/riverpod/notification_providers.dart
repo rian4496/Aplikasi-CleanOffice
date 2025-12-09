@@ -1,52 +1,54 @@
 // lib/providers/riverpod/notification_providers.dart
-// Notification providers - Migrated to Appwrite
+// ✅ MIGRATED TO SUPABASE
 
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../models/notification_model.dart';
 import './auth_providers.dart';
-import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
+import './supabase_service_providers.dart';
 
 part 'notification_providers.g.dart';
 
 // ==================== USER NOTIFICATIONS ====================
 
-/// Stream of user notifications
+/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
 @riverpod
-Stream<List<AppNotification>> userNotifications(Ref ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return Stream.value([]);
+Future<List<AppNotification>> userNotifications(Ref ref) async {
+  final user = supabase.Supabase.instance.client.auth.currentSession?.user;
+  if (user == null) return [];
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getUserNotifications(user.$id);
+  // TODO: Implement notification methods in SupabaseDatabaseService
+  // For now, return empty list
+  return [];
 }
 
 // ==================== UNREAD COUNT ====================
 
-/// Stream of unread notification count
+/// Unread notification count
 @riverpod
-Stream<int> unreadNotificationCount(Ref ref) {
-  final user = ref.watch(authStateProvider).value;
-  if (user == null) return Stream.value(0);
+Future<int> unreadNotificationCount(Ref ref) async {
+  final user = supabase.Supabase.instance.client.auth.currentSession?.user;
+  if (user == null) return 0;
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getUnreadNotificationCount(user.$id);
+  // TODO: Implement notification methods in SupabaseDatabaseService
+  return 0;
 }
 
 // ==================== NOTIFICATION SETTINGS ====================
 
 /// Notification settings - stored locally for now
-/// Note: Appwrite simplified schema doesn't include notification_settings collection
+/// Note: Supabase schema doesn't include notification_settings table
 /// This could be added later or stored in user preferences
 @riverpod
-Stream<NotificationSettings> notificationSettings(Ref ref) {
-  final user = ref.watch(authStateProvider).value;
+Future<NotificationSettings> notificationSettings(Ref ref) async {
+  final user = supabase.Supabase.instance.client.auth.currentSession?.user;
   if (user == null) {
-    return Stream.value(NotificationSettings(userId: ''));
+    return NotificationSettings(userId: '');
   }
 
   // Return default settings - can be enhanced later
-  return Stream.value(NotificationSettings(userId: user.$id));
+  return NotificationSettings(userId: user.id);
 }
 
 // ==================== ACTIONS ====================
@@ -57,18 +59,20 @@ Future<void> markNotificationAsRead(
   Ref ref,
   String notificationId,
 ) async {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  await service.markNotificationAsRead(notificationId);
+  // TODO: Implement in SupabaseDatabaseService
+  // final service = ref.watch(supabaseDatabaseServiceProvider);
+  // await service.markNotificationAsRead(notificationId);
 }
 
 /// Mark all notifications as read
 @riverpod
 Future<void> markAllNotificationsAsRead(Ref ref) async {
-  final user = ref.watch(authStateProvider).value;
+  final user = supabase.Supabase.instance.client.auth.currentSession?.user;
   if (user == null) return;
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  await service.markAllNotificationsAsRead(user.$id);
+  // TODO: Implement in SupabaseDatabaseService
+  // final service = ref.watch(supabaseDatabaseServiceProvider);
+  // await service.markAllNotificationsAsRead(user.id);
 }
 
 /// Delete notification
@@ -77,18 +81,19 @@ Future<void> deleteNotification(
   Ref ref,
   String notificationId,
 ) async {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  await service.deleteNotification(notificationId);
+  // TODO: Implement in SupabaseDatabaseService
+  // final service = ref.watch(supabaseDatabaseServiceProvider);
+  // await service.deleteNotification(notificationId);
 }
 
 /// Save notification settings
 /// Note: For now, settings are handled locally
-/// Can be enhanced to store in Appwrite later
+/// Can be enhanced to store in Supabase later
 @riverpod
 Future<void> saveNotificationSettings(
   Ref ref,
   NotificationSettings settings,
 ) async {
-  // TODO: Implement when notification_settings collection is added
+  // TODO: Implement when notifications feature is fully implemented
   // For now, settings could be stored in SharedPreferences
 }

@@ -33,83 +33,73 @@ class MessageBubble extends StatelessWidget {
       child: Align(
         alignment: isOwnMessage ? Alignment.centerRight : Alignment.centerLeft,
         child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: const EdgeInsets.only(bottom: 4),
           constraints: const BoxConstraints(maxWidth: 300),
-          child: Column(
-            crossAxisAlignment:
-                isOwnMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-            children: [
-              // Message container
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isOwnMessage ? AdminColors.primary : Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(16),
-                    topRight: const Radius.circular(16),
-                    bottomLeft: Radius.circular(isOwnMessage ? 16 : 4),
-                    bottomRight: Radius.circular(isOwnMessage ? 4 : 16),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.05),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Sender name (if not own message)
-                    if (!isOwnMessage) ...[
-                      Text(
-                        message.senderName,
-                        style: AdminTypography.caption.copyWith(
-                          color: AdminColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
-
-                    // Reply-to preview (if replying to a message)
-                    if (message.replyToMessageId != null &&
-                        message.replyToText != null) ...[
-                      _buildReplyPreview(),
-                      const SizedBox(height: 8),
-                    ],
-
-                    // Message content based on type
-                    _buildMessageContent(),
-
-                    // Edited indicator
-                    if (message.isEdited) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        'diedit',
-                        style: AdminTypography.caption.copyWith(
-                          color: isOwnMessage
-                              ? Colors.white70
-                              : Colors.grey[500],
-                          fontStyle: FontStyle.italic,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: Colors.grey[200], // Grey background for both
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isOwnMessage ? 16 : 4),
+              bottomRight: Radius.circular(isOwnMessage ? 4 : 16),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 3,
+                offset: const Offset(0, 1),
               ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Sender name (if not own message)
+              if (!isOwnMessage) ...[
+                Text(
+                  message.senderName,
+                  style: AdminTypography.caption.copyWith(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
 
-              const SizedBox(height: 4),
+              // Reply-to preview (if replying to a message)
+              if (message.replyToMessageId != null &&
+                  message.replyToText != null) ...[
+                _buildReplyPreview(),
+                const SizedBox(height: 8),
+              ],
 
-              // Time and status row
+              // Message content based on type
+              _buildMessageContent(),
+
+              const SizedBox(height: 2),
+
+              // Time and status row (INSIDE bubble)
               Row(
                 mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  // Edited indicator inline
+                  if (message.isEdited) ...[
+                    Text(
+                      'diedit ',
+                      style: AdminTypography.caption.copyWith(
+                        color: Colors.grey[500],
+                        fontSize: 10,
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+                  ],
                   Text(
                     message.getFormattedTime(),
                     style: AdminTypography.caption.copyWith(
                       color: Colors.grey[600],
+                      fontSize: 10,
                     ),
                   ),
                   if (isOwnMessage) ...[
@@ -169,7 +159,7 @@ class MessageBubble extends StatelessWidget {
     return Text(
       message.content,
       style: AdminTypography.body2.copyWith(
-        color: isOwnMessage ? Colors.white : AdminColors.textPrimary,
+        color: Colors.black, // Black text on grey background
       ),
     );
   }
@@ -290,8 +280,8 @@ class MessageBubble extends StatelessWidget {
 
     return Icon(
       isRead ? Icons.done_all : Icons.done,
-      size: 14,
-      color: isRead ? Colors.blue : Colors.grey[600],
+      size: 12,
+      color: isRead ? AdminColors.info : (isOwnMessage ? Colors.white60 : Colors.grey[600]),
     );
   }
 

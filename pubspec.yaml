@@ -15,8 +15,8 @@ dependencies:
   # UI
   cupertino_icons: ^1.0.8
 
-  # Backend - Appwrite (Firebase removed)
-  appwrite: ^20.3.1
+  # Backend - Supabase
+  supabase_flutter: ^2.10.1
 
   # Settings
   shared_preferences: ^2.2.2
@@ -53,7 +53,7 @@ dependencies:
   permission_handler: ^12.0.1
 
   # Image Handling
-  image_picker: ^1.2.0
+  image_picker: ^1.2.1
   image_cropper: ^11.0.0
   cached_network_image: ^3.4.1
   flutter_image_compress: ^2.3.0
@@ -79,6 +79,8 @@ dependencies:
   flutter_local_notifications: ^19.5.0
   flutter_dotenv: ^6.0.0
   timeago: ^3.7.1
+  emoji_picker_flutter: ^4.4.0
+  connectivity_plus: ^7.0.0
 
 dev_dependencies:
   flutter_test:

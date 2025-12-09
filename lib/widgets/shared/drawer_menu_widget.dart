@@ -57,8 +57,8 @@ class DrawerMenuWidget extends StatelessWidget {
                 // Render semua menu items
                 ...menuItems.map((item) => _buildMenuItem(item)),
 
-                // Divider sebelum logout
-                const Divider(),
+                // Divider sebelum logout (tipis, minimalis grey)
+                Divider(height: 1, thickness: 0.5, color: Colors.grey[400]),
 
                 // Logout button with confirmation
                 _buildMenuItem(

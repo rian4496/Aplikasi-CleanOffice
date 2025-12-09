@@ -69,7 +69,7 @@ class InventoryItem extends Equatable {
     }
   }
 
-  // From Firestore
+  // From Firestore (legacy)
   factory InventoryItem.fromMap(String id, Map<String, dynamic> map) {
     return InventoryItem(
       id: id,
@@ -86,7 +86,28 @@ class InventoryItem extends Equatable {
     );
   }
 
-  // To Firestore
+  /// From Supabase (snake_case)
+  factory InventoryItem.fromSupabase(Map<String, dynamic> map) {
+    return InventoryItem(
+      id: map['id'] as String,
+      name: map['name'] as String,
+      category: map['category'] as String,
+      currentStock: map['quantity'] as int? ?? 0,
+      maxStock: map['max_stock'] as int? ?? 100,
+      minStock: map['min_stock'] as int? ?? 0,
+      unit: map['unit'] as String,
+      description: map['description'] as String?,
+      imageUrl: map['image_url'] as String?,
+      createdAt: map['created_at'] != null 
+          ? DateTime.parse(map['created_at'] as String) 
+          : DateTime.now(),
+      updatedAt: map['updated_at'] != null 
+          ? DateTime.parse(map['updated_at'] as String) 
+          : DateTime.now(),
+    );
+  }
+
+  // To Firestore (legacy)
   Map<String, dynamic> toMap() {
     return {
       'name': name,
@@ -99,6 +120,20 @@ class InventoryItem extends Equatable {
       'imageUrl': imageUrl,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+
+  /// To Supabase (snake_case)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'name': name,
+      'category': category,
+      'quantity': currentStock,
+      'min_stock': minStock,
+      'unit': unit,
+      'description': description,
+      'image_url': imageUrl,
+      'location': null, // Add if needed
     };
   }
 
@@ -145,6 +180,7 @@ class InventoryItem extends Equatable {
         updatedAt,
       ];
 }
+
 
 // ==================== STOCK STATUS ====================
 
@@ -232,6 +268,32 @@ class StockRequest extends Equatable {
       approvedBy: map['approvedBy'] as String?,
       approvedByName: map['approvedByName'] as String?,
       rejectionReason: map['rejectionReason'] as String?,
+    );
+  }
+
+  /// From Supabase (snake_case)
+  factory StockRequest.fromSupabase(Map<String, dynamic> map) {
+    return StockRequest(
+      id: map['id'] as String,
+      itemId: map['item_id'] as String,
+      itemName: map['item_name'] as String,
+      requesterId: map['requester_id'] as String,
+      requesterName: map['requester_name'] as String,
+      requestedQuantity: map['requested_quantity'] as int,
+      notes: map['notes'] as String?,
+      status: RequestStatus.values.firstWhere(
+        (e) => e.name == (map['status'] as String? ?? 'pending'),
+        orElse: () => RequestStatus.pending,
+      ),
+      requestedAt: map['requested_at'] != null
+          ? DateTime.parse(map['requested_at'] as String)
+          : DateTime.now(),
+      approvedAt: map['approved_at'] != null
+          ? DateTime.parse(map['approved_at'] as String)
+          : null,
+      approvedBy: map['approved_by'] as String?,
+      approvedByName: map['approved_by_name'] as String?,
+      rejectionReason: map['rejection_reason'] as String?,
     );
   }
 

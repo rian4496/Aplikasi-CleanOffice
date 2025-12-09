@@ -19,7 +19,13 @@ import '../../core/utils/responsive_helper.dart';
 import '../../core/constants/app_constants.dart';
 import '../../utils/responsive_ui_helper.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
+import '../../widgets/navigation/cleaner_more_bottom_sheet.dart';
+import '../../widgets/shared/notification_bell.dart';
+import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../providers/riverpod/auth_providers.dart';
 import './inventory_detail_screen.dart';
+import './inventory_add_edit_screen.dart';
+import '../../widgets/inventory/inventory_form_side_panel.dart';
 
 class InventoryListScreen extends ConsumerStatefulWidget {
   const InventoryListScreen({super.key});
@@ -86,7 +92,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
         flexibleSpace: Container(
           decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [AppTheme.primary, AppTheme.primaryDark],
+              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -117,7 +123,21 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 'Pilih Semua',
                 style: TextStyle(color: Colors.white),
               ),
-            ),
+            )
+          else ...[
+            // Notification bell
+            const NotificationBell(iconColor: Colors.white),
+            const SizedBox(width: 8),
+            // Hamburger Menu Icon to open endDrawer
+            if (!isDesktop)
+              IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  Scaffold.of(context).openEndDrawer();
+                },
+                tooltip: 'Menu',
+              ),
+          ],
         ],
       ),
       body: Column(
@@ -252,6 +272,69 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           ),
         ],
       ),
+      // ==================== END DRAWER ====================
+      endDrawer: !isDesktop
+          ? Drawer(
+              child: DrawerMenuWidget(
+                userProfile: ref.watch(currentUserProfileProvider).asData?.value,
+                roleTitle: 'Admin',
+                menuItems: [
+                  DrawerMenuItem(
+                    icon: Icons.dashboard_outlined,
+                    title: 'Dashboard',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamedAndRemoveUntil(
+                        context,
+                        AppConstants.homeAdminRoute,
+                        (route) => false,
+                      );
+                    },
+                  ),
+                  DrawerMenuItem(
+                    icon: Icons.person_outline,
+                    title: 'Profil',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/profile');
+                    },
+                  ),
+                  DrawerMenuItem(
+                    icon: Icons.settings_outlined,
+                    title: 'Pengaturan',
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.pushNamed(context, '/settings');
+                    },
+                  ),
+                ],
+                onLogout: () async {
+                  await ref.read(authActionsProvider.notifier).logout();
+                  if (context.mounted) {
+                    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+                  }
+                },
+              ),
+            )
+          : null,
+      // ==================== FAB ====================
+      floatingActionButton: !isSelectionMode
+          ? FloatingActionButton.extended(
+              onPressed: () async {
+                await ResponsiveUIHelper.showFormView(
+                  context: context,
+                  mobileScreen: const InventoryAddEditScreen(),
+                  webDialog: const InventoryFormSidePanel(),
+                );
+              },
+              backgroundColor: AppTheme.primary,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: const Text(
+                'Tambah Item',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+              ),
+            )
+          : null,
       bottomNavigationBar: isSelectionMode
           ? itemsAsync.maybeWhen(
               data: (items) => BatchActionBar(
@@ -268,6 +351,8 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
 
   // ==================== BOTTOM NAVIGATION BAR ====================
   Widget _buildBottomNavBar() {
+    final userRole = ref.watch(currentUserRoleProvider)?.toLowerCase();
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -289,20 +374,32 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.homeAdminRoute,
-                  (route) => false,
-                ),
+                onTap: () {
+                  String route;
+                  switch (userRole) {
+                    case 'cleaner':
+                      route = AppConstants.homeCleanerRoute;
+                      break;
+                    case 'employee':
+                      route = AppConstants.homeEmployeeRoute;
+                      break;
+                    default:
+                      route = AppConstants.homeAdminRoute;
+                  }
+                  Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
+                },
               ),
               _buildNavItem(
-                icon: Icons.assignment_rounded,
-                label: 'Laporan',
+                icon: userRole == 'cleaner' ? Icons.inbox_rounded : Icons.assignment_rounded,
+                label: userRole == 'cleaner' ? 'Inbox' : 'Laporan',
                 isActive: false,
-                onTap: () => Navigator.pushReplacementNamed(
-                  context,
-                  '/reports_management',
-                ),
+                onTap: () {
+                  if (userRole == 'cleaner') {
+                    Navigator.pop(context);
+                  } else {
+                    Navigator.pushReplacementNamed(context, '/reports_management');
+                  }
+                },
               ),
               _buildNavItem(
                 icon: Icons.chat_bubble_rounded,
@@ -317,7 +414,11 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                 label: 'Lainnya',
                 isActive: false,
                 onTap: () {
-                  AdminMoreBottomSheet.show(context);
+                  if (userRole == 'cleaner') {
+                    CleanerMoreBottomSheet.show(context);
+                  } else {
+                    AdminMoreBottomSheet.show(context);
+                  }
                 },
               ),
             ],

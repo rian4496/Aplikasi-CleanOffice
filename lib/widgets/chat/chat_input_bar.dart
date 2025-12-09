@@ -235,6 +235,103 @@ class _ChatInputBarState extends State<ChatInputBar> {
     }
   }
 
+  /// Show emoji picker bottom sheet
+  void _showEmojiPicker() {
+    // Common emojis organized by category
+    final emojis = [
+      // Smileys
+      '😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂',
+      '🙂', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗',
+      '😚', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗',
+      '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶',
+      '😏', '😒', '🙄', '😬', '😮', '😯', '😲', '😳',
+      '🥺', '😦', '😧', '😨', '😰', '😢', '😭', '😱',
+      '😖', '😣', '😞', '😓', '😩', '😫', '🥱', '😤',
+      '😡', '😠', '🤬', '😈', '👿', '💀', '☠️', '💩',
+      // Gestures
+      '👍', '👎', '👊', '✊', '🤛', '🤜', '🤝', '👏',
+      '🙌', '👐', '🤲', '🙏', '✌️', '🤞', '🤟', '🤘',
+      '👌', '🤌', '🤏', '👈', '👉', '👆', '👇', '☝️',
+      '✋', '🤚', '🖐️', '🖖', '👋', '🤙', '💪', '🦾',
+      // Hearts & Love
+      '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍',
+      '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘',
+      // Objects
+      '🎉', '🎊', '🎁', '🏆', '🏅', '🥇', '🥈', '🥉',
+      '⭐', '🌟', '✨', '💫', '🔥', '💯', '✅', '❌',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          height: 280,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Pilih Emoji',
+                style: AdminTypography.h4,
+              ),
+              const SizedBox(height: 12),
+              // Emoji grid
+              Expanded(
+                child: GridView.builder(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 8,
+                    mainAxisSpacing: 4,
+                    crossAxisSpacing: 4,
+                  ),
+                  itemCount: emojis.length,
+                  itemBuilder: (context, index) {
+                    return InkWell(
+                      onTap: () {
+                        // Insert emoji at cursor position
+                        final text = widget.controller.text;
+                        final selection = widget.controller.selection;
+                        final newText = text.replaceRange(
+                          selection.start,
+                          selection.end,
+                          emojis[index],
+                        );
+                        widget.controller.text = newText;
+                        // Move cursor after emoji
+                        widget.controller.selection = TextSelection.collapsed(
+                          offset: selection.start + emojis[index].length,
+                        );
+                        Navigator.pop(context);
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Center(
+                        child: Text(
+                          emojis[index],
+                          style: const TextStyle(fontSize: 24),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -252,41 +349,56 @@ class _ChatInputBarState extends State<ChatInputBar> {
       child: SafeArea(
         child: Row(
           children: [
-            // Attachment button
+            // Emoji button
             IconButton(
-              icon: const Icon(Icons.attach_file),
-              color: widget.enabled ? AdminColors.primary : Colors.grey,
-              onPressed: widget.enabled ? _handleAttachment : null,
-              tooltip: 'Lampiran',
+              icon: const Icon(Icons.emoji_emotions_outlined),
+              color: widget.enabled ? Colors.grey[600] : Colors.grey,
+              onPressed: widget.enabled ? _showEmojiPicker : null,
+              tooltip: 'Emoji',
             ),
 
-            // Text input
+            // Text input with attachment button inside
             Expanded(
-              child: TextField(
-                controller: widget.controller,
-                enabled: widget.enabled,
-                decoration: InputDecoration(
-                  hintText: 'Ketik pesan...',
-                  hintStyle: AdminTypography.body2.copyWith(
-                    color: Colors.grey[400],
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: widget.enabled
-                      ? AdminColors.background
-                      : Colors.grey[100],
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 10,
-                  ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.enabled ? Colors.white : Colors.grey[100],
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: Colors.grey[300]!),
                 ),
-                style: AdminTypography.body2,
-                maxLines: null,
-                textInputAction: TextInputAction.newline,
-                textCapitalization: TextCapitalization.sentences,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: TextField(
+                        controller: widget.controller,
+                        enabled: widget.enabled,
+                        cursorColor: Colors.grey[700],
+                        decoration: const InputDecoration(
+                          hintText: 'Ketik pesan...',
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                        ),
+                        style: AdminTypography.body2.copyWith(
+                          color: Colors.black,
+                        ),
+                        maxLines: null,
+                        textInputAction: TextInputAction.newline,
+                        textCapitalization: TextCapitalization.sentences,
+                      ),
+                    ),
+                    // Attachment button (inside input field)
+                    IconButton(
+                      icon: const Icon(Icons.attach_file),
+                      color: Colors.grey[600],
+                      iconSize: 20,
+                      onPressed: widget.enabled ? _handleAttachment : null,
+                      tooltip: 'Lampiran',
+                    ),
+                  ],
+                ),
               ),
             ),
 

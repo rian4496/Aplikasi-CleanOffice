@@ -1,392 +1,416 @@
-// lib/services/chat_service.dart
-// Service for managing chat conversations and messages
-
-import 'dart:io';
-import 'package:appwrite/appwrite.dart';
-import 'package:logging/logging.dart';
-import 'package:path/path.dart' as path;
-
-import '../core/config/appwrite_config.dart';
-import '../core/services/appwrite_client.dart';
-import '../models/conversation.dart';
+import 'dart:async';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../core/logging/app_logger.dart';
 import '../models/message.dart';
-import '../models/user_profile.dart';
+import '../models/conversation.dart';
 
-/// Chat Service - Manages conversations and messages
+/// Service for chat/messaging functionality using Supabase.
+/// Updated to use 'chats' table with participant_ids array schema.
 class ChatService {
-  // Singleton pattern
-  static final ChatService _instance = ChatService._internal();
-  factory ChatService() => _instance;
-  ChatService._internal();
+  final SupabaseClient _supabase;
+  final _logger = AppLogger('ChatService');
+  
+  ChatService([SupabaseClient? supabase]) 
+      : _supabase = supabase ?? Supabase.instance.client;
 
-  final Logger _logger = Logger('ChatService');
-  Databases get _databases => AppwriteClient().databases;
-  Realtime get _realtime => AppwriteClient().realtime;
-  Storage get _storage => AppwriteClient().storage;
+  // ==================== CONVERSATIONS (using 'chats' table) ====================
 
-  // ==================== CONVERSATIONS ====================
+  /// Get all conversations for a user as Stream
+  Stream<List<Conversation>> getConversations(String userId) {
+    return Stream.fromFuture(_getConversationsFuture(userId));
+  }
 
-  /// Get all conversations for a specific user (with realtime updates)
-  Stream<List<Conversation>> getConversations(String userId) async* {
-    Future<List<Conversation>> fetchConversations() async {
-      try {
-        final response = await _databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.conversationsCollectionId,
-          queries: [
-            Query.equal('participantIds', [userId]),
-            Query.equal('isArchived', [false]),
-            Query.orderDesc('\$updatedAt'),
-            Query.limit(100),
-          ],
-        );
-
-        return response.documents
-            .map((doc) => Conversation.fromAppwrite(doc.data))
-            .toList();
-      } catch (e) {
-        _logger.severe('Error fetching conversations: $e');
-        return [];
+  Future<List<Conversation>> _getConversationsFuture(String userId) async {
+    try {
+      final response = await _supabase
+          .from('chats')
+          .select()
+          .contains('participant_ids', [userId])
+          .order('updated_at', ascending: false);
+      
+      final conversations = <Conversation>[];
+      
+      for (final chatData in response as List) {
+        // Get participant IDs
+        final participantIds = (chatData['participant_ids'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ?? [];
+        
+        // Fetch participant names from users table
+        final participantNames = <String>[];
+        for (final participantId in participantIds) {
+          try {
+            _logger.info('Fetching user for participant: $participantId');
+            final userResponse = await _supabase
+                .from('users')
+                .select('display_name')
+                .eq('id', participantId)
+                .maybeSingle();
+            _logger.info('User response for $participantId: $userResponse');
+            if (userResponse != null && userResponse['display_name'] != null) {
+              participantNames.add(userResponse['display_name']);
+            } else {
+              _logger.warning('No display_name found for user $participantId - response was: $userResponse');
+              participantNames.add('Unknown');
+            }
+          } catch (e) {
+            _logger.error('Failed to fetch user $participantId', e);
+            participantNames.add('Unknown');
+          }
+        }
+        
+        // Fetch last message
+        String? lastMessageText;
+        DateTime? lastMessageTime;
+        String? lastMessageSenderId;
+        
+        try {
+          final lastMsgResponse = await _supabase
+              .from('messages')
+              .select('content, created_at, sender_id')
+              .eq('chat_id', chatData['id'])
+              .order('created_at', ascending: false)
+              .limit(1)
+              .maybeSingle();
+          
+          if (lastMsgResponse != null) {
+            lastMessageText = lastMsgResponse['content'];
+            lastMessageTime = DateTime.tryParse(lastMsgResponse['created_at'] ?? '');
+            lastMessageSenderId = lastMsgResponse['sender_id'];
+          }
+        } catch (e) {
+          _logger.error('Failed to get last message', e);
+        }
+        
+        // Create enriched conversation
+        final enrichedData = Map<String, dynamic>.from(chatData);
+        enrichedData['participant_names'] = participantNames;
+        enrichedData['last_message_text'] = lastMessageText;
+        enrichedData['last_message_time'] = lastMessageTime?.toIso8601String();
+        enrichedData['last_message_sender_id'] = lastMessageSenderId;
+        
+        conversations.add(Conversation.fromChatsTable(enrichedData));
       }
-    }
-
-    // Emit initial data
-    yield await fetchConversations();
-
-    // Listen for realtime updates
-    await for (final _ in _realtime
-        .subscribe([AppwriteConfig.conversationsChannel]).stream) {
-      yield await fetchConversations();
+      
+      return conversations;
+    } catch (e) {
+      _logger.error('Failed to get conversations', e);
+      return [];
     }
   }
 
-  /// Create a new conversation
-  Future<Conversation?> createConversation({
-    required ConversationType type,
-    required List<String> participantIds,
-    required List<String> participantNames,
-    required List<String> participantRoles,
-    required String createdBy,
-    String? name, // For group chat
-    ChatContextType? contextType,
-    String? contextId,
-  }) async {
+  /// Get a single conversation by ID (with enriched participant names)
+  Future<Conversation?> getConversation(String conversationId) async {
     try {
-      // Check if direct conversation already exists
-      if (type == ConversationType.direct) {
-        final existing = await _findExistingDirectConversation(participantIds);
-        if (existing != null) {
-          _logger.info('Direct conversation already exists: ${existing.id}');
-          return existing;
+      final response = await _supabase
+          .from('chats')
+          .select()
+          .eq('id', conversationId)
+          .maybeSingle();
+      
+      if (response == null) return null;
+      
+      // Get participant IDs
+      final participantIds = (response['participant_ids'] as List?)
+          ?.map((e) => e.toString())
+          .toList() ?? [];
+      
+      // Fetch participant names from users table
+      final participantNames = <String>[];
+      for (final participantId in participantIds) {
+        try {
+          final userResponse = await _supabase
+              .from('users')
+              .select('display_name')
+              .eq('id', participantId)
+              .maybeSingle();
+          if (userResponse != null && userResponse['display_name'] != null) {
+            participantNames.add(userResponse['display_name']);
+          } else {
+            participantNames.add('Unknown');
+          }
+        } catch (e) {
+          participantNames.add('Unknown');
         }
       }
-
-      // Initialize unread counts for all participants
-      final unreadCounts = <String, int>{};
-      for (final participantId in participantIds) {
-        unreadCounts[participantId] = 0;
-      }
-
-      final conversationData = {
-        'type': type.toFirestore(),
-        'name': name,
-        'participantIds': participantIds,
-        'participantNames': participantNames,
-        'participantRoles': participantRoles,
-        'createdBy': createdBy,
-        'lastMessageText': null,
-        'lastMessageAt': null,
-        'lastMessageBy': null,
-        'groupAvatarUrl': null,
-        'isArchived': false,
-        'contextType': contextType?.toFirestore(),
-        'contextId': contextId,
-        'unreadCounts': '{}', // JSON string
-      };
-
-      final response = await _databases.createDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: ID.unique(),
-        data: conversationData,
-      );
-
-      _logger.info('Conversation created successfully: ${response.$id}');
-      return Conversation.fromAppwrite(response.data);
+      
+      // Create enriched conversation data
+      final enrichedData = Map<String, dynamic>.from(response);
+      enrichedData['participant_names'] = participantNames;
+      
+      return Conversation.fromChatsTable(enrichedData);
     } catch (e) {
-      _logger.severe('Error creating conversation: $e');
+      _logger.error('Failed to get conversation', e);
       return null;
     }
   }
 
-  /// Find existing direct conversation between two users
-  Future<Conversation?> _findExistingDirectConversation(
-      List<String> participantIds) async {
-    try {
-      final response = await _databases.listDocuments(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        queries: [
-          Query.equal('type', ['direct']),
-          Query.equal('participantIds', [participantIds[0]]),
-          Query.equal('participantIds', [participantIds[1]]),
-          Query.limit(1),
-        ],
-      );
-
-      if (response.documents.isEmpty) return null;
-      return Conversation.fromAppwrite(response.documents.first.data);
-    } catch (e) {
-      _logger.severe('Error finding existing conversation: $e');
-      return null;
-    }
-  }
-
-  /// Get or create direct conversation
+  /// Get or create a direct conversation between two users
   Future<Conversation?> getOrCreateDirectConversation({
     required String currentUserId,
     required String otherUserId,
-    required UserProfile currentUser,
-    required UserProfile otherUser,
-  }) async {
-    // Try to find existing
-    final existing = await _findExistingDirectConversation([
-      currentUserId,
-      otherUserId,
-    ]);
-
-    if (existing != null) return existing;
-
-    // Create new
-    return await createConversation(
-      type: ConversationType.direct,
-      participantIds: [currentUserId, otherUserId],
-      participantNames: [currentUser.displayName, otherUser.displayName],
-      participantRoles: [currentUser.role, otherUser.role],
-      createdBy: currentUserId,
-    );
-  }
-
-  /// Update conversation's last message
-  Future<void> updateConversationLastMessage({
-    required String conversationId,
-    required String messageText,
-    required String messageBy,
-    required DateTime messageAt,
+    required String currentUserName,
+    required String otherUserName,
   }) async {
     try {
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-        data: {
-          'lastMessageText': messageText,
-          'lastMessageAt': messageAt.toIso8601String(),
-          'lastMessageBy': messageBy,
+      // Check if conversation already exists by checking participant_ids contains both users
+      final existingChats = await _supabase
+          .from('chats')
+          .select()
+          .contains('participant_ids', [currentUserId, otherUserId]);
+      
+      // Filter to find exact 2-person chat
+      final existing = (existingChats as List).cast<Map<String, dynamic>>().firstWhere(
+        (chat) {
+          final ids = (chat['participant_ids'] as List?)?.cast<String>() ?? [];
+          return ids.length == 2 && 
+                 ids.contains(currentUserId) && 
+                 ids.contains(otherUserId);
         },
+        orElse: () => <String, dynamic>{},
       );
-    } catch (e) {
-      _logger.severe('Error updating conversation last message: $e');
-    }
-  }
-
-  /// Increment unread count for participants (except sender)
-  Future<void> incrementUnreadCount({
-    required String conversationId,
-    required String senderId,
-    required List<String> participantIds,
-  }) async {
-    try {
-      // Get current conversation
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-      );
-
-      final conversation = Conversation.fromAppwrite(doc.data);
-      final unreadCounts = Map<String, int>.from(conversation.unreadCounts);
-
-      // Increment for all participants except sender
-      for (final participantId in participantIds) {
-        if (participantId != senderId) {
-          unreadCounts[participantId] = (unreadCounts[participantId] ?? 0) + 1;
-        }
+      
+      if (existing.isNotEmpty) {
+        return Conversation.fromChatsTable(existing);
       }
 
-      // Update document
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-        data: {
-          'unreadCounts': _encodeUnreadCounts(unreadCounts),
-        },
-      );
+      // Create new chat
+      final response = await _supabase
+          .from('chats')
+          .insert({
+            'participant_ids': [currentUserId, otherUserId],
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .select()
+          .single();
+      
+      _logger.info('Created chat: ${response['id']}');
+      return Conversation.fromChatsTable(response);
     } catch (e) {
-      _logger.severe('Error incrementing unread count: $e');
+      _logger.error('Failed to get/create conversation', e);
+      return null;
     }
   }
 
-  /// Reset unread count for a specific user
-  Future<void> resetUnreadCount({
-    required String conversationId,
-    required String userId,
-  }) async {
+  /// Get total unread count
+  Future<int> getTotalUnreadCount(String userId) async {
     try {
-      // Get current conversation
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-      );
-
-      final conversation = Conversation.fromAppwrite(doc.data);
-      final unreadCounts = Map<String, int>.from(conversation.unreadCounts);
-
-      // Reset for this user
-      unreadCounts[userId] = 0;
-
-      // Update document
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-        data: {
-          'unreadCounts': _encodeUnreadCounts(unreadCounts),
-        },
-      );
+      final conversations = await _getConversationsFuture(userId);
+      final conversationIds = conversations.map((c) => c.id).toList();
+      
+      if (conversationIds.isEmpty) return 0;
+      
+      final response = await _supabase
+          .from('messages')
+          .select('id')
+          .inFilter('chat_id', conversationIds)
+          .neq('sender_id', userId)
+          .eq('is_read', false);
+      
+      return (response as List).length;
     } catch (e) {
-      _logger.severe('Error resetting unread count: $e');
+      _logger.error('Failed to get total unread count', e);
+      return 0;
     }
-  }
-
-  /// Encode unread counts to JSON string
-  String _encodeUnreadCounts(Map<String, int> unreadCounts) {
-    final entries = unreadCounts.entries
-        .map((e) => '"${e.key}":${e.value}')
-        .join(',');
-    return '{$entries}';
   }
 
   // ==================== MESSAGES ====================
 
-  /// Get all messages for a conversation (with realtime updates)
-  Stream<List<Message>> getMessages(String conversationId) async* {
-    Future<List<Message>> fetchMessages() async {
-      try {
-        final response = await _databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.messagesCollectionId,
-          queries: [
-            Query.equal('conversationId', [conversationId]),
-            Query.equal('isDeleted', [false]),
-            Query.orderDesc('\$createdAt'),
-            Query.limit(100),
-          ],
-        );
+  /// Get messages for a conversation as Stream with Supabase Realtime
+  Stream<List<Message>> getMessages(String conversationId) {
+    final controller = StreamController<List<Message>>();
+    List<Message> currentMessages = [];
 
-        return response.documents
-            .map((doc) => Message.fromAppwrite(doc.data))
-            .toList();
-      } catch (e) {
-        _logger.severe('Error fetching messages: $e');
-        return [];
+    // Load initial messages
+    _getMessagesFuture(conversationId).then((messages) {
+      currentMessages = messages;
+      if (!controller.isClosed) {
+        controller.add(currentMessages);
       }
-    }
+    }).catchError((e) {
+      _logger.error('Failed to load initial messages', e);
+      if (!controller.isClosed) {
+        controller.add([]);
+      }
+    });
 
-    // Emit initial data
-    yield await fetchMessages();
+    // Subscribe to realtime updates
+    final channel = _supabase
+        .channel('messages:$conversationId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'chat_id',
+            value: conversationId,
+          ),
+          callback: (payload) {
+            _logger.info('New message received: ${payload.newRecord}');
+            final newMessage = Message.fromSupabase(payload.newRecord);
+            currentMessages = [newMessage, ...currentMessages];
+            if (!controller.isClosed) {
+              controller.add(currentMessages);
+            }
+          },
+        )
+        .subscribe();
 
-    // Listen for realtime updates
-    await for (final _ in _realtime
-        .subscribe([AppwriteConfig.messagesChannel]).stream) {
-      yield await fetchMessages();
+    // Cleanup when stream is closed
+    controller.onCancel = () {
+      _logger.info('Unsubscribing from messages channel');
+      _supabase.removeChannel(channel);
+    };
+
+    return controller.stream;
+  }
+
+  Future<List<Message>> _getMessagesFuture(String conversationId, {int limit = 50}) async {
+    try {
+      final response = await _supabase
+          .from('messages')
+          .select()
+          .eq('chat_id', conversationId)
+          .order('created_at', ascending: false)
+          .limit(limit);
+      
+      return (response as List)
+          .map((data) => Message.fromSupabase(data))
+          .toList();
+    } catch (e) {
+      _logger.error('Failed to get messages', e);
+      return [];
     }
   }
 
-  /// Send a text message
-  Future<Message?> sendMessage({
-    required String conversationId,
-    required String senderId,
-    required String senderName,
-    required String senderRole,
-    String? senderAvatarUrl,
-    required String content,
-    MessageType type = MessageType.text,
-    String? mediaUrl,
-    String? mediaFileName,
-    int? mediaFileSize,
-    String? mediaMimeType,
-    String? replyToMessageId,
-    String? replyToText,
-  }) async {
+  /// Get single message
+  Future<Message?> getMessage(String messageId) async {
     try {
-      final messageData = {
-        'conversationId': conversationId,
-        'senderId': senderId,
-        'senderName': senderName,
-        'senderRole': senderRole,
-        'senderAvatarUrl': senderAvatarUrl,
-        'type': type.toFirestore(),
-        'content': content,
-        'mediaUrl': mediaUrl,
-        'mediaFileName': mediaFileName,
-        'mediaFileSize': mediaFileSize,
-        'mediaMimeType': mediaMimeType,
-        'replyToMessageId': replyToMessageId,
-        'replyToText': replyToText,
-        'reactions': '{}',
-        'readBy': [senderId], // Sender has read their own message
-        'deliveredTo': <String>[],
-        'isEdited': false,
-        'editedAt': null,
-        'isDeleted': false,
-        'deletedAt': null,
-        'deletedBy': null,
-      };
-
-      final response = await _databases.createDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: ID.unique(),
-        data: messageData,
-      );
-
-      final message = Message.fromAppwrite(response.data);
-
-      // Update conversation's last message
-      await updateConversationLastMessage(
-        conversationId: conversationId,
-        messageText: content,
-        messageBy: senderId,
-        messageAt: message.createdAt,
-      );
-
-      // Get conversation to increment unread count
-      final conversationDoc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-      );
-      final conversation = Conversation.fromAppwrite(conversationDoc.data);
-
-      // Increment unread count for other participants
-      await incrementUnreadCount(
-        conversationId: conversationId,
-        senderId: senderId,
-        participantIds: conversation.participantIds,
-      );
-
-      _logger.info('Message sent successfully: ${message.id}');
-      return message;
+      final response = await _supabase
+          .from('messages')
+          .select()
+          .eq('id', messageId)
+          .maybeSingle();
+      
+      if (response == null) return null;
+      return Message.fromSupabase(response);
     } catch (e) {
-      _logger.severe('Error sending message: $e');
+      _logger.error('Failed to get message', e);
       return null;
     }
   }
 
-  /// Mark messages as read
+  /// Send a message
+  Future<Message> sendMessage({
+    required String conversationId,
+    required String senderId,
+    required String senderName,
+    required String content,
+    String type = 'text',
+    String? imageUrl,
+  }) async {
+    try {
+      final response = await _supabase
+          .from('messages')
+          .insert({
+            'chat_id': conversationId,
+            'sender_id': senderId,
+            'sender_name': senderName,
+            'content': content,
+            'created_at': DateTime.now().toIso8601String(),
+            'is_read': false,
+          })
+          .select()
+          .single();
+      
+      // Update chat's updated_at
+      await _supabase
+          .from('chats')
+          .update({
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', conversationId);
+      
+      _logger.info('Sent message to chat: $conversationId');
+      return Message.fromSupabase(response);
+    } catch (e) {
+      _logger.error('Failed to send message', e);
+      rethrow;
+    }
+  }
+
+  // ==================== TYPING INDICATOR ====================
+
+  /// Get typing users (stub - not implemented)
+  Stream<List<String>> getTypingUsers(String conversationId, String currentUserId) {
+    // Typing indicators require realtime presence - stub for now
+    return Stream.value([]);
+  }
+
+  // ==================== USER PRESENCE ====================
+
+  /// Check if user is online (stub)
+  Future<bool> isUserOnline(String userId) async {
+    // User presence requires realtime presence - stub for now
+    return false;
+  }
+
+  /// Get multiple users online status (stub)
+  Future<Map<String, bool>> getUsersOnlineStatus(List<String> userIds) async {
+    // Stub - all users offline
+    return {for (var id in userIds) id: false};
+  }
+
+  // ==================== MARK AS READ ====================
+
+  /// Mark message as read
+  Future<void> markMessageAsRead(String messageId) async {
+    try {
+      await _supabase
+          .from('messages')
+          .update({'is_read': true})
+          .eq('id', messageId);
+    } catch (e) {
+      _logger.error('Failed to mark message as read', e);
+    }
+  }
+
+  /// Mark all messages in conversation as read
+  Future<void> markAllAsRead(String conversationId, String readerId) async {
+    try {
+      await _supabase
+          .from('messages')
+          .update({'is_read': true})
+          .eq('chat_id', conversationId)
+          .neq('sender_id', readerId)
+          .eq('is_read', false);
+      
+      _logger.info('Marked all messages as read in: $conversationId');
+    } catch (e) {
+      _logger.error('Failed to mark all as read', e);
+    }
+  }
+
+  /// Delete a message
+  Future<void> deleteMessage(String messageId) async {
+    try {
+      await _supabase
+          .from('messages')
+          .delete()
+          .eq('id', messageId);
+      
+      _logger.info('Deleted message: $messageId');
+    } catch (e) {
+      _logger.error('Failed to delete message', e);
+    }
+  }
+
+  // ==================== ADDITIONAL METHODS FOR CHAT SCREEN ====================
+
+  /// Mark multiple messages as read
   Future<void> markMessagesAsRead({
     required String conversationId,
     required String userId,
@@ -394,497 +418,103 @@ class ChatService {
   }) async {
     try {
       for (final messageId in messageIds) {
-        // Get current message
-        final doc = await _databases.getDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.messagesCollectionId,
-          documentId: messageId,
-        );
-
-        final message = Message.fromAppwrite(doc.data);
-
-        // Skip if already read
-        if (message.readBy.contains(userId)) continue;
-
-        // Add user to readBy list
-        final readBy = List<String>.from(message.readBy)..add(userId);
-
-        await _databases.updateDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.messagesCollectionId,
-          documentId: messageId,
-          data: {
-            'readBy': readBy,
-          },
-        );
+        await markMessageAsRead(messageId);
       }
-
-      // Reset unread count for this conversation
-      await resetUnreadCount(
-        conversationId: conversationId,
-        userId: userId,
-      );
-
-      _logger.info('Messages marked as read for user: $userId');
+      _logger.info('Marked ${messageIds.length} messages as read');
     } catch (e) {
-      _logger.severe('Error marking messages as read: $e');
+      _logger.error('Failed to mark messages as read', e);
     }
   }
 
-  /// Delete a message (soft delete)
-  Future<void> deleteMessage({
-    required String messageId,
-    required String userId,
-  }) async {
-    try {
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-        data: {
-          'isDeleted': true,
-          'deletedAt': DateTime.now().toIso8601String(),
-          'deletedBy': userId,
-          'content': 'Pesan telah dihapus',
-        },
-      );
-
-      _logger.info('Message deleted: $messageId');
-    } catch (e) {
-      _logger.severe('Error deleting message: $e');
-    }
-  }
-
-  /// Edit a message
-  Future<void> editMessage({
-    required String messageId,
-    required String newContent,
-  }) async {
-    try {
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-        data: {
-          'content': newContent,
-          'isEdited': true,
-          'editedAt': DateTime.now().toIso8601String(),
-        },
-      );
-
-      _logger.info('Message edited: $messageId');
-    } catch (e) {
-      _logger.severe('Error editing message: $e');
-    }
-  }
-
-  // ==================== HELPER METHODS ====================
-
-  /// Get conversation by ID
-  Future<Conversation?> getConversation(String conversationId) async {
-    try {
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        documentId: conversationId,
-      );
-
-      return Conversation.fromAppwrite(doc.data);
-    } catch (e) {
-      _logger.severe('Error getting conversation: $e');
-      return null;
-    }
-  }
-
-  /// Get message by ID
-  Future<Message?> getMessage(String messageId) async {
-    try {
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-      );
-
-      return Message.fromAppwrite(doc.data);
-    } catch (e) {
-      _logger.severe('Error getting message: $e');
-      return null;
-    }
-  }
-
-  /// Get total unread count for a user (across all conversations)
-  Future<int> getTotalUnreadCount(String userId) async {
-    try {
-      final response = await _databases.listDocuments(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.conversationsCollectionId,
-        queries: [
-          Query.equal('participantIds', [userId]),
-          Query.equal('isArchived', [false]),
-        ],
-      );
-
-      int totalUnread = 0;
-      for (final doc in response.documents) {
-        final conversation = Conversation.fromAppwrite(doc.data);
-        totalUnread += conversation.getUnreadCount(userId);
-      }
-
-      return totalUnread;
-    } catch (e) {
-      _logger.severe('Error getting total unread count: $e');
-      return 0;
-    }
-  }
-
-  // ==================== MEDIA UPLOAD ====================
-
-  /// Upload image to storage and send as message
-  Future<Message?> sendImageMessage({
-    required String conversationId,
-    required String senderId,
-    required String senderName,
-    required String senderRole,
-    String? senderAvatarUrl,
-    required String imagePath,
-    String? caption,
-  }) async {
-    try {
-      _logger.info('Uploading image: $imagePath');
-
-      // Upload image to storage
-      final file = File(imagePath);
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${path.basename(imagePath)}';
-
-      final uploadedFile = await _storage.createFile(
-        bucketId: AppwriteConfig.mainBucketId,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(path: imagePath, filename: fileName),
-      );
-
-      // Get file URL
-      final fileUrl = '${AppwriteConfig.endpoint}/storage/buckets/${AppwriteConfig.mainBucketId}/files/${uploadedFile.$id}/view?project=${AppwriteConfig.projectId}';
-
-      _logger.info('Image uploaded: $fileUrl');
-
-      // Send message with image
-      return await sendMessage(
-        conversationId: conversationId,
-        senderId: senderId,
-        senderName: senderName,
-        senderRole: senderRole,
-        senderAvatarUrl: senderAvatarUrl,
-        content: caption ?? '',
-        type: MessageType.image,
-        mediaUrl: fileUrl,
-        mediaFileName: fileName,
-        mediaFileSize: await file.length(),
-        mediaMimeType: _getMimeType(imagePath),
-      );
-    } catch (e) {
-      _logger.severe('Error uploading image: $e');
-      return null;
-    }
-  }
-
-  /// Upload file to storage and send as message
-  Future<Message?> sendFileMessage({
-    required String conversationId,
-    required String senderId,
-    required String senderName,
-    required String senderRole,
-    String? senderAvatarUrl,
-    required String filePath,
-    required String fileName,
-  }) async {
-    try {
-      _logger.info('Uploading file: $filePath');
-
-      // Upload file to storage
-      final file = File(filePath);
-      final uniqueFileName = '${DateTime.now().millisecondsSinceEpoch}_$fileName';
-
-      final uploadedFile = await _storage.createFile(
-        bucketId: AppwriteConfig.mainBucketId,
-        fileId: ID.unique(),
-        file: InputFile.fromPath(path: filePath, filename: uniqueFileName),
-      );
-
-      // Get file URL
-      final fileUrl = '${AppwriteConfig.endpoint}/storage/buckets/${AppwriteConfig.mainBucketId}/files/${uploadedFile.$id}/view?project=${AppwriteConfig.projectId}';
-
-      _logger.info('File uploaded: $fileUrl');
-
-      // Send message with file
-      return await sendMessage(
-        conversationId: conversationId,
-        senderId: senderId,
-        senderName: senderName,
-        senderRole: senderRole,
-        senderAvatarUrl: senderAvatarUrl,
-        content: fileName,
-        type: MessageType.file,
-        mediaUrl: fileUrl,
-        mediaFileName: fileName,
-        mediaFileSize: await file.length(),
-        mediaMimeType: _getMimeType(filePath),
-      );
-    } catch (e) {
-      _logger.severe('Error uploading file: $e');
-      return null;
-    }
-  }
-
-  /// Get MIME type from file path
-  String _getMimeType(String filePath) {
-    final extension = path.extension(filePath).toLowerCase();
-    switch (extension) {
-      case '.jpg':
-      case '.jpeg':
-        return 'image/jpeg';
-      case '.png':
-        return 'image/png';
-      case '.gif':
-        return 'image/gif';
-      case '.pdf':
-        return 'application/pdf';
-      case '.doc':
-        return 'application/msword';
-      case '.docx':
-        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-      case '.xls':
-        return 'application/vnd.ms-excel';
-      case '.xlsx':
-        return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-      case '.txt':
-        return 'text/plain';
-      default:
-        return 'application/octet-stream';
-    }
-  }
-
-  // ==================== TYPING INDICATOR ====================
-
-  /// Set typing indicator for user in conversation
+  /// Set typing indicator (stub - requires realtime presence)
   Future<void> setTypingIndicator({
     required String conversationId,
     required String userId,
     required String userName,
     required bool isTyping,
   }) async {
+    // Stub - typing indicators require realtime presence
+    _logger.info('Typing indicator stub: $userName isTyping=$isTyping');
+  }
+
+  /// Send image message (stub)
+  Future<Message?> sendImageMessage({
+    required String conversationId,
+    required String senderId,
+    required String senderName,
+    String? senderRole,
+    String? senderAvatarUrl,
+    required String imagePath,
+  }) async {
+    // For now, send as text message with image URL
     try {
-      if (isTyping) {
-        // Create or update typing indicator
-        await _databases.createDocument(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.typingIndicatorsCollectionId,
-          documentId: '${conversationId}_$userId',
-          data: {
-            'conversationId': conversationId,
-            'userId': userId,
-            'userName': userName,
-            'isTyping': true,
-            'lastTypedAt': DateTime.now().toIso8601String(),
-          },
-        );
-      } else {
-        // Remove typing indicator
-        try {
-          await _databases.deleteDocument(
-            databaseId: AppwriteConfig.databaseId,
-            collectionId: AppwriteConfig.typingIndicatorsCollectionId,
-            documentId: '${conversationId}_$userId',
-          );
-        } catch (e) {
-          // Document might not exist, ignore error
-        }
-      }
+      return await sendMessage(
+        conversationId: conversationId,
+        senderId: senderId,
+        senderName: senderName,
+        content: '[Image]',
+        type: 'image',
+        imageUrl: imagePath,
+      );
     } catch (e) {
-      _logger.warning('Error setting typing indicator: $e');
+      _logger.error('Failed to send image message', e);
+      return null;
     }
   }
 
-  /// Get typing users in conversation (stream)
-  Stream<List<String>> getTypingUsers(String conversationId, String currentUserId) async* {
-    Future<List<String>> fetchTypingUsers() async {
-      try {
-        final response = await _databases.listDocuments(
-          databaseId: AppwriteConfig.databaseId,
-          collectionId: AppwriteConfig.typingIndicatorsCollectionId,
-          queries: [
-            Query.equal('conversationId', [conversationId]),
-            Query.equal('isTyping', [true]),
-          ],
-        );
-
-        return response.documents
-            .where((doc) => doc.data['userId'] != currentUserId)
-            .map((doc) => doc.data['userName'] as String)
-            .toList();
-      } catch (e) {
-        _logger.warning('Error fetching typing users: $e');
-        return [];
-      }
-    }
-
-    // Emit initial data
-    yield await fetchTypingUsers();
-
-    // Listen for realtime updates
-    await for (final _ in _realtime
-        .subscribe([AppwriteConfig.typingIndicatorsChannel]).stream) {
-      yield await fetchTypingUsers();
-    }
-  }
-
-  // ==================== USER PRESENCE ====================
-
-  /// Update user online status
-  Future<void> updateUserPresence({
-    required String userId,
-    required String userName,
-    required bool isOnline,
+  /// Send file message (stub)
+  Future<Message?> sendFileMessage({
+    required String conversationId,
+    required String senderId,
+    required String senderName,
+    String? senderRole,
+    String? senderAvatarUrl,
+    required String filePath,
+    required String fileName,
   }) async {
     try {
-      await _databases.createDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userPresenceCollectionId,
-        documentId: userId,
-        data: {
-          'userId': userId,
-          'userName': userName,
-          'isOnline': isOnline,
-          'lastSeenAt': DateTime.now().toIso8601String(),
-        },
+      return await sendMessage(
+        conversationId: conversationId,
+        senderId: senderId,
+        senderName: senderName,
+        content: '[File: $fileName]',
+        type: 'file',
       );
     } catch (e) {
-      _logger.warning('Error updating user presence: $e');
+      _logger.error('Failed to send file message', e);
+      return null;
     }
   }
 
-  /// Get user online status
-  Future<bool> isUserOnline(String userId) async {
-    try {
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.userPresenceCollectionId,
-        documentId: userId,
-      );
-
-      final isOnline = doc.data['isOnline'] as bool? ?? false;
-      final lastSeenAt = DateTime.parse(doc.data['lastSeenAt'] as String);
-      final now = DateTime.now();
-
-      // Consider user offline if last seen > 2 minutes ago
-      if (now.difference(lastSeenAt).inMinutes > 2) {
-        return false;
-      }
-
-      return isOnline;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  /// Get multiple users online status
-  Future<Map<String, bool>> getUsersOnlineStatus(List<String> userIds) async {
-    final statusMap = <String, bool>{};
-
-    for (final userId in userIds) {
-      statusMap[userId] = await isUserOnline(userId);
-    }
-
-    return statusMap;
-  }
-
-  // ==================== MESSAGE REACTIONS ====================
-
-  /// Add reaction to message
-  Future<void> addMessageReaction({
+  /// Delete message with named parameters (overload)
+  Future<void> deleteMessageWithParams({
     required String messageId,
     required String userId,
-    required String emoji,
   }) async {
-    try {
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-      );
-
-      final message = Message.fromAppwrite(doc.data);
-      final reactions = Map<String, List<String>>.from(message.reactions);
-
-      // Add user to emoji list
-      if (reactions.containsKey(emoji)) {
-        if (!reactions[emoji]!.contains(userId)) {
-          reactions[emoji]!.add(userId);
-        }
-      } else {
-        reactions[emoji] = [userId];
-      }
-
-      // Encode reactions to JSON string
-      final reactionsJson = _encodeReactions(reactions);
-
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-        data: {'reactions': reactionsJson},
-      );
-    } catch (e) {
-      _logger.severe('Error adding message reaction: $e');
-    }
+    await deleteMessage(messageId);
   }
 
-  /// Remove reaction from message
-  Future<void> removeMessageReaction({
+  /// Edit message
+  Future<void> editMessage({
     required String messageId,
-    required String userId,
-    required String emoji,
+    required String newContent,
   }) async {
     try {
-      final doc = await _databases.getDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-      );
-
-      final message = Message.fromAppwrite(doc.data);
-      final reactions = Map<String, List<String>>.from(message.reactions);
-
-      // Remove user from emoji list
-      if (reactions.containsKey(emoji)) {
-        reactions[emoji]!.remove(userId);
-        if (reactions[emoji]!.isEmpty) {
-          reactions.remove(emoji);
-        }
-      }
-
-      // Encode reactions to JSON string
-      final reactionsJson = _encodeReactions(reactions);
-
-      await _databases.updateDocument(
-        databaseId: AppwriteConfig.databaseId,
-        collectionId: AppwriteConfig.messagesCollectionId,
-        documentId: messageId,
-        data: {'reactions': reactionsJson},
-      );
+      await _supabase
+          .from('messages')
+          .update({
+            'content': newContent,
+          })
+          .eq('id', messageId);
+      
+      _logger.info('Edited message: $messageId');
     } catch (e) {
-      _logger.severe('Error removing message reaction: $e');
+      _logger.error('Failed to edit message', e);
     }
-  }
-
-  /// Encode reactions map to JSON string
-  String _encodeReactions(Map<String, List<String>> reactions) {
-    if (reactions.isEmpty) return '{}';
-
-    final entries = reactions.entries.map((e) {
-      final usersList = e.value.map((u) => '"$u"').join(',');
-      return '"${e.key}":[$usersList]';
-    }).join(',');
-
-    return '{$entries}';
   }
 }
+
+/// Provider for ChatService
+final chatServiceProvider = Provider<ChatService>((ref) {
+  return ChatService();
+});

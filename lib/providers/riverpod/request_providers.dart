@@ -1,8 +1,8 @@
 // lib/providers/riverpod/request_providers.dart
-// ✅ REQUEST PROVIDERS - Migrated to Appwrite
+// ✅ REQUEST PROVIDERS - Migrated to Supabase
 //
 // FEATURES:
-// - Stream providers for real-time request updates
+// - Future providers for request data (Supabase uses Futures, not Streams)
 // - Request validation (3 active limit)
 // - Request actions (create, self-assign, start, complete, cancel)
 // - Role-based data access
@@ -10,66 +10,66 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/request.dart';
-import '../../services/appwrite_storage_service.dart';
+import '../../models/user_role.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import './auth_providers.dart';
-import './inventory_providers.dart' show appwriteDatabaseServiceProvider;
+import './supabase_service_providers.dart';
 
 final _logger = AppLogger('RequestProviders');
 
-// ==================== REQUEST STREAM PROVIDERS ====================
+// ==================== REQUEST PROVIDERS ====================
 
 /// My Requests Provider (for employee to see own requests)
-final myRequestsProvider = StreamProvider<List<Request>>((ref) {
+final myRequestsProvider = FutureProvider<List<Request>>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
 
   if (userId == null) {
-    return Stream.value([]);
+    return [];
   }
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getServiceRequestsByUser(userId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getRequestsByUserId(userId);
 });
 
 /// Pending Requests Provider (for cleaner to self-assign)
-final pendingRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getPendingServiceRequests();
+final pendingRequestsProvider = FutureProvider<List<Request>>((ref) async {
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getRequestsByStatus('pending');
 });
 
 /// My Assigned Requests Provider (for cleaner to see assigned requests)
-final myAssignedRequestsProvider = StreamProvider<List<Request>>((ref) {
+final myAssignedRequestsProvider = FutureProvider<List<Request>>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
 
   if (userId == null) {
-    return Stream.value([]);
+    return [];
   }
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getServiceRequestsByCleaner(userId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getRequestsByCleanerId(userId);
 });
 
 /// All Requests Provider (for admin)
-final allRequestsProvider = StreamProvider<List<Request>>((ref) {
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return service.getAllServiceRequests();
+final allRequestsProvider = FutureProvider<List<Request>>((ref) async {
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return service.getAllRequests();
 });
 
 /// Requests by Status Provider
 final requestsByStatusProvider =
-    StreamProvider.family<List<Request>, RequestStatus>(
-  (ref, status) {
-    final service = ref.watch(appwriteDatabaseServiceProvider);
-    return service.getServiceRequestsByStatus(status);
+    FutureProvider.family<List<Request>, RequestStatus>(
+  (ref, status) async {
+    final service = ref.watch(supabaseDatabaseServiceProvider);
+    return service.getRequestsByStatus(status.toDatabase());
   },
 );
 
 /// Request by ID Provider (for detail screen)
-final requestByIdProvider = StreamProvider.family<Request?, String>(
-  (ref, requestId) {
-    final service = ref.watch(appwriteDatabaseServiceProvider);
-    return service.watchServiceRequestById(requestId);
+final requestByIdProvider = FutureProvider.family<Request?, String>(
+  (ref, requestId) async {
+    final service = ref.watch(supabaseDatabaseServiceProvider);
+    return service.getRequestById(requestId);
   },
 );
 
@@ -83,8 +83,12 @@ final canCreateRequestProvider = FutureProvider<bool>((ref) async {
     return false;
   }
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return await service.canCreateServiceRequest(userId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  final requests = await service.getRequestsByUserId(userId);
+  
+  // Count active requests (not completed or cancelled)
+  final activeCount = requests.where((r) => r.isActive).length;
+  return activeCount < 3;
 });
 
 /// Active Request Count Provider
@@ -95,8 +99,11 @@ final activeRequestCountProvider = FutureProvider<int>((ref) async {
     return 0;
   }
 
-  final service = ref.watch(appwriteDatabaseServiceProvider);
-  return await service.getActiveServiceRequestCount(userId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  final requests = await service.getRequestsByUserId(userId);
+  
+  // Count active requests (not completed or cancelled)
+  return requests.where((r) => r.isActive).length;
 });
 
 // ==================== REQUEST SUMMARY PROVIDERS ====================
@@ -176,12 +183,37 @@ class CleanerProfile {
   });
 }
 
-/// Available Cleaners Provider (for employee to select cleaner)
-/// TODO: Implement with Appwrite users query when needed
-final availableCleanersProvider = StreamProvider<List<CleanerProfile>>((ref) {
-  // For now, return empty list - cleaner selection feature can be added later
-  // This would require querying users collection with role='cleaner'
-  return Stream.value([]);
+/// Available Cleaners Provider - Fetches all active cleaners from Supabase
+/// This provider is used by Cleaner Management screen to display all cleaners
+final availableCleanersProvider = FutureProvider<List<CleanerProfile>>((ref) async {
+  final service = ref.read(supabaseDatabaseServiceProvider);
+
+  try {
+    _logger.info('🔍 Fetching cleaners from Supabase...');
+
+    // Fetch all users
+    final allUsers = await service.getAllUserProfiles();
+
+    // Filter for cleaners with active status
+    final cleaners = allUsers.where((user) =>
+      user.role == UserRole.cleaner &&
+      user.status == 'active'
+    ).toList();
+
+    _logger.info('✅ Found ${cleaners.length} active cleaners');
+
+    // Map UserProfile to CleanerProfile
+    return cleaners.map((user) => CleanerProfile(
+      id: user.uid,
+      name: user.displayName,
+      email: user.email,
+      photoUrl: user.photoURL,
+      activeTaskCount: 0, // TODO: Calculate from requests in future enhancement
+    )).toList();
+  } catch (e, stackTrace) {
+    _logger.error('❌ Error fetching cleaners', e, stackTrace);
+    rethrow;
+  }
 });
 
 // ==================== REQUEST ACTIONS ====================
@@ -189,11 +221,6 @@ final availableCleanersProvider = StreamProvider<List<CleanerProfile>>((ref) {
 /// Request Actions Provider
 final requestActionsProvider = Provider<RequestActions>((ref) {
   return RequestActions(ref);
-});
-
-/// Storage Service Provider for image uploads
-final appwriteStorageServiceProvider = Provider<AppwriteStorageService>((ref) {
-  return AppwriteStorageService();
 });
 
 class RequestActions {
@@ -218,9 +245,11 @@ class RequestActions {
       }
 
       // Check if user can create request (max 3 active)
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      final canCreate = await service.canCreateServiceRequest(userProfile.uid);
-      if (!canCreate) {
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      final requests = await service.getRequestsByUserId(userProfile.uid);
+      final activeCount = requests.where((r) => r.isActive).length;
+      
+      if (activeCount >= 3) {
         throw const ValidationException(
           message: 'Anda sudah memiliki 3 permintaan aktif. Tunggu sampai selesai.',
         );
@@ -230,10 +259,10 @@ class RequestActions {
       String? imageUrl;
       if (imageBytes != null) {
         _logger.info('Uploading request image...');
-        final storageService = ref.read(appwriteStorageServiceProvider);
+        final storageService = ref.read(supabaseStorageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: imageBytes,
-          folder: 'requests',
+          bucket: 'report-images', // Using report-images bucket for requests too
           userId: userProfile.uid,
         );
         if (result.isSuccess && result.data != null) {
@@ -246,7 +275,7 @@ class RequestActions {
 
       // Create request
       final request = Request(
-        id: '', // Will be generated by Appwrite
+        id: '', // Will be generated by Supabase
         location: location,
         description: description,
         requestedBy: userProfile.uid,
@@ -263,13 +292,9 @@ class RequestActions {
         imageUrl: imageUrl,
       );
 
-      final requestId = await service.createServiceRequest(request);
-      if (requestId == null) {
-        throw const DatabaseException(message: 'Gagal membuat permintaan.');
-      }
-
-      _logger.info('Request created successfully: $requestId');
-      return requestId;
+      final createdRequest = await service.createRequest(request);
+      _logger.info('Request created successfully: ${createdRequest.id}');
+      return createdRequest.id;
     } on ValidationException {
       rethrow;
     } catch (e) {
@@ -288,11 +313,11 @@ class RequestActions {
         throw const ValidationException(message: 'User not logged in');
       }
 
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      await service.selfAssignServiceRequest(
-        requestId,
-        userProfile.uid,
-        userProfile.displayName,
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      await service.assignRequestToCleaner(
+        requestId: requestId,
+        cleanerId: userProfile.uid,
+        cleanerName: userProfile.displayName,
       );
 
       _logger.info('Request self-assigned successfully');
@@ -309,8 +334,8 @@ class RequestActions {
   /// Start request (cleaner starts working)
   Future<void> startRequest(String requestId) async {
     try {
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      await service.startServiceRequest(requestId);
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      await service.updateRequestStatus(requestId, 'in_progress');
 
       _logger.info('Request started successfully');
     } catch (e) {
@@ -337,10 +362,10 @@ class RequestActions {
       String? completionImageUrl;
       if (completionImageBytes != null) {
         _logger.info('Uploading completion image...');
-        final storageService = ref.read(appwriteStorageServiceProvider);
+        final storageService = ref.read(supabaseStorageServiceProvider);
         final result = await storageService.uploadImage(
           bytes: completionImageBytes,
-          folder: 'request_completions',
+          bucket: 'report-images',
           userId: userProfile.uid,
         );
         if (result.isSuccess && result.data != null) {
@@ -352,12 +377,20 @@ class RequestActions {
       }
 
       // Complete request
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      await service.completeServiceRequest(
-        requestId,
-        completionImageUrl: completionImageUrl,
-        completionNotes: completionNotes,
-      );
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      final updates = <String, dynamic>{
+        'status': 'completed',
+        'completed_at': DateTime.now().toIso8601String(),
+      };
+      
+      if (completionImageUrl != null) {
+        updates['completion_image_url'] = completionImageUrl;
+      }
+      if (completionNotes != null) {
+        updates['notes'] = completionNotes;
+      }
+      
+      await service.updateRequest(requestId, updates);
 
       _logger.info('Request completed successfully');
     } on ValidationException {
@@ -373,8 +406,13 @@ class RequestActions {
   /// Cancel request (by requester)
   Future<void> cancelRequest(String requestId) async {
     try {
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      await service.cancelServiceRequest(requestId);
+      final userProfile = ref.read(currentUserProfileProvider).value;
+      if (userProfile == null) {
+        throw const ValidationException(message: 'User not logged in');
+      }
+      
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      await service.cancelRequest(requestId, userProfile.uid);
 
       _logger.info('Request cancelled successfully');
     } catch (e) {
@@ -393,8 +431,8 @@ class RequestActions {
         throw const ValidationException(message: 'User not logged in');
       }
 
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      await service.softDeleteServiceRequest(requestId, userProfile.uid);
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      await service.deleteRequest(requestId, userProfile.uid);
 
       _logger.info('Request deleted successfully');
     } on ValidationException {
@@ -410,11 +448,18 @@ class RequestActions {
   /// Get request by ID
   Future<Request?> getRequestById(String requestId) async {
     try {
-      final service = ref.read(appwriteDatabaseServiceProvider);
-      return await service.getServiceRequestById(requestId);
+      final service = ref.read(supabaseDatabaseServiceProvider);
+      return await service.getRequestById(requestId);
     } catch (e) {
       _logger.error('Error getting request', e);
       return null;
     }
   }
 }
+
+// ==================== LEGACY COMPATIBILITY ====================
+// TODO: Remove after all screens are migrated
+
+/// Legacy provider - redirects to supabaseStorageServiceProvider
+@Deprecated('Use supabaseStorageServiceProvider instead')
+final appwriteStorageServiceProvider = supabaseStorageServiceProvider;

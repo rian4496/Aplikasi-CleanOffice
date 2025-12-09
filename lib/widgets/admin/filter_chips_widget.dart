@@ -159,3 +159,7 @@ class FilterChips extends ConsumerWidget {
     }
   }
 }
+
+/// Alias for backward compatibility
+typedef FilterChipsWidget = FilterChips;
+

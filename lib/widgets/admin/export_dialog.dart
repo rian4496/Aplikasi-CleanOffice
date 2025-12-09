@@ -63,13 +63,14 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
   Widget _buildHeader() {
     return Row(
       children: [
-        const Icon(Icons.download, size: 28, color: Colors.blue),
+        const Icon(Icons.download, size: 24, color: Colors.black),
         const SizedBox(width: 12),
         const Text(
           'Export Laporan',
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
         ),
         const Spacer(),
@@ -102,6 +103,10 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[400]!),
               ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
@@ -151,6 +156,10 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey[400]!),
+              ),
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             dropdownColor: Colors.white,
@@ -187,11 +196,16 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       children: [
         Expanded(
           child: OutlinedButton.icon(
-            icon: const Icon(Icons.calendar_today, size: 18),
+            icon: Icon(Icons.calendar_today, size: 16, color: Colors.grey[700]),
             label: Text(
               _startDate != null
                   ? DateFormat('dd/MM/yyyy').format(_startDate!)
                   : 'Tanggal Mulai',
+              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+              side: BorderSide.none,
             ),
             onPressed: () async {
               final date = await showDatePicker(
@@ -212,11 +226,16 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
         ),
         Expanded(
           child: OutlinedButton.icon(
-            icon: const Icon(Icons.calendar_today, size: 18),
+            icon: Icon(Icons.calendar_today, size: 16, color: Colors.grey[700]),
             label: Text(
               _endDate != null
                   ? DateFormat('dd/MM/yyyy').format(_endDate!)
                   : 'Tanggal Akhir',
+              style: TextStyle(color: Colors.grey[700], fontSize: 13),
+            ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.grey[700],
+              side: BorderSide.none,
             ),
             onPressed: () async {
               final date = await showDatePicker(
@@ -277,7 +296,7 @@ class _ExportDialogState extends ConsumerState<ExportDialog> {
       children: [
         TextButton(
           onPressed: _isExporting ? null : () => Navigator.pop(context),
-          child: const Text('Batal'),
+          child: const Text('Batal', style: TextStyle(color: Colors.black, fontWeight: FontWeight.normal)),
         ),
         const SizedBox(width: 12),
         ElevatedButton.icon(

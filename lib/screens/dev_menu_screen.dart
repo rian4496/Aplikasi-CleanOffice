@@ -10,7 +10,7 @@ import 'package:aplikasi_cleanoffice/screens/shared/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/change_password_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/dev/seed_data_screen.dart';
+
 /// Development Menu untuk test UI tanpa Firebase Authentication
 /// HANYA UNTUK DEVELOPMENT - JANGAN DIPAKAI DI PRODUCTION!
 class DevMenuScreen extends StatelessWidget {
@@ -194,7 +194,9 @@ class DevMenuScreen extends StatelessWidget {
               subtitle: 'Buat sample data inventory untuk testing',
               icon: Icons.data_object,
               color: Colors.deepPurple,
-              screen: const SeedDataScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Seed Data - Temporarly Disabled')),
+              ),
             ),
 
             const SizedBox(height: 24),

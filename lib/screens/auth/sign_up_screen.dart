@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:appwrite/appwrite.dart';
-import '../../services/appwrite_auth_service.dart';
+import '../../core/error/exceptions.dart';
+import '../../services/supabase_auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -15,7 +15,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _nameController = TextEditingController();
-  final _authService = AppwriteAuthService();
+  final _authService = SupabaseAuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -49,16 +49,24 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
     try {
       final email = _emailController.text.trim();
+      final password = _passwordController.text.trim();
+      final name = _nameController.text.trim();
 
+      debugPrint('🔐 Starting registration for: $email');
+
+      // ✅ Await and catch profile creation errors
       await _authService.signUpWithEmailAndPassword(
         email: email,
-        password: _passwordController.text.trim(),
-        name: _nameController.text.trim(),
+        password: password,
+        name: name,
         role: 'employee',  // ✅ Default role, admin will assign during approval
       );
 
       if (!mounted) return;
 
+      debugPrint('✅ Registration successful for: $email');
+
+      // ✅ Only show success if EVERYTHING succeeded
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
@@ -72,39 +80,28 @@ class _SignUpScreenState extends State<SignUpScreen> {
           ),
           backgroundColor: Colors.green,
           behavior: SnackBarBehavior.floating,
-          duration: const Duration(seconds: 3),
+          duration: const Duration(seconds: 4),
         ),
       );
 
       // Navigate to login screen after successful registration
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/login');
-    } on AppwriteException catch (e) {
+    } on AuthException catch (e) {
+      // ✅ Catch our custom AuthException with user-friendly messages
       if (!mounted) return;
-      debugPrint('❌ AppwriteException: code=${e.code}, message=${e.message}');
-      _showError(_getErrorMessage(e));
+      debugPrint('❌ Registration failed (AuthException): ${e.message}');
+      _showError(e.message);
+    } on DatabaseException catch (e) {
+      if (!mounted) return;
+      debugPrint('❌ Registration failed (DatabaseException): ${e.message}');
+      _showError(e.message);
     } catch (e) {
       if (!mounted) return;
-      debugPrint('❌ Generic exception: $e');
-      _showError('Terjadi kesalahan: ${e.toString()}');
+      debugPrint('❌ Unexpected error during registration: $e');
+      _showError('Terjadi kesalahan tidak terduga. Silakan coba lagi.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  String _getErrorMessage(AppwriteException e) {
-    switch (e.code) {
-      case 409:
-        return 'Email sudah terdaftar. Silakan login.';
-      case 400:
-        if (e.message?.contains('password') ?? false) {
-          return 'Password terlalu lemah (minimal 8 karakter)';
-        }
-        return 'Format email tidak valid';
-      case 429:
-        return 'Terlalu banyak percobaan. Tunggu sebentar';
-      default:
-        return e.message ?? 'Terjadi kesalahan saat registrasi';
     }
   }
 
@@ -417,7 +414,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              'Role ditentukan otomatis dari email',
+                              'Role ditentukan oleh admin',
                               style: TextStyle(
                                 fontSize: 11,
                                 color: Colors.blue[700],

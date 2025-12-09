@@ -58,7 +58,7 @@ class AdminSidebar extends StatelessWidget {
                     borderRadius: BorderRadius.circular(AdminConstants.radiusMd),
                   ),
                   child: const Icon(
-                    Icons.cleaning_services,
+                    Icons.business,
                     color: Colors.white,
                     size: 24,
                   ),
@@ -68,13 +68,13 @@ class AdminSidebar extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'CleanOffice',
+                      'SIM-ASET',
                       style: AdminTypography.h5.copyWith(
                         color: AdminColors.textPrimary,
                       ),
                     ),
                     Text(
-                      'Admin Panel',
+                      'Manajemen Aset',
                       style: AdminTypography.caption.copyWith(
                         color: AdminColors.textSecondary,
                       ),
@@ -97,26 +97,26 @@ class AdminSidebar extends StatelessWidget {
                   isSelected: currentIndex == 0,
                 ),
                 _buildNavItem(
-                  icon: Icons.description,
-                  label: 'Laporan',
+                  icon: Icons.inventory_2,
+                  label: 'Aset',
                   index: 1,
                   isSelected: currentIndex == 1,
                 ),
                 _buildNavItem(
-                  icon: Icons.analytics,
-                  label: 'Analytics',
+                  icon: Icons.build,
+                  label: 'Maintenance',
                   index: 2,
                   isSelected: currentIndex == 2,
                 ),
                 _buildNavItem(
-                  icon: Icons.verified,
-                  label: 'Verifikasi',
+                  icon: Icons.event,
+                  label: 'Booking',
                   index: 3,
                   isSelected: currentIndex == 3,
                 ),
                 _buildNavItem(
-                  icon: Icons.people,
-                  label: 'Petugas',
+                  icon: Icons.inventory,
+                  label: 'Inventaris',
                   index: 4,
                   isSelected: currentIndex == 4,
                 ),
@@ -130,8 +130,8 @@ class AdminSidebar extends StatelessWidget {
                 ),
 
                 _buildNavItem(
-                  icon: Icons.inventory,
-                  label: 'Inventory',
+                  icon: Icons.assessment,
+                  label: 'Reports',
                   index: 5,
                   isSelected: currentIndex == 5,
                 ),

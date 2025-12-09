@@ -55,14 +55,19 @@ class AdminBottomNav extends StatelessWidget {
               label: 'Home',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.assignment_outlined),
-              activeIcon: Icon(Icons.assignment),
-              label: 'Laporan',
+              icon: Icon(Icons.inventory_2_outlined),
+              activeIcon: Icon(Icons.inventory_2),
+              label: 'Aset',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.notifications_outlined),
-              activeIcon: Icon(Icons.notifications),
-              label: 'Permintaan',
+              icon: Icon(Icons.qr_code_scanner),
+              activeIcon: Icon(Icons.qr_code_scanner),
+              label: 'Scan',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.assignment_outlined),
+              activeIcon: Icon(Icons.assignment),
+              label: 'Tugas',
             ),
             BottomNavigationBarItem(
               icon: Icon(Icons.more_horiz),

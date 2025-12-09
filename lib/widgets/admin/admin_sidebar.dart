@@ -14,6 +14,7 @@ import '../../screens/admin/all_requests_management_screen.dart';
 import '../../screens/admin/cleaner_management_screen.dart';
 import '../../screens/admin/analytics_screen.dart';
 import '../../screens/inventory/inventory_dashboard_screen.dart';
+import '../../screens/sim_aset/asset_list_screen.dart';
 import '../../services/inventory_service.dart';
 import '../../models/inventory_item.dart';
 
@@ -120,7 +121,7 @@ class AdminSidebar extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Admin Dashboard',
+                  'SIM-ASET Dashboard',
                   style: TextStyle(
                     color: Colors.grey[600],
                     fontSize: 12,
@@ -156,17 +157,17 @@ class AdminSidebar extends ConsumerWidget {
 
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.assignment_outlined,
-                  activeIcon: Icons.assignment,
-                  title: 'Kelola Laporan',
+                  icon: Icons.inventory_2_outlined,
+                  activeIcon: Icons.inventory_2,
+                  title: 'Aset',
                   badge: verificationCount,
-                  isActive: currentRoute == 'reports_management',
+                  isActive: currentRoute == 'assets',
                   onTap: () {
-                    if (currentRoute != 'reports_management') {
+                    if (currentRoute != 'assets') {
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const AllReportsManagementScreen(),
+                          builder: (_) => const AssetListScreen(),
                         ),
                       );
                     }
@@ -175,37 +176,29 @@ class AdminSidebar extends ConsumerWidget {
 
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.room_service_outlined,
-                  activeIcon: Icons.room_service,
-                  title: 'Kelola Permintaan',
-                  isActive: currentRoute == 'requests_management',
+                  icon: Icons.build_outlined,
+                  activeIcon: Icons.build,
+                  title: 'Maintenance',
+                  isActive: currentRoute == 'maintenance',
                   onTap: () {
-                    if (currentRoute != 'requests_management') {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AllRequestsManagementScreen(),
-                        ),
-                      );
-                    }
+                    // TODO: Navigate to Maintenance Screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Maintenance screen coming soon')),
+                    );
                   },
                 ),
 
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.people_outline,
-                  activeIcon: Icons.people,
-                  title: 'Kelola Petugas',
-                  isActive: currentRoute == 'cleaner_management',
+                  icon: Icons.event_outlined,
+                  activeIcon: Icons.event,
+                  title: 'Booking',
+                  isActive: currentRoute == 'booking',
                   onTap: () {
-                    if (currentRoute != 'cleaner_management') {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const CleanerManagementScreen(),
-                        ),
-                      );
-                    }
+                    // TODO: Navigate to Booking Screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Booking screen coming soon')),
+                    );
                   },
                 ),
 
@@ -230,19 +223,15 @@ class AdminSidebar extends ConsumerWidget {
 
                 _buildMenuItem(
                   context: context,
-                  icon: Icons.analytics_outlined,
-                  activeIcon: Icons.analytics,
-                  title: 'Analitik',
-                  isActive: currentRoute == 'analytics',
+                  icon: Icons.assessment_outlined,
+                  activeIcon: Icons.assessment,
+                  title: 'Reports',
+                  isActive: currentRoute == 'reports',
                   onTap: () {
-                    if (currentRoute != 'analytics') {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const AnalyticsScreen(),
-                        ),
-                      );
-                    }
+                    // TODO: Navigate to Reports Screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Reports screen coming soon')),
+                    );
                   },
                 ),
 
@@ -318,7 +307,7 @@ class AdminSidebar extends ConsumerWidget {
               ),
             ),
             child: Text(
-              'CleanOffice v1.0.0',
+              'SIM-ASET v2.0.0',
               style: TextStyle(
                 color: Colors.grey[500],
                 fontSize: 11,

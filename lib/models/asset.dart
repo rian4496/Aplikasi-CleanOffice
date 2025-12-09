@@ -138,6 +138,10 @@ class Asset {
   final String? description;
   final String qrCode;
   final String category;
+  final String? typeId;       // FK to asset_types
+  final String? categoryId;   // FK to asset_categories
+  final String? departmentId; // FK to departments
+  final String? conditionId;  // FK to asset_conditions
   final String? locationId;
   final String? locationName; // Joined from locations table
   final AssetStatus status;
@@ -157,6 +161,10 @@ class Asset {
     this.description,
     required this.qrCode,
     required this.category,
+    this.typeId,
+    this.categoryId,
+    this.departmentId,
+    this.conditionId,
     this.locationId,
     this.locationName,
     required this.status,
@@ -179,6 +187,10 @@ class Asset {
       description: map['description'] as String?,
       qrCode: map['qr_code'] as String,
       category: map['category'] as String,
+      typeId: map['type_id'] as String?,
+      categoryId: map['category_id'] as String?,
+      departmentId: map['department_id'] as String?,
+      conditionId: map['condition_id'] as String?,
       locationId: map['location_id'] as String?,
       locationName: map['locations']?['name'] as String?, // Joined
       status: AssetStatus.fromString(map['status'] ?? 'active'),
@@ -294,5 +306,24 @@ class Asset {
       default:
         return Icons.category;
     }
+  }
+
+  // Formatted helpers
+  String? get purchaseDateFormatted {
+    if (purchaseDate == null) return null;
+    return '${purchaseDate!.day}/${purchaseDate!.month}/${purchaseDate!.year}';
+  }
+
+  String? get warrantyUntilFormatted {
+    if (warrantyUntil == null) return null;
+    return '${warrantyUntil!.day}/${warrantyUntil!.month}/${warrantyUntil!.year}';
+  }
+
+  String? get purchasePriceFormatted {
+    if (purchasePrice == null) return null;
+    return 'Rp ${purchasePrice!.toStringAsFixed(0).replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (Match m) => '${m[1]}.',
+    )}';
   }
 }

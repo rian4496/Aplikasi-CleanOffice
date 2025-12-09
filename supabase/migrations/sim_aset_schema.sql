@@ -99,8 +99,31 @@ CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_status ON bookings(status);
 CREATE INDEX IF NOT EXISTS idx_bookings_time ON bookings(start_time, end_time);
 
+-- ==================== INVENTORY ITEMS ====================
+-- Create inventory_items if not exists (for existing projects, this may already exist)
+CREATE TABLE IF NOT EXISTS inventory_items (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name TEXT NOT NULL,
+  sku TEXT UNIQUE,
+  category TEXT,
+  description TEXT,
+  unit TEXT DEFAULT 'pcs',
+  current_stock INTEGER DEFAULT 0,
+  min_stock INTEGER DEFAULT 0,
+  max_stock INTEGER,
+  unit_price DECIMAL(15,2),
+  location_id UUID REFERENCES locations(id) ON DELETE SET NULL,
+  image_url TEXT,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_inventory_items_category ON inventory_items(category);
+CREATE INDEX IF NOT EXISTS idx_inventory_items_sku ON inventory_items(sku);
+
 -- ==================== INVENTORY MUTATIONS ====================
--- Extends existing inventory_items table
+-- Tracks stock movements
 CREATE TABLE IF NOT EXISTS inventory_mutations (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,

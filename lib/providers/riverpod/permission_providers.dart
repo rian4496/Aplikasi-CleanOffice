@@ -117,3 +117,4 @@ extension PermissionStatusX on PermissionStatus {
   bool get isAllowed => this == PermissionStatus.granted;
   bool get isNotAllowed => this != PermissionStatus.granted;
 }
+

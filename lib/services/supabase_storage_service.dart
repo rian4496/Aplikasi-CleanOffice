@@ -1,10 +1,11 @@
 // lib/services/supabase_storage_service.dart
 
-import 'dart:io';
+// import 'dart:io'; // REMOVED for Web Compatibility
 import 'package:flutter/foundation.dart';
 import 'package:logging/logging.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:image_picker/image_picker.dart'; // Added XFile support
 import '../core/config/supabase_config.dart';
 
 /// Result pattern for error handling
@@ -107,11 +108,11 @@ class SupabaseStorageService {
 
   /// Upload report image (convenience method)
   ///
-  /// [imageFile] - File object from image picker
+  /// [imageFile] - XFile object from image picker
   /// [userId] - User ID for tracking who uploaded
   ///
   /// Returns: Public URL string (throws on error)
-  Future<String> uploadReportImage(File imageFile, String userId) async {
+  Future<String> uploadReportImage(XFile imageFile, String userId) async {
     try {
       _logger.info('📸 Uploading report image for user: $userId');
 
@@ -125,33 +126,26 @@ class SupabaseStorageService {
         userId: userId,
       );
 
-      // Check result and return URL or throw
+      // ... (Rest of logic)
       if (result.isSuccess && result.data != null) {
         return result.data!;
       } else {
-        throw StorageException(
-          message: result.error ?? 'Upload failed',
-        );
+        throw StorageException(message: result.error ?? 'Upload failed');
       }
     } catch (e, stackTrace) {
+      // ... (Error handling)
       _logger.severe('❌ Upload report image error', e, stackTrace);
-      if (e is StorageException) {
-        rethrow;
-      }
-      throw StorageException(
-        message: 'Gagal upload gambar laporan: $e',
-        originalError: e,
-        stackTrace: stackTrace,
-      );
+      if (e is StorageException) rethrow;
+      throw StorageException(message: 'Gagal upload gambar laporan: $e', originalError: e);
     }
   }
 
   /// Upload inventory image (convenience method)
   ///
-  /// [imageFile] - File object from image picker
+  /// [imageFile] - XFile object from image picker
   ///
   /// Returns: Public URL string (throws on error)
-  Future<String> uploadInventoryImage(File imageFile) async {
+  Future<String> uploadInventoryImage(XFile imageFile) async {
     try {
       _logger.info('📦 Uploading inventory image');
 
@@ -165,34 +159,27 @@ class SupabaseStorageService {
         userId: 'inv',
       );
 
-      // Check result and return URL or throw
+      // ... 
       if (result.isSuccess && result.data != null) {
         return result.data!;
       } else {
-        throw StorageException(
-          message: result.error ?? 'Upload failed',
-        );
+        throw StorageException(message: result.error ?? 'Upload failed');
       }
     } catch (e, stackTrace) {
       _logger.severe('❌ Upload inventory image error', e, stackTrace);
-      if (e is StorageException) {
-        rethrow;
-      }
-      throw StorageException(
-        message: 'Gagal upload gambar inventory: $e',
-        originalError: e,
-        stackTrace: stackTrace,
-      );
+      if (e is StorageException) rethrow;
+      throw StorageException(message: 'Gagal upload gambar inventory: $e', originalError: e);
     }
   }
 
   /// Upload profile image (convenience method)
   ///
-  /// [imageFile] - File object from image picker
+  /// [imageFile] - XFile object from image picker
   /// [userId] - User ID for naming file
   ///
   /// Returns: Public URL string (throws on error)
-  Future<String> uploadProfileImage(File imageFile, String userId) async {
+  Future<String> uploadProfileImage(XFile imageFile, String userId) async {
+
     try {
       _logger.info('👤 Uploading profile image for user: $userId');
 
@@ -407,3 +394,4 @@ class SupabaseStorageService {
     }
   }
 }
+

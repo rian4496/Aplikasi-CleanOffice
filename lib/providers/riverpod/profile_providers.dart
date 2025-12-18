@@ -6,7 +6,7 @@
 // - Profile picture upload/delete
 // - Work schedule providers
 
-import 'dart:io';
+// import 'dart:io'; // REMOVED for Web Compatibility
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/user_profile.dart';
@@ -67,7 +67,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
 
   /// Upload profile picture (supports both File and Uint8List)
   Future<String?> uploadProfilePicture({
-    File? imageFile,
+    dynamic imageFile, // Changed from File to dynamic for Web Compatibility
     Uint8List? imageBytes,
     required String userId,
   }) async {
@@ -76,7 +76,8 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
 
       Uint8List? bytes = imageBytes;
       if (bytes == null && imageFile != null) {
-        bytes = await imageFile.readAsBytes();
+         // File logic removed. Callers must pass bytes.
+         _logger.warning('Passing File object is deprecated. Use imageBytes.');
       }
 
       if (bytes == null) {
@@ -133,7 +134,7 @@ class ProfileActionsNotifier extends Notifier<AsyncValue<void>> {
 
   /// Update profile with new photo
   Future<void> updateProfileWithPhoto({
-    File? imageFile,
+    dynamic imageFile,
     Uint8List? imageBytes,
     required UserProfile profile,
   }) async {
@@ -195,3 +196,4 @@ final currentUserSchedulesProvider = StreamProvider<List<WorkSchedule>>((ref) {
   _logger.info('Work schedules not yet implemented in Appwrite');
   return Stream.value([]);
 });
+

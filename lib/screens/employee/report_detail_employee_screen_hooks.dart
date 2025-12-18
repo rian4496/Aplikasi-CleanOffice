@@ -642,3 +642,4 @@ class ReportDetailEmployeeScreen extends HookConsumerWidget {
     );
   }
 }
+

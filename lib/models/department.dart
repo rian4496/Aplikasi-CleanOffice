@@ -1,5 +1,5 @@
 // lib/models/department.dart
-// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
+// Department Model for Supabase
 
 class Department {
   final String id;
@@ -28,43 +28,39 @@ class Department {
     return null;
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'name': name,
-      'description': description,
-      'supervisorId': supervisorId,
-      'locations': locations,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
-  }
-
-  /// Convert to Appwrite document format
-  Map<String, dynamic> toAppwrite() => toMap();
-
   factory Department.fromMap(String id, Map<String, dynamic> map) {
     return Department(
       id: id,
       name: map['name'] ?? '',
       description: map['description'] ?? '',
-      supervisorId: map['supervisorId'] ?? '',
+      supervisorId: map['supervisorId'] ?? map['supervisor_id'] ?? '',
       locations: List<String>.from(map['locations'] ?? []),
-      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(map['updatedAt']),
+      createdAt: _parseDate(map['createdAt']) ?? _parseDate(map['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDate(map['updatedAt']) ?? _parseDate(map['updated_at']),
     );
   }
 
-  /// Factory from Appwrite document
-  factory Department.fromAppwrite(Map<String, dynamic> data) {
+  /// Create from Supabase (snake_case)
+  factory Department.fromSupabase(Map<String, dynamic> data) {
     return Department(
-      id: data['\$id'] ?? data['id'] ?? '',
+      id: data['id']?.toString() ?? '',
       name: data['name'] ?? '',
       description: data['description'] ?? '',
-      supervisorId: data['supervisorId'] ?? '',
+      supervisorId: data['supervisor_id'] ?? '',
       locations: List<String>.from(data['locations'] ?? []),
-      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(data['\$updatedAt']) ?? _parseDate(data['updatedAt']),
+      createdAt: _parseDate(data['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDate(data['updated_at']),
     );
+  }
+
+  /// Convert to Supabase document format (snake_case)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'name': name,
+      'description': description,
+      'supervisor_id': supervisorId,
+      'locations': locations,
+    };
   }
 
   Department copyWith({
@@ -84,3 +80,4 @@ class Department {
     );
   }
 }
+

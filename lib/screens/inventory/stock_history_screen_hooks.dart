@@ -489,3 +489,4 @@ class StockHistoryScreen extends HookConsumerWidget {
     }
   }
 }
+

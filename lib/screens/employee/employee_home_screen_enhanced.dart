@@ -110,13 +110,23 @@ class EmployeeHomeScreenEnhanced extends HookConsumerWidget {
       elevation: 0,
       automaticallyImplyLeading: false,
       centerTitle: true,
-      title: const Text(
-        'CleanOffice',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-        ),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            'assets/images/logo-pemprov-kalsel.png',
+            height: 32,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'CleanOffice',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
       flexibleSpace: Container(
         decoration: const BoxDecoration(
@@ -715,3 +725,4 @@ class EmployeeHomeScreenEnhanced extends HookConsumerWidget {
     }
   }
 }
+

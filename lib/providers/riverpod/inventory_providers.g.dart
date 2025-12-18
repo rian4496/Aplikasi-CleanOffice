@@ -183,7 +183,7 @@ final class PendingStockRequestsProvider
 }
 
 String _$pendingStockRequestsHash() =>
-    r'43c236be6f35c1df615a1060561918ce116a5607';
+    r'f17841d8f85253434540c1b6c1b73a47735f0f79';
 
 /// Stream user's stock requests
 
@@ -229,7 +229,7 @@ final class MyStockRequestsProvider
   }
 }
 
-String _$myStockRequestsHash() => r'6559bf12454eb6fb8f96021c87ebd74deb94f7e9';
+String _$myStockRequestsHash() => r'2c100659383959755abe6c30d56ee51147f55644';
 
 /// Get pending requests count
 
@@ -269,58 +269,3 @@ final class PendingRequestsCountProvider
 
 String _$pendingRequestsCountHash() =>
     r'2c7a9636c9e29f9a60d49f1f3aa4e49efbbc003a';
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-
-@ProviderFor(appwriteDatabaseService)
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-const appwriteDatabaseServiceProvider = AppwriteDatabaseServiceProvider._();
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-final class AppwriteDatabaseServiceProvider
-    extends
-        $FunctionalProvider<
-          SupabaseDatabaseService,
-          SupabaseDatabaseService,
-          SupabaseDatabaseService
-        >
-    with $Provider<SupabaseDatabaseService> {
-  /// Legacy provider - redirects to supabaseDatabaseServiceProvider
-  const AppwriteDatabaseServiceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'appwriteDatabaseServiceProvider',
-        isAutoDispose: true,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$appwriteDatabaseServiceHash();
-
-  @$internal
-  @override
-  $ProviderElement<SupabaseDatabaseService> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  SupabaseDatabaseService create(Ref ref) {
-    return appwriteDatabaseService(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(SupabaseDatabaseService value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<SupabaseDatabaseService>(value),
-    );
-  }
-}
-
-String _$appwriteDatabaseServiceHash() =>
-    r'60846aab1a2737a00b926b44d47609bc50587f15';

@@ -208,3 +208,4 @@ class QuickAccessCardCompact extends StatelessWidget {
     );
   }
 }
+

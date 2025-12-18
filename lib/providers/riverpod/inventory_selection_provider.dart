@@ -84,3 +84,4 @@ class SelectionMode extends _$SelectionMode {
     }
   }
 }
+

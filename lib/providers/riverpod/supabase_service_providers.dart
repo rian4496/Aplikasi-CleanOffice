@@ -34,3 +34,4 @@ SupabaseDatabaseService supabaseDatabaseService(Ref ref) {
 SupabaseStorageService supabaseStorageService(Ref ref) {
   return SupabaseStorageService();
 }
+

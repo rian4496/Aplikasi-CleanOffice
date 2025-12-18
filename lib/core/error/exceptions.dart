@@ -1,6 +1,5 @@
 /// Custom exceptions untuk aplikasi Clean Office
 /// Digunakan di data layer (services, repositories)
-/// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
 library;
 
 /// Base exception class
@@ -24,7 +23,7 @@ abstract class AppException implements Exception {
 
 // ==================== AUTH EXCEPTIONS ====================
 
-/// Exception untuk Authentication errors (Appwrite)
+/// Exception untuk Authentication errors (Supabase)
 class AuthException extends AppException {
   const AuthException({
     required super.message,
@@ -33,29 +32,29 @@ class AuthException extends AppException {
     super.stackTrace,
   });
 
-  /// Factory untuk Appwrite error codes
-  factory AuthException.fromAppwrite(dynamic error) {
-    final code = error.code?.toString();
+  /// Factory untuk Supabase auth error
+  factory AuthException.fromSupabase(dynamic error) {
+    final code = error.statusCode?.toString() ?? error.code?.toString();
     String message;
 
     switch (code) {
+      case '400':
+        message = 'Email atau password tidak valid';
+        break;
       case '401':
         message = 'Email atau password salah';
         break;
       case '404':
         message = 'Email belum terdaftar';
         break;
-      case '409':
+      case '422':
         message = 'Email sudah terdaftar';
         break;
       case '429':
         message = 'Terlalu banyak percobaan. Coba lagi nanti';
         break;
-      case '400':
-        message = 'Format data tidak valid';
-        break;
-      case '503':
-        message = 'Service tidak tersedia';
+      case '500':
+        message = 'Terjadi kesalahan server';
         break;
       default:
         message = error.message?.toString() ?? 'Terjadi kesalahan autentikasi';
@@ -65,7 +64,7 @@ class AuthException extends AppException {
   }
 }
 
-/// Exception untuk Database errors (Appwrite)
+/// Exception untuk Database errors (Supabase PostgreSQL)
 class DatabaseException extends AppException {
   const DatabaseException({
     required super.message,
@@ -74,26 +73,26 @@ class DatabaseException extends AppException {
     super.stackTrace,
   });
 
-  /// Factory untuk Appwrite database error codes
-  factory DatabaseException.fromAppwrite(dynamic error) {
+  /// Factory untuk Supabase/PostgreSQL error codes
+  factory DatabaseException.fromSupabase(dynamic error) {
     final code = error.code?.toString();
     String message;
 
     switch (code) {
-      case '401':
-        message = 'Anda tidak memiliki akses';
-        break;
-      case '404':
-        message = 'Data tidak ditemukan';
-        break;
-      case '409':
+      case '23505': // unique_violation
         message = 'Data sudah ada';
         break;
-      case '500':
-        message = 'Terjadi kesalahan server';
+      case '23503': // foreign_key_violation
+        message = 'Data terkait tidak ditemukan';
         break;
-      case '503':
-        message = 'Service tidak tersedia. Coba lagi';
+      case '42501': // insufficient_privilege
+        message = 'Anda tidak memiliki akses';
+        break;
+      case 'PGRST116': // not found
+        message = 'Data tidak ditemukan';
+        break;
+      case '42P01': // undefined_table
+        message = 'Tabel tidak ditemukan';
         break;
       default:
         message = error.message?.toString() ?? 'Terjadi kesalahan database';
@@ -107,7 +106,7 @@ class DatabaseException extends AppException {
   }
 }
 
-/// Exception untuk Storage errors (Appwrite)
+/// Exception untuk Storage errors (Supabase Storage)
 class StorageException extends AppException {
   const StorageException({
     required super.message,
@@ -116,9 +115,9 @@ class StorageException extends AppException {
     super.stackTrace,
   });
 
-  /// Factory untuk Appwrite storage error codes
-  factory StorageException.fromAppwrite(dynamic error) {
-    final code = error.code?.toString();
+  /// Factory untuk Supabase storage error
+  factory StorageException.fromSupabase(dynamic error) {
+    final code = error.statusCode?.toString() ?? error.code?.toString();
     String message;
 
     switch (code) {
@@ -126,6 +125,7 @@ class StorageException extends AppException {
         message = 'File tidak ditemukan';
         break;
       case '401':
+      case '403':
         message = 'Tidak ada akses untuk upload/download file';
         break;
       case '413':
@@ -229,24 +229,21 @@ class FormatException extends AppException {
 AppException toAppException(dynamic error, {StackTrace? stackTrace}) {
   if (error is AppException) return error;
 
-  // Check if it's an Appwrite error (has code property)
+  // Check if it's a Supabase error
   final errorString = error.runtimeType.toString().toLowerCase();
+  final errorMsg = error.toString().toLowerCase();
 
-  if (errorString.contains('appwrite') || error.toString().contains('AppwriteException')) {
+  if (errorString.contains('postgrest') || errorString.contains('supabase')) {
     // Try to determine error type based on context
-    final errorMsg = error.toString().toLowerCase();
-
     if (errorMsg.contains('auth') || errorMsg.contains('user') || errorMsg.contains('session')) {
-      return AuthException.fromAppwrite(error);
+      return AuthException.fromSupabase(error);
     }
 
     if (errorMsg.contains('storage') || errorMsg.contains('file') || errorMsg.contains('bucket')) {
-      return StorageException.fromAppwrite(error);
+      return StorageException.fromSupabase(error);
     }
 
-    if (errorMsg.contains('database') || errorMsg.contains('document') || errorMsg.contains('collection')) {
-      return DatabaseException.fromAppwrite(error);
-    }
+    return DatabaseException.fromSupabase(error);
   }
 
   // Default to server exception

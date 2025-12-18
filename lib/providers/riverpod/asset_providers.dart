@@ -149,3 +149,4 @@ final assetsByCategoryProvider = FutureProvider.family<List<Asset>, String>((ref
       .map((json) => Asset.fromSupabase(json))
       .toList();
 });
+

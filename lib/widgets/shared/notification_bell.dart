@@ -82,3 +82,4 @@ class NotificationBell extends ConsumerWidget {
     );
   }
 }
+

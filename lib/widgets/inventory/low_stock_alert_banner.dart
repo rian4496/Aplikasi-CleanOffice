@@ -102,3 +102,4 @@ class LowStockAlertBanner extends StatelessWidget {
     );
   }
 }
+

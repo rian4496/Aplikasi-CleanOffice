@@ -17,9 +17,9 @@ class SupabaseConfig {
   static const String notificationsTable = 'notifications';
 
   // Storage Buckets
-  static const String reportImagesBucket = 'report-images';
-  static const String profileImagesBucket = 'profile-images';
-  static const String inventoryImagesBucket = 'inventory-images';
+  static const String reportImagesBucket = 'report_images';
+  static const String profileImagesBucket = 'profile_images';
+  static const String inventoryImagesBucket = 'inventory_images'; // Changed to match user's bucket (underscore)
 
   // Realtime Channels
   static const String reportsChannel = 'public:reports';
@@ -28,3 +28,4 @@ class SupabaseConfig {
   static const String messagesChannel = 'public:messages';
   static const String notificationsChannel = 'public:notifications';
 }
+

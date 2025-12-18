@@ -462,3 +462,4 @@ final deleteReportProvider = Provider<Future<void> Function(String, String)>((re
     ref.invalidate(reportSummaryProvider);
   };
 });
+

@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 // ==================== MAINTENANCE TYPE ENUM ====================
 enum MaintenanceType {
+  preventive,
+  corrective,
   scheduled,
   repair,
   inspection,
@@ -12,6 +14,10 @@ enum MaintenanceType {
 
   static MaintenanceType fromString(String type) {
     switch (type.toLowerCase()) {
+      case 'preventive':
+        return MaintenanceType.preventive;
+      case 'corrective':
+        return MaintenanceType.corrective;
       case 'scheduled':
         return MaintenanceType.scheduled;
       case 'repair':
@@ -21,7 +27,7 @@ enum MaintenanceType {
       case 'upgrade':
         return MaintenanceType.upgrade;
       default:
-        return MaintenanceType.repair;
+        return MaintenanceType.corrective;
     }
   }
 
@@ -29,10 +35,14 @@ enum MaintenanceType {
 
   String get displayName {
     switch (this) {
+      case MaintenanceType.preventive:
+        return 'Preventif';
+      case MaintenanceType.corrective:
+        return 'Perbaikan';
       case MaintenanceType.scheduled:
         return 'Terjadwal';
       case MaintenanceType.repair:
-        return 'Perbaikan';
+        return 'Repair';
       case MaintenanceType.inspection:
         return 'Inspeksi';
       case MaintenanceType.upgrade:
@@ -42,10 +52,14 @@ enum MaintenanceType {
 
   IconData get icon {
     switch (this) {
-      case MaintenanceType.scheduled:
+      case MaintenanceType.preventive:
         return Icons.schedule;
-      case MaintenanceType.repair:
+      case MaintenanceType.corrective:
         return Icons.build;
+      case MaintenanceType.scheduled:
+        return Icons.calendar_today;
+      case MaintenanceType.repair:
+        return Icons.handyman;
       case MaintenanceType.inspection:
         return Icons.search;
       case MaintenanceType.upgrade:
@@ -55,12 +69,16 @@ enum MaintenanceType {
 
   Color get color {
     switch (this) {
-      case MaintenanceType.scheduled:
+      case MaintenanceType.preventive:
         return Colors.blue;
-      case MaintenanceType.repair:
+      case MaintenanceType.corrective:
         return Colors.orange;
-      case MaintenanceType.inspection:
+      case MaintenanceType.scheduled:
         return Colors.teal;
+      case MaintenanceType.repair:
+        return Colors.deepOrange;
+      case MaintenanceType.inspection:
+        return Colors.cyan;
       case MaintenanceType.upgrade:
         return Colors.purple;
     }
@@ -70,19 +88,25 @@ enum MaintenanceType {
 // ==================== MAINTENANCE STATUS ENUM ====================
 enum MaintenanceStatus {
   pending,
+  approved,
   inProgress,
   completed,
+  rejected,
   cancelled;
 
   static MaintenanceStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
         return MaintenanceStatus.pending;
+      case 'approved':
+        return MaintenanceStatus.approved;
       case 'in_progress':
       case 'inprogress':
         return MaintenanceStatus.inProgress;
       case 'completed':
         return MaintenanceStatus.completed;
+      case 'rejected':
+        return MaintenanceStatus.rejected;
       case 'cancelled':
         return MaintenanceStatus.cancelled;
       default:
@@ -94,10 +118,14 @@ enum MaintenanceStatus {
     switch (this) {
       case MaintenanceStatus.pending:
         return 'pending';
+      case MaintenanceStatus.approved:
+        return 'approved';
       case MaintenanceStatus.inProgress:
         return 'in_progress';
       case MaintenanceStatus.completed:
         return 'completed';
+      case MaintenanceStatus.rejected:
+        return 'rejected';
       case MaintenanceStatus.cancelled:
         return 'cancelled';
     }
@@ -107,10 +135,14 @@ enum MaintenanceStatus {
     switch (this) {
       case MaintenanceStatus.pending:
         return 'Menunggu';
+      case MaintenanceStatus.approved:
+        return 'Disetujui';
       case MaintenanceStatus.inProgress:
         return 'Dikerjakan';
       case MaintenanceStatus.completed:
         return 'Selesai';
+      case MaintenanceStatus.rejected:
+        return 'Ditolak';
       case MaintenanceStatus.cancelled:
         return 'Dibatalkan';
     }
@@ -120,12 +152,33 @@ enum MaintenanceStatus {
     switch (this) {
       case MaintenanceStatus.pending:
         return Colors.orange;
-      case MaintenanceStatus.inProgress:
+      case MaintenanceStatus.approved:
         return Colors.blue;
+      case MaintenanceStatus.inProgress:
+        return Colors.indigo;
       case MaintenanceStatus.completed:
         return Colors.green;
+      case MaintenanceStatus.rejected:
+        return Colors.red;
       case MaintenanceStatus.cancelled:
         return Colors.grey;
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case MaintenanceStatus.pending:
+        return Icons.hourglass_empty;
+      case MaintenanceStatus.approved:
+        return Icons.check_circle_outline;
+      case MaintenanceStatus.inProgress:
+        return Icons.autorenew;
+      case MaintenanceStatus.completed:
+        return Icons.check_circle;
+      case MaintenanceStatus.rejected:
+        return Icons.cancel;
+      case MaintenanceStatus.cancelled:
+        return Icons.block;
     }
   }
 }
@@ -283,4 +336,60 @@ class MaintenanceLog {
     if (startedAt == null || completedAt == null) return null;
     return completedAt!.difference(startedAt!).inMinutes;
   }
+
+  // Check if request is urgent
+  bool get isUrgent => priority == MaintenancePriority.urgent || priority == MaintenancePriority.high;
+
+  // Alias getters for screen compatibility
+  DateTime? get scheduledDate => scheduledAt;
+  DateTime? get completedDate => completedAt;
+  String? get assignedToName => technicianName;
+
+  // copyWith method
+  MaintenanceLog copyWith({
+    String? id,
+    String? assetId,
+    String? assetName,
+    String? technicianId,
+    String? technicianName,
+    MaintenanceType? type,
+    String? title,
+    String? descriptionValue,
+    MaintenanceStatus? status,
+    MaintenancePriority? priority,
+    DateTime? scheduledAt,
+    DateTime? startedAt,
+    DateTime? completedAt,
+    String? notes,
+    double? cost,
+    String? beforeImageUrl,
+    String? afterImageUrl,
+    String? createdBy,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return MaintenanceLog(
+      id: id ?? this.id,
+      assetId: assetId ?? this.assetId,
+      assetName: assetName ?? this.assetName,
+      technicianId: technicianId ?? this.technicianId,
+      technicianName: technicianName ?? this.technicianName,
+      type: type ?? this.type,
+      title: title ?? this.title,
+      description: descriptionValue ?? this.description,
+      status: status ?? this.status,
+      priority: priority ?? this.priority,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      startedAt: startedAt ?? this.startedAt,
+      completedAt: completedAt ?? this.completedAt,
+      notes: notes ?? this.notes,
+      cost: cost ?? this.cost,
+      beforeImageUrl: beforeImageUrl ?? this.beforeImageUrl,
+      afterImageUrl: afterImageUrl ?? this.afterImageUrl,
+      createdBy: createdBy ?? this.createdBy,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
+

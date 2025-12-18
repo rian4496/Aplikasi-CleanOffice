@@ -37,3 +37,4 @@ class AssetType {
   bool get isMovable => code == 'movable';
   bool get isImmovable => code == 'immovable';
 }
+

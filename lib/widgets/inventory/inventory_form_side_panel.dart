@@ -21,7 +21,7 @@ class InventoryFormSidePanel extends StatelessWidget {
       alignment: Alignment.centerRight,
       insetPadding: EdgeInsets.zero,
       child: Container(
-        width: 500,
+        width: 900,
         height: double.infinity,
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -41,3 +41,4 @@ class InventoryFormSidePanel extends StatelessWidget {
     );
   }
 }
+

@@ -8,12 +8,12 @@ part of 'notification_providers.dart';
 
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
-/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
+/// Future-based user notifications
 
 @ProviderFor(userNotifications)
 const userNotificationsProvider = UserNotificationsProvider._();
 
-/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
+/// Future-based user notifications
 
 final class UserNotificationsProvider
     extends
@@ -25,7 +25,7 @@ final class UserNotificationsProvider
     with
         $FutureModifier<List<AppNotification>>,
         $FutureProvider<List<AppNotification>> {
-  /// Future-based user notifications (Supabase doesn't support real-time streams the same way)
+  /// Future-based user notifications
   const UserNotificationsProvider._()
     : super(
         from: null,
@@ -52,7 +52,7 @@ final class UserNotificationsProvider
   }
 }
 
-String _$userNotificationsHash() => r'e41ca26a960a5bc8ed9039c27ba74735fe325cc1';
+String _$userNotificationsHash() => r'1788d97633b07bbc2b5055a432d216eda3ad9abf';
 
 /// Unread notification count
 
@@ -91,7 +91,7 @@ final class UnreadNotificationCountProvider
 }
 
 String _$unreadNotificationCountHash() =>
-    r'48badcebb243ee9ecdef5d6280ba68862f5a436b';
+    r'fa0dc9990bd801b3bd9123174d257fb021990350';
 
 /// Notification settings - stored locally for now
 /// Note: Supabase schema doesn't include notification_settings table
@@ -202,7 +202,7 @@ final class MarkNotificationAsReadProvider
 }
 
 String _$markNotificationAsReadHash() =>
-    r'd129cf7ac9f1cbbce4a1def02dc08e3f64fab902';
+    r'1ae42c285d8e47f35106419e6bfe37e4c01b04a1';
 
 /// Mark notification as read
 
@@ -264,7 +264,7 @@ final class MarkAllNotificationsAsReadProvider
 }
 
 String _$markAllNotificationsAsReadHash() =>
-    r'5571e22d6f726ad799fff5ec449e27a9804ce1bf';
+    r'2d9cb973bdec1e219de45ad8e5ba6ad5da4b33d3';
 
 /// Delete notification
 

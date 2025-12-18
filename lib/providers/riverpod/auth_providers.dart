@@ -273,19 +273,52 @@ final isEmployeeProvider = Provider<bool>((ref) {
   return role == 'employee';
 });
 
+/// Check if user is kasubbag
+final isKasubbagProvider = Provider<bool>((ref) {
+  final role = ref.watch(currentUserRoleProvider);
+  return role == 'kasubbag';
+});
+
+/// Check if user is teknisi
+final isTeknisiProvider = Provider<bool>((ref) {
+  final role = ref.watch(currentUserRoleProvider);
+  return role == 'teknisi';
+});
+
+// ==================== DATABASE-BACKED USER ROLE ====================
+
+/// Provider untuk user role dari tabel user_roles (Admin-assigned)
+/// Falls back to profile role if no database record exists
+final userRoleRecordProvider = FutureProvider<String>((ref) async {
+  final session = supabase.Supabase.instance.client.auth.currentSession;
+  final userId = session?.user.id;
+  
+  if (userId == null) {
+    return 'employee'; // Default
+  }
+
+  try {
+    final response = await supabase.Supabase.instance.client
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (response != null && response['role'] != null) {
+      _logger.info('User role from database: ${response['role']}');
+      return response['role'] as String;
+    }
+
+    // Fallback to profile role
+    final profileRole = ref.read(currentUserRoleProvider);
+    _logger.info('User role from profile (fallback): $profileRole');
+    return profileRole ?? 'employee';
+  } catch (e) {
+    _logger.error('Error fetching user role from database', e);
+    return ref.read(currentUserRoleProvider) ?? 'employee';
+  }
+});
+
 // ==================== LEGACY COMPATIBILITY ====================
-// These are kept for backward compatibility during migration
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseAuthServiceProvider
-@Deprecated('Use supabaseAuthServiceProvider instead')
-final appwriteAuthServiceProvider = supabaseAuthServiceProvider;
-
-/// Legacy alias for screens using old authControllerProvider name
-@Deprecated('Use authActionsProvider instead')
-final authControllerProvider = authActionsProvider;
-
-/// Legacy alias for screens using currentUserProvider
-@Deprecated('Use currentUserProfileProvider instead')
+// Alias for screens still using 'currentUserProvider' name
 final currentUserProvider = currentUserProfileProvider;
-

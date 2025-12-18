@@ -2,6 +2,8 @@
 // ✅ MIGRATED TO SUPABASE
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'login_screen_web.dart';
 import '../../services/supabase_auth_service.dart';
 import '../../core/error/exceptions.dart';
 import '../../core/constants/app_constants.dart';
@@ -77,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, route);
+      context.go(route);
     } on AuthException catch (e) {
       if (!mounted) return;
 
@@ -126,214 +128,225 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32.0),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Image.asset(
-                    'assets/images/login_illustration.png',
-                    height: 200,
-                    width: 200,
-                  ),
-                  const SizedBox(height: 32),
-
-                  // Title
-                  Text(
-                    'Login',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo[800],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Masuk ke akun Anda',
-                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                  ),
-                  const SizedBox(height: 40),
-
-                  // Email Field
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    child: TextFormField(
-                      controller: _emailController,
-                      cursorColor: Colors.black,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        labelStyle: const TextStyle(color: Colors.black54),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[400]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
-                        ),
-                        prefixIcon: const Icon(Icons.email, color: Colors.black),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth > 900) {
+          // Use the new Web Layout for larger screens
+          return const LoginScreenWeb();
+        }
+        
+        // Use existing Mobile Layout
+        return Scaffold(
+          backgroundColor: Colors.white,
+          body: SafeArea(
+            child: Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Image.asset(
+                        'assets/images/login_illustration.png',
+                        height: 200,
+                        width: 200,
                       ),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Email tidak boleh kosong';
-                        }
-                        if (!value.contains('@')) {
-                          return 'Email tidak valid';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 32),
 
-                  // Password Field
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    child: TextFormField(
-                      controller: _passwordController,
-                      cursorColor: Colors.black,
-                      style: const TextStyle(color: Colors.black),
-                      decoration: InputDecoration(
-                        labelText: 'Password',
-                        labelStyle: const TextStyle(color: Colors.black54),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: const BorderSide(color: Colors.black),
+                      // Title
+                      Text(
+                        'Login',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo[800],
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[400]!),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
-                        ),
-                        prefixIcon: const Icon(Icons.lock, color: Colors.black),
-                        suffixIcon: IconButton(
-                          icon: Icon(
-                            _obscurePassword
-                                ? Icons.visibility_off
-                                : Icons.visibility,
-                            color: Colors.black,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Masuk ke akun Anda',
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                      const SizedBox(height: 40),
+
+                      // Email Field
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        child: TextFormField(
+                          controller: _emailController,
+                          cursorColor: Colors.black,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            labelStyle: const TextStyle(color: Colors.black54),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.black),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[400]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
+                            ),
+                            prefixIcon: const Icon(Icons.email, color: Colors.black),
                           ),
-                          onPressed: () {
-                            setState(() {
-                              _obscurePassword = !_obscurePassword;
-                            });
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Email tidak boleh kosong';
+                            }
+                            if (!value.contains('@')) {
+                              return 'Email tidak valid';
+                            }
+                            return null;
                           },
                         ),
                       ),
-                      obscureText: _obscurePassword,
-                      textInputAction: TextInputAction.done,
-                      onFieldSubmitted: (_) => _login(),
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Password tidak boleh kosong';
-                        }
-                        return null;
-                      },
-                    ),
-                  ),
+                      const SizedBox(height: 16),
 
-                  // Forgot Password
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    child: Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () {
-                          // TODO: Implement forgot password with Appwrite
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Fitur reset password akan segera tersedia'),
-                              behavior: SnackBarBehavior.floating,
+                      // Password Field
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        child: TextFormField(
+                          controller: _passwordController,
+                          cursorColor: Colors.black,
+                          style: const TextStyle(color: Colors.black),
+                          decoration: InputDecoration(
+                            labelText: 'Password',
+                            labelStyle: const TextStyle(color: Colors.black54),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: const BorderSide(color: Colors.black),
                             ),
-                          );
-                        },
-                        child: Text(
-                          'Lupa Password?',
-                          style: TextStyle(
-                            color: Colors.indigo[600],
-                            fontWeight: FontWeight.w500,
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[400]!),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.grey[600]!, width: 2),
+                            ),
+                            prefixIcon: const Icon(Icons.lock, color: Colors.black),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: Colors.black,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
+                          obscureText: _obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          onFieldSubmitted: (_) => _login(),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Password tidak boleh kosong';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+
+                      // Forgot Password
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        child: Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () {
+                              // TODO: Implement forgot password with Appwrite
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Fitur reset password akan segera tersedia'),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'Lupa Password?',
+                              style: TextStyle(
+                                color: Colors.indigo[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Login Button
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.85,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
-                      style: ElevatedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 54),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      // Login Button
+                      SizedBox(
+                        width: MediaQuery.of(context).size.width * 0.85,
+                        child: ElevatedButton(
+                          onPressed: _isLoading ? null : _login,
+                          style: ElevatedButton.styleFrom(
+                            minimumSize: const Size(double.infinity, 54),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            backgroundColor: Colors.indigo[600],
+                            foregroundColor: Colors.white,
+                          ),
+                          child: _isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : const Text(
+                                  'Masuk',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                        backgroundColor: Colors.indigo[600],
-                        foregroundColor: Colors.white,
                       ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              height: 24,
-                              width: 24,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Text(
-                              'Masuk',
+                      const SizedBox(height: 20),
+
+                      // Sign Up Link
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Belum punya akun?',
+                            style: TextStyle(color: Colors.grey[600]),
+                          ),
+                          TextButton(
+                            onPressed: () => context.push(AppConstants.registerRoute),
+                            child: Text(
+                              'Sign Up',
                               style: TextStyle(
-                                fontSize: 16,
+                                color: Colors.indigo[600],
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Sign Up Link
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        'Belum punya akun?',
-                        style: TextStyle(color: Colors.grey[600]),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pushNamed(context, AppConstants.registerRoute),
-                        child: Text(
-                          'Sign Up',
-                          style: TextStyle(
-                            color: Colors.indigo[600],
-                            fontWeight: FontWeight.bold,
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 }
+

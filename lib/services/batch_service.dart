@@ -106,3 +106,4 @@ final batchServiceProvider = Provider<BatchService>((ref) {
   final supabase = Supabase.instance.client;
   return BatchService(supabase);
 });
+

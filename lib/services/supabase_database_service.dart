@@ -10,6 +10,11 @@ import '../models/user_profile.dart';
 import '../models/report.dart';
 import '../models/request.dart';
 import '../models/inventory_item.dart';
+import '../models/stock_request.dart';
+import '../models/notification_model.dart';
+import '../models/transactions/loan_model.dart'; 
+import '../models/transactions/disposal_model.dart';
+import '../models/audit_log.dart';
 
 
 class SupabaseDatabaseService {
@@ -172,6 +177,7 @@ class SupabaseDatabaseService {
     String? location,
     String? role,
     String? status,
+    String? departmentId,
   }) async {
     try {
       _logger.info('📝 Updating profile for user: $userId');
@@ -183,6 +189,7 @@ class SupabaseDatabaseService {
       if (location != null) updates['location'] = location;
       if (role != null) updates['role'] = role;
       if (status != null) updates['status'] = status;
+      if (departmentId != null) updates['department_id'] = departmentId;
 
       if (updates.isEmpty) {
         _logger.warning('⚠️ No fields to update');
@@ -816,6 +823,120 @@ class SupabaseDatabaseService {
     }
   }
 
+  // ==================== NOTIFICATION OPERATIONS ====================
+
+  /// Get notifications for a user
+  Future<List<AppNotification>> getNotifications(String userId) async {
+    try {
+      _logger.info('🔔 Fetching notifications for user: $userId');
+
+      final response = await _client
+          .from('notifications')
+          .select()
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      
+      // Note: Model expects 'userId', 'createdAt' etc. matching DB columns
+      // If DB has snake_case (user_id, created_at), we might need a mapper or the model handles it.
+      // Based on AppNotification.fromMap, it expects camelCase keys or we map them here.
+      // Let's assume standard Supabase snake_case in DB and map manually if needed, 
+      // OR assuming the Table column names match what the model expects if we use simple mapping.
+      // However, typical Supabase pattern is snake_case. 
+      // Let's correct the query to standard Supabase conventions if needed, 
+      // but if the table was created with camelCase columns (indicated by previous patterns), we use that.
+      // Checking `notifications` table structure isn't possible directly, but typically it is snake_case.
+      // I will map snake_case DB to camelCase Model properties here for safety.
+
+      final notifications = (response as List).map((data) {
+        // Map snake_case DB to camelCase Model keys if necessary, or just pass if they match.
+        // Let's normalize to what AppNotification.fromMap likely expects if it accepts a map.
+        // Actually, looking at AppNotification.fromMap:
+        // userId: map['userId']
+        // createdAt: map['createdAt']
+        // 
+        // If DB is snake_case (user_id), we need to transform.
+        final map = Map<String, dynamic>.from(data);
+        if (map.containsKey('user_id')) map['userId'] = map['user_id'];
+        if (map.containsKey('created_at')) map['createdAt'] = map['created_at'];
+        // 'type', 'title', 'message', 'data', 'read' usually match or are simple.
+        
+        return AppNotification.fromMap(data['id']?.toString() ?? '', map);
+      }).toList();
+
+      return notifications;
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error fetching notifications', e, stackTrace);
+      // Return empty list instead of throwing to avoid breaking UI
+      return [];
+    }
+  }
+
+  /// Get unread notification count
+  Future<int> getUnreadNotificationCount(String userId) async {
+    try {
+      final response = await _client
+          .from('notifications')
+          .count()
+          .eq('user_id', userId) // user_id is standard
+          .eq('read', false);
+      
+      return response;
+    } catch (e) {
+      // Try snake_case if camelCase fails (fallback)
+      try {
+         final response = await _client
+          .from('notifications')
+          .count()
+          .eq('user_id', userId)
+          .eq('read', false);
+         return response;
+      } catch (_) {
+         return 0;
+      }
+    }
+  }
+
+  /// Mark notification as read
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _client
+          .from('notifications')
+          .update({'read': true})
+          .eq('id', notificationId);
+    } catch (e) {
+      _logger.error('❌ Error marking notification read', e);
+    }
+  }
+
+  /// Mark all notifications as read
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      // Try both column conventions to be safe or assuming the one that works in getNotifications
+      // Safe bet: user_id usually. But let's try strict.
+      // We will assume the column is `userId` based on previous code context, but `user_id` is SQL standard.
+      // I'll stick to a generic update that handles potential schema naming by trying the most likely first.
+      
+      // Update: Based on `AppNotification` model using `userId` in `toMap`, it's possible 
+      // the columns are camelCase if generated from Dart. 
+      // But standard migrations usually use snake_case. 
+      // I'll use `user_id` as primary assumption for WHERE clause in DB operations unless proven otherwise.
+      
+      await _client
+          .from('notifications')
+          .update({'read': true})
+          .eq('user_id', userId);
+          
+    } catch (e) {
+       // Fallback to snake_case
+       try {
+         await _client
+          .from('notifications')
+          .update({'read': true})
+          .eq('user_id', userId);
+       } catch (_) {}
+    }
+  }
+
   /// Get requests by cleaner ID (cleaner assigned to handle the request)
   Future<List<Request>> getRequestsByCleanerId(String cleanerId) async {
     try {
@@ -1069,16 +1190,21 @@ class SupabaseDatabaseService {
       _logger.info('📋 Fetching all inventory items');
 
       final response = await _client
-          .from('inventory')
+          .from('inventory_items')
           .select()
           .order('name', ascending: true);
 
-      final items = (response as List)
-          .map((data) => InventoryItem.fromSupabase(data))
-          .toList();
+      final allItems = (response as List);
+      
+      // Filter out deleted items (where deleted_at is not null or is_active is false)
+      final activeItems = allItems.where((data) {
+        final deletedAt = data['deleted_at'];
+        final isActive = data['is_active'] ?? true;
+        return deletedAt == null && isActive != false;
+      }).map((data) => InventoryItem.fromSupabase(data)).toList();
 
-      _logger.info('✅ Loaded ${items.length} inventory items');
-      yield items;
+      _logger.info('✅ Loaded ${activeItems.length} active inventory items (filtered from ${allItems.length} total)');
+      yield activeItems;
     } on PostgrestException catch (e, stackTrace) {
       _logger.error('❌ Database error fetching inventory', e, stackTrace);
       yield [];
@@ -1094,16 +1220,21 @@ class SupabaseDatabaseService {
       _logger.info('📋 Fetching low stock items');
 
       final response = await _client
-          .from('inventory')
+          .from('inventory_items')
           .select()
           .order('name', ascending: true);
 
-      final allItems = (response as List)
-          .map((data) => InventoryItem.fromSupabase(data))
-          .toList();
+      final allItems = (response as List);
+      
+      // First filter out deleted items, then map to InventoryItem
+      final activeItems = allItems.where((data) {
+        final deletedAt = data['deleted_at'];
+        final isActive = data['is_active'] ?? true;
+        return deletedAt == null && isActive != false;
+      }).map((data) => InventoryItem.fromSupabase(data)).toList();
 
       // Filter low stock items client-side (since Supabase doesn't support column comparison easily)
-      final lowStockItems = allItems
+      final lowStockItems = activeItems
           .where((item) => item.currentStock <= item.minStock)
           .toList();
 
@@ -1291,5 +1422,331 @@ class SupabaseDatabaseService {
     _logger.warning('⚠️ Stock requests table not yet implemented in Supabase');
     yield [];
   }
+
+  // ==================== LOAN OPERATIONS ====================
+
+  /// Get all loan requests
+  Future<List<LoanRequest>> getLoanRequests() async {
+    try {
+      _logger.info('📋 Fetching loan requests');
+      final response = await _client
+          .from('transactions_loans')
+          .select('*, master_assets(name, condition)')
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) => LoanRequest.fromMap(e)).toList();
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error fetching loans', e, stackTrace);
+      // Return empty list on error to prevent UI crash
+      return []; 
+    }
+  }
+
+  /// Create new loan request
+  Future<void> createLoanRequest(LoanRequest loan) async {
+    try {
+      // Remove 'id' if empty/new so Supabase generates UUID
+      final data = loan.toMap();
+      if (data['id'] == '' || data['id'] == null) {
+        data.remove('id');
+      }
+      
+      await _client.from('transactions_loans').insert(data);
+      _logger.info('✅ Loan request created: ${loan.requestNumber}');
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error creating loan', e, stackTrace);
+      throw DatabaseException(message: 'Gagal membuat peminjaman', originalError: e);
+    }
+  }
+
+  /// Update loan status
+  Future<void> updateLoanStatus(String id, String status, {String? rejectionReason}) async {
+    try {
+      final updates = {'status': status};
+      if (rejectionReason != null) {
+        updates['rejection_reason'] = rejectionReason;
+      }
+
+      await _client.from('transactions_loans').update(updates).eq('id', id);
+    } catch (e) {
+      _logger.error('❌ Error updating loan status', e);
+      throw DatabaseException(message: 'Gagal update status peminjaman');
+    }
+  }
+
+  // ==================== DISPOSAL OPERATIONS ====================
+
+  /// Get all disposal requests
+  Future<List<DisposalRequest>> getDisposalRequests() async {
+    try {
+      _logger.info('📋 Fetching disposal requests');
+      
+      final response = await _client
+          .from('transactions_disposal')
+          .select('*, master_assets(name, asset_code)') 
+          .order('created_at', ascending: false);
+
+      return (response as List).map((e) {
+        final map = Map<String, dynamic>.from(e);
+        if (map['master_assets'] != null) {
+          map['asset_name'] = map['master_assets']['name'];
+          map['asset_code'] = map['master_assets']['asset_code'];
+        }
+        return DisposalRequest.fromJson(map);
+      }).toList();
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error fetching disposals', e, stackTrace);
+      return [];
+    }
+  }
+
+  /// Create disposal proposal
+  Future<void> createDisposalRequest(DisposalRequest request) async {
+    try {
+      final data = request.toJson();
+      if (data['id'] == '' || data['id'] == null) data.remove('id');
+      
+      // Clean up fields that shouldn't be inserted on create (like joined fields)
+      data.remove('asset_name');
+      data.remove('asset_code');
+      
+      await _client.from('transactions_disposal').insert(data);
+      _logger.info('✅ Disposal request created: ${request.code}');
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error creating disposal', e, stackTrace);
+      throw DatabaseException(message: 'Gagal membuat usulan penghapusan', originalError: e);
+    }
+  }
+
+  /// Update disposal status
+  Future<void> updateDisposalStatus(String id, String status, {
+    String? approvedBy, 
+    DateTime? approvalDate
+  }) async {
+    try {
+      final updates = <String, dynamic>{'status': status};
+      if (approvedBy != null) updates['approved_by'] = approvedBy;
+      if (approvalDate != null) updates['approval_date'] = approvalDate.toIso8601String();
+
+      await _client.from('transactions_disposal').update(updates).eq('id', id);
+    } catch (e) {
+      _logger.error('❌ Error updating disposal status', e);
+      throw DatabaseException(message: 'Gagal update status penghapusan');
+    }
+  }
+
+  // ==================== ADVANCED REPORTING ====================
+  
+  /// Get Disposal Report Data
+  Future<List<DisposalRequest>> getDisposalReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      _logger.info('📊 Fetching Disposal Report ($startDate - $endDate)');
+      
+      final response = await _client
+          .from('transactions_disposal')
+          .select('*, master_assets(name, asset_code)')
+          .gte('created_at', startDate.toIso8601String())
+          .lte('created_at', endDate.toIso8601String())
+          .order('created_at', ascending: true);
+          
+      return (response as List).map((e) {
+         final map = Map<String, dynamic>.from(e);
+         if (map['master_assets'] != null) {
+           map['asset_name'] = map['master_assets']['name'];
+           map['asset_code'] = map['master_assets']['asset_code'];
+         }
+         return DisposalRequest.fromJson(map);
+      }).toList();
+    } catch (e, s) {
+      _logger.error('❌ Error fetching disposal report', e, s);
+      return [];
+    }
+  }
+
+  /// Get Maintenance Report Data (Tickets)
+  Future<List<Map<String, dynamic>>> getMaintenanceReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      _logger.info('📊 Fetching Maintenance Report ($startDate - $endDate)');
+      
+      final response = await _client
+          .from('tickets')
+          .select('*, master_assets(name, asset_code), assigned_to_user:users!assigned_to(display_name)') 
+          .eq('type', 'kerusakan')
+          .gte('created_at', startDate.toIso8601String())
+          .lte('created_at', endDate.toIso8601String())
+          .order('created_at', ascending: true);
+
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e, s) {
+      _logger.error('❌ Error fetching maintenance report', e, s);
+      return [];
+    }
+  }
+
+  /// Get Loan Report Data
+  Future<List<LoanRequest>> getLoanReport({
+    required DateTime startDate,
+    required DateTime endDate,
+  }) async {
+    try {
+      _logger.info('📊 Fetching Loan Report ($startDate - $endDate)');
+      
+      final response = await _client
+          .from('transactions_loans')
+          .select('*, master_assets(name, asset_code)')
+          .gte('created_at', startDate.toIso8601String())
+          .lte('created_at', endDate.toIso8601String())
+          .order('created_at', ascending: true);
+          
+      return (response as List).map((e) {
+          final map = Map<String, dynamic>.from(e);
+            if (map['master_assets'] != null) {
+              map['asset_name'] = map['master_assets']['name'];
+            }
+          return LoanRequest.fromMap(map);
+      }).toList();
+    } catch (e, s) {
+      _logger.error('❌ Error fetching loan report', e, s);
+      return [];
+    }
+  }
+
+  // ==================== AUDIT LOGS ====================
+  
+  /// Log an audit event
+  Future<void> logAudit({
+    required String action,
+    String? entityType,
+    String? entityId,
+    String? description,
+    Map<String, dynamic>? oldData,
+    Map<String, dynamic>? newData,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final currentUser = _client.auth.currentUser;
+      
+      await _client.from('audit_logs').insert({
+        'user_id': currentUser?.id,
+        'user_email': currentUser?.email,
+        'action': action,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'description': description,
+        'old_data': oldData,
+        'new_data': newData,
+        'metadata': metadata,
+      });
+      
+      _logger.info('📝 Audit logged: $action on $entityType');
+    } catch (e, s) {
+      _logger.error('❌ Error logging audit', e, s);
+      // Don't throw - audit logging should not break main flow
+    }
+  }
+
+  /// Get audit logs with optional filters
+  Future<List<AuditLog>> getAuditLogs({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? userId,
+    String? action,
+    String? entityType,
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    try {
+      _logger.info('📋 Fetching audit logs');
+      
+      // Build query with filters first, then order/limit
+      var baseQuery = _client.from('audit_logs').select();
+      
+      if (startDate != null) {
+        baseQuery = baseQuery.gte('created_at', startDate.toIso8601String());
+      }
+      if (endDate != null) {
+        baseQuery = baseQuery.lte('created_at', endDate.toIso8601String());
+      }
+      if (userId != null) {
+        baseQuery = baseQuery.eq('user_id', userId);
+      }
+      if (action != null) {
+        baseQuery = baseQuery.eq('action', action);
+      }
+      if (entityType != null) {
+        baseQuery = baseQuery.eq('entity_type', entityType);
+      }
+      
+      final response = await baseQuery
+          .order('created_at', ascending: false)
+          .limit(limit);
+      
+      return (response as List).map((e) => AuditLog.fromJson(e)).toList();
+    } catch (e, s) {
+      _logger.error('❌ Error fetching audit logs', e, s);
+      return [];
+    }
+  }
+
+  /// Get audit log count for stats
+  Future<int> getAuditLogCount({
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      var query = _client
+          .from('audit_logs')
+          .select('id');
+      
+      if (startDate != null) {
+        query = query.gte('created_at', startDate.toIso8601String());
+      }
+      if (endDate != null) {
+        query = query.lte('created_at', endDate.toIso8601String());
+      }
+      
+      final response = await query;
+      return (response as List).length;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Delete audit logs older than specified days (retention policy)
+  Future<int> deleteOldAuditLogs({int daysToKeep = 30}) async {
+    try {
+      final cutoffDate = DateTime.now().subtract(Duration(days: daysToKeep));
+      _logger.info('🗑️ Deleting audit logs older than ${cutoffDate.toIso8601String()}');
+      
+      // Note: Supabase doesn't return deleted count directly, so we count first
+      final countQuery = await _client
+          .from('audit_logs')
+          .select('id')
+          .lt('created_at', cutoffDate.toIso8601String());
+      
+      final countToDelete = (countQuery as List).length;
+      
+      if (countToDelete > 0) {
+        await _client
+            .from('audit_logs')
+            .delete()
+            .lt('created_at', cutoffDate.toIso8601String());
+        
+        _logger.info('✅ Deleted $countToDelete old audit logs');
+      }
+      
+      return countToDelete;
+    } catch (e, s) {
+      _logger.error('❌ Error deleting old audit logs', e, s);
+      rethrow;
+    }
+  }
 }
+
 

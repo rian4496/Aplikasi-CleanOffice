@@ -42,7 +42,8 @@ final pendingBookingsProvider = FutureProvider<List<Booking>>((ref) async {
 
 // ==================== MY BOOKINGS PROVIDER ====================
 final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
-  final user = ref.watch(currentUserProvider);
+  final userAsync = ref.watch(currentUserProfileProvider);
+  final user = userAsync.value;
   if (user == null) return [];
 
   final response = await _supabase
@@ -51,7 +52,7 @@ final myBookingsProvider = FutureProvider<List<Booking>>((ref) async {
         *,
         assets(name)
       ''')
-      .eq('user_id', user.id)
+      .eq('user_id', user.uid)
       .order('start_time', ascending: false);
 
   return (response as List)
@@ -147,3 +148,4 @@ class BookingConflictCheck {
   @override
   int get hashCode => assetId.hashCode ^ startTime.hashCode ^ endTime.hashCode;
 }
+

@@ -12,6 +12,36 @@ import './supabase_service_providers.dart';
 
 final _logger = AppLogger('CleanerProviders');
 
+// ==================== CLEANER LIST PROVIDER ====================
+
+/// Model for cleaner list display
+class CleanerInfo {
+  final String id;
+  final String? name;
+  final String? department;
+  
+  CleanerInfo({required this.id, this.name, this.department});
+}
+
+/// Provider untuk semua daftar cleaner
+final allCleanersProvider = FutureProvider<List<CleanerInfo>>((ref) async {
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  try {
+    final profiles = await service.getAllUserProfiles();
+    return profiles
+        .where((p) => p.role == 'cleaner')
+        .map((p) => CleanerInfo(
+              id: p.uid,
+              name: p.displayName,
+              department: p.departmentId,
+            ))
+        .toList();
+  } catch (e) {
+    _logger.warning('Could not fetch cleaners: $e');
+    return [];
+  }
+});
+
 // ==================== CLEANER REPORTS PROVIDERS ====================
 
 /// Provider untuk pending reports (belum diambil siapa-siapa)
@@ -415,10 +445,3 @@ final cleanerActionsProvider =
     NotifierProvider<CleanerActionsNotifier, AsyncValue<void>>(
   () => CleanerActionsNotifier(),
 );
-
-// ==================== LEGACY COMPATIBILITY ====================
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-final appwriteDatabaseServiceProvider = supabaseDatabaseServiceProvider;

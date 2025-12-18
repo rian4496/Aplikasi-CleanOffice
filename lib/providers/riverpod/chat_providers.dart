@@ -109,3 +109,4 @@ final usersOnlineStatusProvider = FutureProvider.family<Map<String, bool>, List<
     return await chatService.getUsersOnlineStatus(userIds);
   },
 );
+

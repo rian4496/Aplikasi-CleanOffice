@@ -5,11 +5,18 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../models/inventory_item.dart';
+import '../../models/stock_request.dart';
 import '../../services/supabase_database_service.dart';
 import './supabase_service_providers.dart';
 import './auth_providers.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/inventory_service.dart';
+
 part 'inventory_providers.g.dart';
+
+final inventoryServiceProvider = Provider<InventoryService>((ref) => InventoryService());
+
 
 // ==================== INVENTORY ITEMS ====================
 
@@ -42,20 +49,21 @@ Stream<int> lowStockCount(Ref ref) {
 /// Stream pending stock requests
 @riverpod
 Stream<List<StockRequest>> pendingStockRequests(Ref ref) {
-  final service = ref.watch(supabaseDatabaseServiceProvider);
-  return service.getPendingStockRequests();
+  final service = ref.watch(inventoryServiceProvider);
+  return service.streamPendingRequests();
 }
 
 /// Stream user's stock requests
 @riverpod
+@riverpod
 Stream<List<StockRequest>> myStockRequests(Ref ref) {
   final authState = ref.watch(authStateProvider);
-  final service = ref.watch(supabaseDatabaseServiceProvider);
+  final service = ref.watch(inventoryServiceProvider);
 
   return authState.when(
     data: (user) {
       if (user == null) return Stream.value([]);
-      return service.getStockRequestsByUser(user.id);
+      return service.streamUserRequests(user.id);
     },
     loading: () => Stream.value([]),
     error: (error, stack) => Stream.value([]),
@@ -70,14 +78,4 @@ Stream<int> pendingRequestsCount(Ref ref) {
     loading: () => Stream.value(0),
     error: (_, __) => Stream.value(0),
   );
-}
-
-// ==================== LEGACY COMPATIBILITY ====================
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-@riverpod
-SupabaseDatabaseService appwriteDatabaseService(Ref ref) {
-  return ref.watch(supabaseDatabaseServiceProvider);
 }

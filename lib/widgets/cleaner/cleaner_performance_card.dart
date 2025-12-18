@@ -246,3 +246,4 @@ class CleanerPerformanceCard extends ConsumerWidget {
     return Colors.red;
   }
 }
+

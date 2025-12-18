@@ -397,3 +397,4 @@ class SettingsScreen extends HookConsumerWidget {
     );
   }
 }
+

@@ -409,3 +409,4 @@ class _ScannerOverlayShape extends ShapeBorder {
   @override
   ShapeBorder scale(double t) => this;
 }
+

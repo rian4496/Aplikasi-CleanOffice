@@ -85,3 +85,4 @@ class ChatSelection extends _$ChatSelection {
     return state.selectedIds.contains(id);
   }
 }
+

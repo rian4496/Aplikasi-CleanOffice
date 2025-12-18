@@ -198,3 +198,4 @@ class ErrorConfig {
     required this.color,
   });
 }
+

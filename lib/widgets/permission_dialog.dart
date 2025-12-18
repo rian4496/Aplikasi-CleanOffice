@@ -304,3 +304,4 @@ Future<bool> checkAndRequestPermission(
 
   return false;
 }
+

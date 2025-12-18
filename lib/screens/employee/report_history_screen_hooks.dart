@@ -504,3 +504,4 @@ class ReportHistoryScreen extends HookConsumerWidget {
     );
   }
 }
+

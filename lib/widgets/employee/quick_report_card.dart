@@ -36,7 +36,7 @@ class QuickReportCard extends ConsumerWidget {
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.add_circle,
                   size: 48,
                   color: AppTheme.primary,
@@ -137,3 +137,4 @@ class QuickReportCard extends ConsumerWidget {
     );
   }
 }
+

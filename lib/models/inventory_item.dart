@@ -92,7 +92,7 @@ class InventoryItem extends Equatable {
       id: map['id'] as String,
       name: map['name'] as String,
       category: map['category'] as String,
-      currentStock: map['quantity'] as int? ?? 0,
+      currentStock: map['current_stock'] as int? ?? 0, // FIXED: was 'quantity'
       maxStock: map['max_stock'] as int? ?? 100,
       minStock: map['min_stock'] as int? ?? 0,
       unit: map['unit'] as String,
@@ -128,12 +128,12 @@ class InventoryItem extends Equatable {
     return {
       'name': name,
       'category': category,
-      'quantity': currentStock,
+      'current_stock': currentStock, // FIXED: was 'quantity'
+      'max_stock': maxStock,         // FIXED: was missing!
       'min_stock': minStock,
       'unit': unit,
       'description': description,
       'image_url': imageUrl,
-      'location': null, // Add if needed
     };
   }
 
@@ -191,153 +191,7 @@ enum StockStatus {
   outOfStock,
 }
 
-// ==================== STOCK REQUEST ====================
-
-class StockRequest extends Equatable {
-  final String id;
-  final String itemId;
-  final String itemName;
-  final String requesterId;
-  final String requesterName;
-  final int requestedQuantity;
-  final String? notes;
-  final RequestStatus status;
-  final DateTime requestedAt;
-  final DateTime? approvedAt;
-  final String? approvedBy;
-  final String? approvedByName;
-  final String? rejectionReason;
-
-  const StockRequest({
-    required this.id,
-    required this.itemId,
-    required this.itemName,
-    required this.requesterId,
-    required this.requesterName,
-    required this.requestedQuantity,
-    this.notes,
-    required this.status,
-    required this.requestedAt,
-    this.approvedAt,
-    this.approvedBy,
-    this.approvedByName,
-    this.rejectionReason,
-  });
-
-  Color get statusColor {
-    switch (status) {
-      case RequestStatus.pending:
-        return Colors.orange;
-      case RequestStatus.approved:
-        return Colors.green;
-      case RequestStatus.rejected:
-        return Colors.red;
-      case RequestStatus.fulfilled:
-        return Colors.blue;
-    }
-  }
-
-  String get statusLabel {
-    switch (status) {
-      case RequestStatus.pending:
-        return 'Pending';
-      case RequestStatus.approved:
-        return 'Disetujui';
-      case RequestStatus.rejected:
-        return 'Ditolak';
-      case RequestStatus.fulfilled:
-        return 'Selesai';
-    }
-  }
-
-  factory StockRequest.fromMap(String id, Map<String, dynamic> map) {
-    return StockRequest(
-      id: id,
-      itemId: map['itemId'] as String,
-      itemName: map['itemName'] as String,
-      requesterId: map['requesterId'] as String,
-      requesterName: map['requesterName'] as String,
-      requestedQuantity: map['requestedQuantity'] as int,
-      notes: map['notes'] as String?,
-      status: RequestStatus.values.firstWhere(
-        (e) => e.name == map['status'],
-        orElse: () => RequestStatus.pending,
-      ),
-      requestedAt: DateTime.parse(map['requestedAt'] as String),
-      approvedAt: map['approvedAt'] != null ? DateTime.parse(map['approvedAt'] as String) : null,
-      approvedBy: map['approvedBy'] as String?,
-      approvedByName: map['approvedByName'] as String?,
-      rejectionReason: map['rejectionReason'] as String?,
-    );
-  }
-
-  /// From Supabase (snake_case)
-  factory StockRequest.fromSupabase(Map<String, dynamic> map) {
-    return StockRequest(
-      id: map['id'] as String,
-      itemId: map['item_id'] as String,
-      itemName: map['item_name'] as String,
-      requesterId: map['requester_id'] as String,
-      requesterName: map['requester_name'] as String,
-      requestedQuantity: map['requested_quantity'] as int,
-      notes: map['notes'] as String?,
-      status: RequestStatus.values.firstWhere(
-        (e) => e.name == (map['status'] as String? ?? 'pending'),
-        orElse: () => RequestStatus.pending,
-      ),
-      requestedAt: map['requested_at'] != null
-          ? DateTime.parse(map['requested_at'] as String)
-          : DateTime.now(),
-      approvedAt: map['approved_at'] != null
-          ? DateTime.parse(map['approved_at'] as String)
-          : null,
-      approvedBy: map['approved_by'] as String?,
-      approvedByName: map['approved_by_name'] as String?,
-      rejectionReason: map['rejection_reason'] as String?,
-    );
-  }
-
-  Map<String, dynamic> toMap() {
-    return {
-      'itemId': itemId,
-      'itemName': itemName,
-      'requesterId': requesterId,
-      'requesterName': requesterName,
-      'requestedQuantity': requestedQuantity,
-      'notes': notes,
-      'status': status.name,
-      'requestedAt': requestedAt.toIso8601String(),
-      'approvedAt': approvedAt?.toIso8601String(),
-      'approvedBy': approvedBy,
-      'approvedByName': approvedByName,
-      'rejectionReason': rejectionReason,
-    };
-  }
-
-  @override
-  List<Object?> get props => [
-        id,
-        itemId,
-        itemName,
-        requesterId,
-        requesterName,
-        requestedQuantity,
-        notes,
-        status,
-        requestedAt,
-        approvedAt,
-        approvedBy,
-        approvedByName,
-        rejectionReason,
-      ];
-}
-
-enum RequestStatus {
-  pending,
-  approved,
-  rejected,
-  fulfilled,
-}
+// StockRequest moved to lib/models/stock_request.dart
 
 // ==================== ITEM CATEGORY ====================
 
@@ -381,3 +235,4 @@ extension ItemCategoryExtension on ItemCategory {
     }
   }
 }
+

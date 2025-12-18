@@ -634,3 +634,4 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
     );
   }
 }
+

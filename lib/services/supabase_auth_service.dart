@@ -11,6 +11,31 @@ class SupabaseAuthService {
   final _logger = AppLogger('SupabaseAuthService');
   final SupabaseClient _client = Supabase.instance.client;
 
+  /// Helper method to log audit events (fire and forget)
+  Future<void> _logAudit({
+    required String action,
+    String? entityType,
+    String? entityId,
+    String? description,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final user = _client.auth.currentUser;
+      await _client.from('audit_logs').insert({
+        'user_id': user?.id,
+        'user_email': user?.email,
+        'action': action,
+        'entity_type': entityType,
+        'entity_id': entityId,
+        'description': description,
+        'metadata': metadata,
+      });
+    } catch (e) {
+      // Silently fail - audit logging should not break main flow
+      _logger.warning('Audit log failed: $e');
+    }
+  }
+
   // ==================== AUTH STATE ====================
 
   /// Get current authenticated user
@@ -229,6 +254,15 @@ class SupabaseAuthService {
       }
 
       _logger.info('✅ Login complete for: $email (role: ${profile.role})');
+      
+      // Log successful login
+      _logAudit(
+        action: 'LOGIN',
+        entityType: 'session',
+        entityId: profile.uid,
+        description: 'User logged in: ${profile.displayName}',
+      );
+      
       return profile;
     } on AuthException {
       rethrow;
@@ -271,11 +305,20 @@ class SupabaseAuthService {
 
   // ==================== SIGN OUT ====================
 
-  /// Sign out current user
   Future<void> signOut() async {
     try {
       _logger.info('🔐 Signing out user: $currentUserId');
+      
+      // Log logout before actually signing out (while we still have user context)
+      await _logAudit(
+        action: 'LOGOUT',
+        entityType: 'session',
+        entityId: currentUserId,
+        description: 'User logged out',
+      );
+      
       await _client.auth.signOut();
+      
       _logger.info('✅ Sign out successful');
     } catch (e, stackTrace) {
       _logger.error('❌ Error during sign out', e, stackTrace);
@@ -462,6 +505,14 @@ class SupabaseAuthService {
           .eq('id', userId);
 
       _logger.info('✅ Verification status updated successfully');
+      
+      // Log audit
+      _logAudit(
+        action: status == 'approved' ? 'APPROVE' : 'REJECT',
+        entityType: 'user',
+        entityId: userId,
+        description: 'User verification status changed to $status',
+      );
     } on PostgrestException catch (e, stackTrace) {
       _logger.error('❌ Database error updating verification status', e, stackTrace);
       throw DatabaseException(
@@ -494,6 +545,14 @@ class SupabaseAuthService {
           .eq('id', userId);
 
       _logger.info('✅ User status updated successfully');
+      
+      // Log audit
+      _logAudit(
+        action: status == 'deleted' ? 'DELETE' : 'UPDATE',
+        entityType: 'user',
+        entityId: userId,
+        description: 'User status changed to $status',
+      );
     } on PostgrestException catch (e, stackTrace) {
       _logger.error('❌ Database error updating user status', e, stackTrace);
       throw DatabaseException(
@@ -511,4 +570,57 @@ class SupabaseAuthService {
       );
     }
   }
+
+  /// Update other user profile (admin only)
+  Future<void> adminUpdateUser({
+    required String userId,
+    String? displayName,
+    String? role,
+    String? departmentId,
+    String? phoneNumber,
+  }) async {
+    try {
+      _logger.info('📝 Admin updating user: $userId');
+
+      final updates = <String, dynamic>{};
+      if (displayName != null) updates['display_name'] = displayName;
+      if (role != null) updates['role'] = role;
+      if (departmentId != null) updates['department_id'] = departmentId;
+      if (phoneNumber != null) updates['phone_number'] = phoneNumber;
+
+      if (updates.isEmpty) return;
+
+      await _client
+          .from(SupabaseConfig.usersTable)
+          .update(updates)
+          .eq('id', userId);
+
+      _logger.info('✅ Admin update successful');
+      
+      // Log audit
+      _logAudit(
+        action: 'UPDATE',
+        entityType: 'user',
+        entityId: userId,
+        description: 'Admin updated user profile',
+        metadata: updates,
+      );
+    } on PostgrestException catch (e, stackTrace) {
+      _logger.error('❌ Database error updating user by admin', e, stackTrace);
+      throw DatabaseException(
+        message: 'Gagal update user: ${e.message}',
+        code: e.code,
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    } catch (e, stackTrace) {
+      _logger.error('❌ Unexpected error updating user by admin', e, stackTrace);
+      throw DatabaseException(
+        message: 'Gagal update user',
+        originalError: e,
+        stackTrace: stackTrace,
+      );
+    }
+  }
 }
+

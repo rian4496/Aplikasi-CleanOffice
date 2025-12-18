@@ -49,3 +49,4 @@ class ImageOptimizer {
     return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 }
+

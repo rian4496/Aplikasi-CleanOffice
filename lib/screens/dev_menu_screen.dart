@@ -2,7 +2,7 @@ import 'package:aplikasi_cleanoffice/screens/auth/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/auth/login_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/admin/admin_dashboard_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/web_admin/admin_dashboard_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_report_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_request_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/profile_screen.dart';
@@ -343,3 +343,4 @@ class DevMenuScreen extends StatelessWidget {
     );
   }
 }
+

@@ -9,6 +9,7 @@ import '../../core/theme/app_theme.dart';
 import '../../models/inventory_item.dart';
 import '../../services/inventory_service.dart';
 import '../../providers/riverpod/auth_providers.dart';
+import '../../models/stock_request.dart';
 
 class RequestStockDialog extends ConsumerStatefulWidget {
   final InventoryItem? item; // null = show item picker, non-null = pre-selected
@@ -508,8 +509,8 @@ class _RequestStockDialogState extends ConsumerState<RequestStockDialog> {
         notes: _notesController.text.trim().isEmpty
             ? null
             : _notesController.text.trim(),
-        status: RequestStatus.pending,
-        requestedAt: now,
+        status: 'pending',
+        createdAt: now,
       );
 
       await _inventoryService.createRequest(request);
@@ -539,3 +540,4 @@ class _RequestStockDialogState extends ConsumerState<RequestStockDialog> {
     }
   }
 }
+

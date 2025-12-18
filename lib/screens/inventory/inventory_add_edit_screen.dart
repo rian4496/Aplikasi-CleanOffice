@@ -2,9 +2,12 @@
 // Add/Edit Inventory Item Screen with full form validation
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Added import
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+// import 'dart:io'; // REMOVED for Web Compatibility
+import 'dart:typed_data';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
@@ -15,9 +18,11 @@ import '../../providers/riverpod/auth_providers.dart';
 
 class InventoryAddEditScreen extends ConsumerStatefulWidget {
   final InventoryItem? item; // null = Add mode, non-null = Edit mode
+  final String? itemId; // Optional: passing ID instead of object (for deep linking)
 
   const InventoryAddEditScreen({
     this.item,
+    this.itemId,
     super.key,
   });
 
@@ -40,28 +45,65 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
 
   // State
   late String _selectedCategory;
-  File? _imageFile;
+  XFile? _imageFile; // Changed from File? to XFile? for web support
+  Uint8List? _imageBytes; // Added for Web Compatibility
   bool _isSaving = false;
   bool _isUploading = false;
+  bool _isLoading = false;
+  InventoryItem? _fetchedItem; // Store fetched item if itemId was used
+
+  InventoryItem? get _item => widget.item ?? _fetchedItem; // Helper to get the active item
 
   @override
   void initState() {
     super.initState();
-    final item = widget.item;
+    _initializeControllers(); // Initialize with defaults first
+    
+    // If ID provided but object not, fetch it
+    if (widget.item == null && widget.itemId != null) {
+      _fetchItem(widget.itemId!);
+    } else if (widget.item != null) {
+      _populateControllers(widget.item!); // Populate if object already exists
+    }
+  }
 
-    _nameController = TextEditingController(text: item?.name ?? '');
-    _currentStockController = TextEditingController(
-      text: item?.currentStock.toString() ?? '0',
-    );
-    _maxStockController = TextEditingController(
-      text: item?.maxStock.toString() ?? '100',
-    );
-    _minStockController = TextEditingController(
-      text: item?.minStock.toString() ?? '10',
-    );
-    _unitController = TextEditingController(text: item?.unit ?? 'pcs');
-    _descriptionController = TextEditingController(text: item?.description ?? '');
-    _selectedCategory = item?.category ?? 'alat';
+  void _initializeControllers() {
+    _nameController = TextEditingController();
+    _currentStockController = TextEditingController(text: '0');
+    _maxStockController = TextEditingController(text: '100');
+    _minStockController = TextEditingController(text: '10');
+    _unitController = TextEditingController(text: 'pcs');
+    _descriptionController = TextEditingController();
+    _selectedCategory = 'alat';
+  }
+
+  void _populateControllers(InventoryItem item) {
+    _nameController.text = item.name;
+    _currentStockController.text = item.currentStock.toString();
+    _maxStockController.text = item.maxStock.toString();
+    _minStockController.text = item.minStock.toString();
+    _unitController.text = item.unit;
+    _descriptionController.text = item.description ?? '';
+    _selectedCategory = item.category;
+  }
+
+  Future<void> _fetchItem(String id) async {
+    setState(() => _isLoading = true);
+    try {
+      final item = await _inventoryService.getItemById(id);
+      if (mounted) {
+        setState(() {
+          _fetchedItem = item;
+          _populateControllers(item);
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+         setState(() => _isLoading = false);
+         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading item: $e')));
+      }
+    }
   }
 
   @override
@@ -75,10 +117,14 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
     super.dispose();
   }
 
-  bool get isEditMode => widget.item != null;
+  bool get isEditMode => _item != null;
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+    
     final isDesktop = ResponsiveHelper.isDesktop(context);
 
     return Scaffold(
@@ -92,23 +138,62 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
               constraints: BoxConstraints(maxWidth: isDesktop ? 800 : double.infinity),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildHeader(),
-                    const SizedBox(height: 24),
-                    _buildImagePicker(),
-                    const SizedBox(height: 24),
-                    _buildBasicInfo(),
-                    const SizedBox(height: 24),
-                    _buildStockInfo(),
-                    const SizedBox(height: 24),
-                    _buildDescription(),
-                    const SizedBox(height: 32),
-                    _buildActionButtons(),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                child: isDesktop
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 24),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // LEFT COLUMN: Image & Description
+                              Expanded(
+                                flex: 1,
+                                child: Column(
+                                  children: [
+                                    _buildImagePicker(),
+                                    const SizedBox(height: 24),
+                                    _buildDescription(),
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(width: 24),
+                              // RIGHT COLUMN: Basic Info & Stock
+                              Expanded(
+                                flex: 2,
+                                child: Column(
+                                  children: [
+                                    _buildBasicInfo(),
+                                    const SizedBox(height: 24),
+                                    _buildStockInfo(),
+                                    const SizedBox(height: 32),
+                                    _buildActionButtons(),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      )
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 24),
+                          _buildImagePicker(),
+                          const SizedBox(height: 24),
+                          _buildBasicInfo(),
+                          const SizedBox(height: 24),
+                          _buildStockInfo(),
+                          const SizedBox(height: 24),
+                          _buildDescription(),
+                          const SizedBox(height: 32),
+                          _buildActionButtons(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
               ),
             ),
           ),
@@ -256,12 +341,14 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: Colors.grey[300]!),
               ),
-              child: _imageFile != null || widget.item?.imageUrl != null
+              child: _imageFile != null || _item?.imageUrl != null
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: _imageFile != null
-                          ? Image.file(_imageFile!, fit: BoxFit.cover)
-                          : Image.network(widget.item!.imageUrl!, fit: BoxFit.cover),
+                          ? (kIsWeb || _imageBytes != null
+                              ? Image.memory(_imageBytes!, fit: BoxFit.cover) 
+                              : const SizedBox()) // Fallback
+                          : Image.network(_item!.imageUrl!, fit: BoxFit.cover),
                     )
                   : Center(
                       child: Column(
@@ -278,7 +365,7 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
                     ),
             ),
           ),
-          if (_imageFile != null || widget.item?.imageUrl != null)
+          if (_imageFile != null || _item?.imageUrl != null)
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: TextButton.icon(
@@ -730,10 +817,14 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
         imageQuality: 85,
       );
 
-      if (pickedFile != null && mounted) {
-        setState(() {
-          _imageFile = File(pickedFile.path);
-        });
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        if (mounted) {
+          setState(() {
+            _imageFile = pickedFile; 
+            _imageBytes = bytes;
+          });
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -756,17 +847,29 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
 
     try {
       // Upload image if new image selected
-      String? imageUrl = widget.item?.imageUrl;
+      String? imageUrl = _item?.imageUrl;
       if (_imageFile != null) {
         setState(() => _isUploading = true);
         imageUrl = await _storageService.uploadInventoryImage(_imageFile!);
         setState(() => _isUploading = false);
       }
 
-      // Get current user
+      // Get current user with fallback
       final userProfile = ref.read(currentUserProfileProvider).value;
-      if (userProfile == null) {
-        throw Exception('User not authenticated');
+      String userId;
+      String userName;
+
+      if (userProfile != null) {
+        userId = userProfile.uid;
+        userName = userProfile.displayName;
+      } else {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          userId = session.user.id;
+          userName = session.user.email ?? 'Unknown User';
+        } else {
+          throw Exception('User not authenticated');
+        }
       }
 
       final now = DateTime.now();
@@ -787,7 +890,12 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
           'updatedAt': now.toIso8601String(),
         };
 
-        await _inventoryService.updateItem(widget.item!.id, updates);
+        await _inventoryService.updateItem(
+          _item!.id, 
+          updates,
+          performedBy: userId,
+          performedByName: userName,
+        );
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -844,3 +952,4 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
     }
   }
 }
+

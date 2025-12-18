@@ -938,3 +938,4 @@ class ChatRoomScreen extends HookConsumerWidget {
     }
   }
 }
+

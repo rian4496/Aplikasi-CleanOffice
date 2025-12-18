@@ -1,15 +1,15 @@
 // lib/widgets/universal_image.dart
 // ✅ Cross-platform image widget (Android + Web)
 
-import 'dart:io';
+// import 'dart:io'; // REMOVED for Web Compatibility
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 class UniversalImage extends StatelessWidget {
   final String? imageUrl;        // Network URL
-  final File? imageFile;         // Mobile: File from image_picker
-  final Uint8List? imageBytes;   // Web: bytes from image_picker
+  final dynamic imageFile;       // Mobile: File (dynamic to avoid imports)
+  final Uint8List? imageBytes;   // Web/Mobile: bytes
   final double? width;
   final double? height;
   final BoxFit fit;
@@ -48,15 +48,10 @@ class UniversalImage extends StatelessWidget {
       );
     } else if (imageFile != null && !kIsWeb) {
       // Mobile: File
-      imageWidget = Image.file(
-        imageFile!,
-        width: width,
-        height: height,
-        fit: fit,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildErrorWidget();
-        },
-      );
+      // Note: Since dart:io is removed, we can't use Image.file(imageFile) strictly typed.
+      // If we really need File support without bytes, we need universal_io.
+      // For now, we prefer BYTES.
+      return _buildErrorWidget(); // Fallback if no bytes provided
     } else if (imageUrl != null && imageUrl!.isNotEmpty) {
       // Network URL
       imageWidget = Image.network(
@@ -128,8 +123,10 @@ class UniversalImagePicker {
       final bytes = await pickedFile.readAsBytes();
       return {'file': null, 'bytes': bytes as Uint8List};
     } else {
-      // Mobile: use File
-      return {'file': File(pickedFile.path), 'bytes': null};
+      // Mobile: ALSO convert to bytes for consistency and avoiding dart:io dependency
+      final bytes = await pickedFile.readAsBytes();
+      return {'file': null, 'bytes': bytes as Uint8List};
     }
   }
 }
+

@@ -27,13 +27,13 @@ class ModernStatCard extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+        borderRadius: AppTheme.cardRadius,
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
-            boxShadow: [AppTheme.softShadow],
+            borderRadius: AppTheme.cardRadius,
+            boxShadow: AppTheme.softShadow,
             border: isSelected 
                 ? Border.all(color: accentColor, width: 2)
                 : null,
@@ -108,3 +108,4 @@ class ModernStatCard extends StatelessWidget {
     );
   }
 }
+

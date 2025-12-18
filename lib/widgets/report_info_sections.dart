@@ -129,3 +129,4 @@ class ReportInfoSections extends StatelessWidget {
     );
   }
 }
+

@@ -2,7 +2,7 @@
 // Dialog untuk menampilkan stock requests (desktop mode)
 
 import 'package:flutter/material.dart';
-import '../../screens/inventory/stock_requests_screen.dart';
+import '../../screens/inventory/inventory_request_list_screen.dart';
 
 /// Dialog untuk menampilkan daftar stock requests di desktop
 class StockRequestsDialog extends StatelessWidget {
@@ -21,9 +21,10 @@ class StockRequestsDialog extends StatelessWidget {
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(16),
-          child: const StockRequestsScreen(),
+          child: const InventoryRequestListScreen(),
         ),
       ),
     );
   }
 }
+

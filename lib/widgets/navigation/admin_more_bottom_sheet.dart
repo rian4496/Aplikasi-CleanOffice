@@ -3,11 +3,11 @@
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../screens/admin/analytics_screen.dart';
-import '../../screens/admin/all_reports_management_screen.dart';
-import '../../screens/admin/all_requests_management_screen.dart';
-import '../../screens/admin/cleaner_management_screen.dart';
-import '../../screens/admin/account_verification_screen.dart';
+import '../../screens/web_admin/analytics_screen.dart';
+import '../../screens/web_admin/all_reports_management_screen.dart';
+import '../../screens/web_admin/all_requests_management_screen.dart';
+import '../../screens/web_admin/cleaner_management_screen.dart';
+import '../../screens/web_admin/account_verification_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
 
 class AdminMoreBottomSheet extends StatelessWidget {
@@ -84,7 +84,7 @@ class AdminMoreBottomSheet extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const AnalyticsScreen(),
+                        builder: (context) => const AnalyticsReportScreen(),
                       ),
                     );
                   },
@@ -312,3 +312,4 @@ class AdminMoreBottomSheet extends StatelessWidget {
     );
   }
 }
+

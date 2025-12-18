@@ -179,3 +179,4 @@ class _OfflineAwareScaffoldState extends ConsumerState<OfflineAwareScaffold> {
     );
   }
 }
+

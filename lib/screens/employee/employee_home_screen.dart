@@ -570,25 +570,10 @@ class _EmployeeHomeScreenState extends ConsumerState<EmployeeHomeScreen> {
 
   // ==================== LOGOUT ====================
   Future<void> _handleLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi Logout'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('BATAL')),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppTheme.error),
-            child: const Text('KELUAR'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && mounted) {
-      await ref.read(authActionsProvider.notifier).logout();
-      if (mounted) Navigator.pushReplacementNamed(context, '/login');
+    // Confirmation handled by DrawerMenuWidget
+    await ref.read(authActionsProvider.notifier).logout();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/login');
     }
   }
 }

@@ -456,10 +456,3 @@ class RequestActions {
     }
   }
 }
-
-// ==================== LEGACY COMPATIBILITY ====================
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseStorageServiceProvider
-@Deprecated('Use supabaseStorageServiceProvider instead')
-final appwriteStorageServiceProvider = supabaseStorageServiceProvider;

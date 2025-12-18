@@ -311,3 +311,4 @@ class ReportingScreen extends HookConsumerWidget {
     );
   }
 }
+

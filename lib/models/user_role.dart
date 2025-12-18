@@ -1,22 +1,28 @@
 /// Class untuk mengelola role dan permission user dalam aplikasi
 class UserRole {
   // Role constants
-  static const String cleaner = 'cleaner';
-  static const String employee = 'employee';
-  static const String admin = 'admin';
+  static const String admin = 'admin'; // SYS_ADMIN
+  static const String kasubbag = 'kasubbag'; // KASUBBAG UMPEG
+  static const String teknisi = 'teknisi'; // TEKNISI (Executor)
+  static const String cleaner = 'cleaner'; // CLEANER (Field Staff)
+  static const String employee = 'employee'; // EMPLOYEE (General Staff)
 
   /// Mendapatkan semua role yang tersedia
-  static List<String> get allRoles => [cleaner, employee, admin];
+  static List<String> get allRoles => [admin, kasubbag, teknisi, cleaner, employee];
 
   /// Mendapatkan nama tampilan role dalam Bahasa Indonesia
   static String getRoleDisplayName(String role) {
     switch (role) {
+      case admin:
+        return 'Admin Sistem';
+      case kasubbag:
+        return 'Kasubag Umpeg';
+      case teknisi:
+        return 'Teknisi Aset';
       case cleaner:
         return 'Petugas Kebersihan';
       case employee:
-        return 'Karyawan';
-      case admin:
-        return 'Admin';
+        return 'Pegawai Umum';
       default:
         return role;
     }
@@ -25,146 +31,83 @@ class UserRole {
   /// Mendapatkan deskripsi role
   static String getRoleDescription(String role) {
     switch (role) {
-      case cleaner:
-        return 'Melakukan tugas kebersihan dan membuat laporan';
-      case employee:
-        return 'Membuat permintaan dan evaluasi kebersihan';
       case admin:
-        return 'Mengelola sistem dan memverifikasi laporan';
+        return 'Full Access Management';
+      case kasubbag:
+        return 'Approval & Monitoring';
+      case teknisi:
+        return 'Eksekusi Tiket Maintenance';
+      case cleaner:
+        return 'Lapor & Tiket Sederhana';
+      case employee:
+        return 'Peminjaman & Penggunaan Aset';
       default:
-        return 'Akses terbatas ke sistem';
+        return 'Akses Terbatas';
     }
   }
 
-  // ==================== PERMISSION CHECKS ====================
+  // ==================== PERMISSION CHECKS (Helper) ====================
+  // Keeping simple helpers useful for general UI logic
+  
+  static bool isManagement(String role) => role == admin || role == kasubbag;
+  static bool isExecutor(String role) => role == teknisi || role == cleaner;
+}
 
-  /// Employee dapat membuat permintaan kebersihan
-  static bool canRequestCleaning(String role) {
-    return role == employee;
+/// Database-backed user role record
+class UserRoleRecord {
+  final String id;
+  final String userId;
+  final String? employeeId;
+  final String role;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  UserRoleRecord({
+    required this.id,
+    required this.userId,
+    this.employeeId,
+    required this.role,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  factory UserRoleRecord.fromJson(Map<String, dynamic> json) {
+    return UserRoleRecord(
+      id: json['id'] as String,
+      userId: json['user_id'] as String,
+      employeeId: json['employee_id'] as String?,
+      role: json['role'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
   }
 
-  /// Cleaner dapat membuat dan mengerjakan laporan
-  static bool canSubmitReport(String role) {
-    return role == cleaner;
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'employee_id': employeeId,
+      'role': role,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
   }
 
-  /// Supervisor dapat memverifikasi laporan
-  static bool canVerifyReports(String role) {
-    return role == admin;
+  /// For creating new user role (without id, timestamps)
+  static Map<String, dynamic> toInsertJson({
+    required String userId,
+    String? employeeId,
+    required String role,
+  }) {
+    return {
+      'user_id': userId,
+      'employee_id': employeeId,
+      'role': role,
+    };
   }
 
-  /// Supervisor dapat melihat semua laporan
-  static bool canViewAllReports(String role) {
-    return role == admin;
-  }
-
-  /// Supervisor dapat melihat dashboard analytics
-  static bool canViewDashboard(String role) {
-    return role == admin;
-  }
-
-  /// Supervisor dapat mengelola assignment tugas
-  static bool canAssignTasks(String role) {
-    return role == admin;
-  }
-
-  /// Employee dapat memberikan rating
-  static bool canRateCleaning(String role) {
-    return role == employee;
-  }
-
-  /// Semua role dapat edit profile sendiri
-  static bool canEditProfile(String role) {
-    return allRoles.contains(role);
-  }
-
-  /// Supervisor dapat melihat performance metrics petugas
-  static bool canViewPerformanceMetrics(String role) {
-    return role == admin;
-  }
-
-  /// Supervisor dapat export data/laporan
-  static bool canExportData(String role) {
-    return role == admin;
-  }
-
-  // ==================== ROUTE HELPERS ====================
-
-  /// Mendapatkan home route berdasarkan role
-  static String getHomeRoute(String role) {
-    switch (role) {
-      case employee:
-        return '/home_employee';
-      case cleaner:
-        return '/home_cleaner';
-      case admin:
-        return '/home_admin';
-      default:
-        return '/login';
-    }
-  }
-
-  /// Check apakah role valid
-  static bool isValidRole(String role) {
-    return allRoles.contains(role);
-  }
-
-  /// Mendapatkan icon code point untuk role (untuk UI)
-  static int getRoleIconCodePoint(String role) {
-    switch (role) {
-      case cleaner:
-        return 0xe14a; // Icons.cleaning_services
-      case employee:
-        return 0xe7fd; // Icons.person
-      case admin:
-        return 0xe8f2; // Icons.admin_panel_settings
-      default:
-        return 0xe7fd; // Icons.person
-    }
-  }
-
-  /// Mendapatkan warna untuk role (untuk UI)
-  static int getRoleColorValue(String role) {
-    switch (role) {
-      case cleaner:
-        return 0xFF42A5F5; // Blue
-      case employee:
-        return 0xFF66BB6A; // Green
-      case admin:
-        return 0xFF5E35B1; // Purple
-      default:
-        return 0xFF9E9E9E; // Grey
-    }
-  }
-
-  // ==================== HIERARCHY CHECKS ====================
-
-  /// Mendapatkan level hierarki role (semakin tinggi semakin besar authority)
-  static int getRoleLevel(String role) {
-    switch (role) {
-      case admin:
-        return 3;
-      case cleaner:
-        return 2;
-      case employee:
-        return 1;
-      default:
-        return 0;
-    }
-  }
-
-  /// Check apakah role1 memiliki authority lebih tinggi dari role2
-  static bool hasHigherAuthority(String role1, String role2) {
-    return getRoleLevel(role1) > getRoleLevel(role2);
-  }
-
-  /// Check apakah role adalah management level
-  static bool isManagementLevel(String role) {
-    return role == admin;
-  }
-
-  /// Check apakah role adalah operational level
-  static bool isOperationalLevel(String role) {
-    return role == cleaner || role == employee;
-  }
+  String get displayName => UserRole.getRoleDisplayName(role);
+  String get description => UserRole.getRoleDescription(role);
+  bool get isManagement => UserRole.isManagement(role);
+  bool get isExecutor => UserRole.isExecutor(role);
 }

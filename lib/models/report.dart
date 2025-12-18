@@ -1,5 +1,5 @@
 // lib/models/report.dart
-// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
+// Report Model for Supabase
 
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
@@ -51,8 +51,6 @@ enum ReportStatus {
     }
   }
 
-  // Keep for compatibility
-  String toFirestore() => toDatabase();
 
   String get displayName {
     switch (this) {
@@ -181,40 +179,10 @@ class Report {
     return null;
   }
 
-  /// Convert dari Map ke Report object (Appwrite compatible)
+  /// Convert dari Map ke Report object
   factory Report.fromMap(String id, Map<String, dynamic> data) {
     return Report(
       id: id,
-      title: data['title'] as String? ?? '',
-      location: data['location'] as String? ?? '',
-      date: _parseDate(data['date']) ?? DateTime.now(),
-      status: ReportStatus.fromString(data['status'] as String? ?? 'pending'),
-      userId: data['userId'] as String? ?? '',
-      userName: data['userName'] as String? ?? '',
-      userEmail: data['userEmail'] as String?,
-      cleanerId: data['cleanerId'] as String?,
-      cleanerName: data['cleanerName'] as String?,
-      verifiedBy: data['verifiedBy'] as String?,
-      verifiedByName: data['verifiedByName'] as String?,
-      verifiedAt: _parseDate(data['verifiedAt']),
-      verificationNotes: data['verificationNotes'] as String?,
-      imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,
-      description: data['description'] as String?,
-      isUrgent: data['isUrgent'] as bool? ?? false,
-      assignedAt: _parseDate(data['assignedAt']),
-      startedAt: _parseDate(data['startedAt']),
-      completedAt: _parseDate(data['completedAt']),
-      departmentId: data['departmentId'] as String?,
-      deletedAt: _parseDate(data['deletedAt']),
-      deletedBy: data['deletedBy'] as String?,
-    );
-  }
-
-  /// Convert dari Appwrite document ke Report object
-  factory Report.fromAppwrite(Map<String, dynamic> data) {
-    return Report(
-      id: data['\$id'] as String? ?? data['id'] as String? ?? '',
       title: data['title'] as String? ?? '',
       location: data['location'] as String? ?? '',
       date: _parseDate(data['date']) ?? DateTime.now(),
@@ -301,35 +269,6 @@ class Report {
     };
   }
 
-  /// Convert Report object ke Map untuk Appwrite
-  Map<String, dynamic> toAppwrite() {
-    return {
-      'title': title,
-      'location': location,
-      'date': date.toIso8601String(),
-      'status': status.toDatabase(),
-      'userId': userId,
-      'userName': userName,
-      'userEmail': userEmail,
-      'cleanerId': cleanerId,
-      'cleanerName': cleanerName,
-      'verifiedBy': verifiedBy,
-      'verifiedByName': verifiedByName,
-      'verifiedAt': verifiedAt?.toIso8601String(),
-      'verificationNotes': verificationNotes,
-      'imageUrl': imageUrl,
-      'completionImageUrl': completionImageUrl,
-      'description': description,
-      'isUrgent': isUrgent,
-      'assignedAt': assignedAt?.toIso8601String(),
-      'startedAt': startedAt?.toIso8601String(),
-      'completedAt': completedAt?.toIso8601String(),
-      'departmentId': departmentId,
-      'deletedAt': deletedAt?.toIso8601String(),
-      'deletedBy': deletedBy,
-    };
-  }
-
   /// Convert Report object ke Map untuk Supabase (snake_case)
   Map<String, dynamic> toSupabase() {
     return {
@@ -358,9 +297,6 @@ class Report {
       'deleted_by': deletedBy,
     };
   }
-
-  // Keep for compatibility
-  Map<String, dynamic> toFirestore() => toAppwrite();
 
   Report copyWith({
     String? id,
@@ -454,3 +390,4 @@ class Report {
     return null;
   }
 }
+

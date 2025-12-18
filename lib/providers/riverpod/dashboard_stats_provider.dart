@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../../models/stat_card_data.dart';
 import '../../core/theme/app_theme.dart';
 import 'admin_providers.dart';
@@ -53,7 +54,7 @@ final dashboardStatsProvider = Provider<List<StatCardData>>((ref) {
       value: totalReportsToday,
       percentage: completionRate.toDouble(),
       accentColor: AppTheme.blueAccent,
-      icon: Icons.assignment_outlined,
+      icon: LucideIcons.clipboardList,
       comparisonValue: totalReportsTrend,
       isPositiveTrend: true,
     ),
@@ -67,7 +68,7 @@ final dashboardStatsProvider = Provider<List<StatCardData>>((ref) {
           ? ((needsVerification / allReports.length) * 100)
           : 0,
       accentColor: AppTheme.orangeAccent,
-      icon: Icons.pending_actions_outlined,
+      icon: LucideIcons.alertTriangle,
       comparisonValue: verificationTrend,
       isPositiveTrend: false, // Lower is better for pending items
     ),
@@ -81,7 +82,7 @@ final dashboardStatsProvider = Provider<List<StatCardData>>((ref) {
           ? ((activeRequests / allRequests.length) * 100)
           : 0,
       accentColor: AppTheme.greenAccent,
-      icon: Icons.notification_important_outlined,
+      icon: LucideIcons.bellRing,
       comparisonValue: requestsTrend,
       isPositiveTrend: true,
     ),
@@ -93,9 +94,10 @@ final dashboardStatsProvider = Provider<List<StatCardData>>((ref) {
       value: completionRate,
       percentage: completionRate.toDouble(),
       accentColor: AppTheme.purpleAccent,
-      icon: Icons.trending_up_outlined,
+      icon: LucideIcons.trendingUp,
       comparisonValue: completionTrend,
       isPositiveTrend: true,
     ),
   ];
 });
+

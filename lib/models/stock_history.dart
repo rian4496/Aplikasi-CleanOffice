@@ -1,72 +1,99 @@
-// lib/models/stock_history.dart
-// Stock history entry model for audit trail
-
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 
-class StockHistory extends Equatable {
+enum TransactionType {
+  IN, // Masuk (Pembelian/Restock)
+  OUT, // Keluar (Pemakaian/Request)
+  ADJUST, // Penyesuaian (Opname/Koreksi)
+}
+
+extension TransactionTypeExtension on TransactionType {
+  String get label {
+    switch (this) {
+      case TransactionType.IN:
+        return 'Masuk';
+      case TransactionType.OUT:
+        return 'Keluar';
+      case TransactionType.ADJUST:
+        return 'Penyesuaian';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case TransactionType.IN:
+        return Colors.green;
+      case TransactionType.OUT:
+        return Colors.red;
+      case TransactionType.ADJUST:
+        return Colors.orange;
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case TransactionType.IN:
+        return Icons.arrow_downward;
+      case TransactionType.OUT:
+        return Icons.arrow_upward;
+      case TransactionType.ADJUST:
+        return Icons.tune;
+    }
+  }
+}
+
+class StockMovement extends Equatable {
   final String id;
   final String itemId;
-  final String itemName;
-  final StockAction action;
-  final int quantity;
-  final int previousStock;
-  final int newStock;
-  final String performedBy;
-  final String performedByName;
+  final TransactionType type;
+  final int quantity; // Can be positive or negative depending on DB implementation, but here absolute
+  final String? referenceId; // Request ID or PO Number
   final String? notes;
-  final DateTime timestamp;
-  final String? referenceId; // Optional: link to request ID or other reference
+  final String? performedBy;
+  final String? performedByName;
+  final DateTime createdAt;
 
-  const StockHistory({
+  const StockMovement({
     required this.id,
     required this.itemId,
-    required this.itemName,
-    required this.action,
+    required this.type,
     required this.quantity,
-    required this.previousStock,
-    required this.newStock,
-    required this.performedBy,
-    required this.performedByName,
-    this.notes,
-    required this.timestamp,
     this.referenceId,
+    this.notes,
+    this.performedBy,
+    this.performedByName,
+    required this.createdAt,
   });
 
-  // From Firestore
-  factory StockHistory.fromMap(String id, Map<String, dynamic> map) {
-    return StockHistory(
-      id: id,
-      itemId: map['itemId'] as String,
-      itemName: map['itemName'] as String,
-      action: StockAction.values.firstWhere(
-        (e) => e.name == map['action'],
-        orElse: () => StockAction.manual,
+  /// From Supabase (snake_case)
+  factory StockMovement.fromSupabase(Map<String, dynamic> map) {
+    return StockMovement(
+      id: map['id'] as String,
+      itemId: map['item_id'] as String,
+      type: TransactionType.values.firstWhere(
+        (e) => e.name == map['type'],
+        orElse: () => TransactionType.ADJUST,
       ),
       quantity: map['quantity'] as int,
-      previousStock: map['previousStock'] as int,
-      newStock: map['newStock'] as int,
-      performedBy: map['performedBy'] as String,
-      performedByName: map['performedByName'] as String,
+      referenceId: map['reference_id'] as String?,
       notes: map['notes'] as String?,
-      timestamp: DateTime.parse(map['timestamp'] as String),
-      referenceId: map['referenceId'] as String?,
+      performedBy: map['performed_by'] as String?,
+      performedByName: map['performed_by_name'] as String?,
+      createdAt: DateTime.parse(map['created_at'] as String),
     );
   }
 
-  // To Firestore
-  Map<String, dynamic> toMap() {
+  /// To Supabase
+  Map<String, dynamic> toSupabase() {
     return {
-      'itemId': itemId,
-      'itemName': itemName,
-      'action': action.name,
+      'item_id': itemId,
+      'type': type.name,
       'quantity': quantity,
-      'previousStock': previousStock,
-      'newStock': newStock,
-      'performedBy': performedBy,
-      'performedByName': performedByName,
+      'reference_id': referenceId,
       'notes': notes,
-      'timestamp': timestamp.toIso8601String(),
-      'referenceId': referenceId,
+      'performed_by': performedBy,
+      'performed_by_name': performedByName,
+      'created_at': createdAt.toIso8601String(),
     };
   }
 
@@ -74,21 +101,17 @@ class StockHistory extends Equatable {
   List<Object?> get props => [
         id,
         itemId,
-        itemName,
-        action,
+        type,
         quantity,
-        previousStock,
-        newStock,
+        referenceId,
+        notes,
         performedBy,
         performedByName,
-        notes,
-        timestamp,
-        referenceId,
+        createdAt,
       ];
 }
 
-// ==================== STOCK ACTION ENUM ====================
-
+// ==================== STOCK ACTION (Legacy) ====================
 enum StockAction {
   add,
   reduce,
@@ -103,9 +126,9 @@ extension StockActionExtension on StockAction {
   String get label {
     switch (this) {
       case StockAction.add:
-        return 'Tambah Stok';
+        return 'Penambahan';
       case StockAction.reduce:
-        return 'Kurangi Stok';
+        return 'Pengurangan';
       case StockAction.adjustment:
         return 'Penyesuaian';
       case StockAction.fulfillRequest:
@@ -118,23 +141,59 @@ extension StockActionExtension on StockAction {
         return 'Koreksi Sistem';
     }
   }
+}
 
-  String get icon {
-    switch (this) {
-      case StockAction.add:
-        return '➕';
-      case StockAction.reduce:
-        return '➖';
-      case StockAction.adjustment:
-        return '🔧';
-      case StockAction.fulfillRequest:
-        return '✅';
-      case StockAction.initialStock:
-        return '🆕';
-      case StockAction.manual:
-        return '✏️';
-      case StockAction.systemCorrection:
-        return '⚙️';
-    }
+// ==================== STOCK HISTORY (Legacy) ====================
+class StockHistory extends Equatable {
+  final String id;
+  final String itemId;
+  final StockAction action;
+  final int quantity;
+  final int previousStock;
+  final int newStock;
+  final String? notes;
+  final String performedByName;
+  final DateTime timestamp;
+
+  const StockHistory({
+    required this.id,
+    required this.itemId,
+    required this.action,
+    required this.quantity,
+    required this.previousStock,
+    required this.newStock,
+    this.notes,
+    required this.performedByName,
+    required this.timestamp,
+  });
+
+  factory StockHistory.fromMap(String id, Map<String, dynamic> map) {
+    return StockHistory(
+      id: id,
+      itemId: map['itemId'] as String,
+      action: StockAction.values.firstWhere(
+        (e) => e.name == map['action'],
+        orElse: () => StockAction.adjustment,
+      ),
+      quantity: map['quantity'] as int,
+      previousStock: map['previousStock'] as int,
+      newStock: map['newStock'] as int,
+      notes: map['notes'] as String?,
+      performedByName: map['performedByName'] as String? ?? 'System',
+      timestamp: DateTime.parse(map['timestamp'] as String),
+    );
   }
+
+  @override
+  List<Object?> get props => [
+        id,
+        itemId,
+        action,
+        quantity,
+        previousStock,
+        newStock,
+        notes,
+        performedByName,
+        timestamp,
+      ];
 }

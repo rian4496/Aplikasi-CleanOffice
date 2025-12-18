@@ -51,7 +51,10 @@
       "Bash(dart compile kernel:*)",
       "Bash(git restore:*)",
       "Bash(gradlew:*)",
-      "Bash(.gradlew.bat --stop)"
+      "Bash(.gradlew.bat --stop)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(flutter test)"
     ],
     "deny": [],
     "ask": []

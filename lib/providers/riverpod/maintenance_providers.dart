@@ -47,7 +47,8 @@ final pendingMaintenanceProvider = FutureProvider<List<MaintenanceLog>>((ref) as
 
 // ==================== MY ASSIGNED MAINTENANCE PROVIDER ====================
 final myMaintenanceTasksProvider = FutureProvider<List<MaintenanceLog>>((ref) async {
-  final user = ref.watch(currentUserProvider);
+  final userAsync = ref.watch(currentUserProfileProvider);
+  final user = userAsync.value;
   if (user == null) return [];
 
   final response = await _supabase
@@ -56,7 +57,7 @@ final myMaintenanceTasksProvider = FutureProvider<List<MaintenanceLog>>((ref) as
         *,
         assets(name)
       ''')
-      .eq('technician_id', user.id)
+      .eq('technician_id', user.uid)
       .inFilter('status', ['pending', 'in_progress'])
       .order('scheduled_at');
 
@@ -111,3 +112,4 @@ final maintenanceStatsProvider = FutureProvider<Map<String, int>>((ref) async {
     'cancelled': logs.where((l) => l.status == MaintenanceStatus.cancelled).length,
   };
 });
+

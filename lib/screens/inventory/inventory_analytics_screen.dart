@@ -588,3 +588,4 @@ class InventoryAnalyticsScreen extends ConsumerWidget {
     }
   }
 }
+

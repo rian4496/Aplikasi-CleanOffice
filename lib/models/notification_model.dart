@@ -256,3 +256,4 @@ class NotificationSettings extends Equatable {
         vibration,
       ];
 }
+

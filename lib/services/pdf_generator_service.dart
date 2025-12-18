@@ -4,9 +4,11 @@
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 import 'package:intl/intl.dart';
 
 import '../models/export_config.dart';
+import '../utils/pdf_template_helper.dart';
 
 class PdfGeneratorService {
   /// Generate professional PDF report
@@ -15,6 +17,13 @@ class PdfGeneratorService {
     ExportConfig config,
   ) async {
     final pdf = pw.Document();
+    
+    // Load logo and Fonts
+    final logoBytes = await PdfTemplateHelper.loadLogo();
+    final fontKopRegular = pw.Font.times();
+    final fontKopBold = pw.Font.timesBold();
+    final fontBodyRegular = await PdfGoogleFonts.nunitoExtraLight();
+    final fontBodyBold = await PdfGoogleFonts.nunitoBold();
 
     // Add pages
     pdf.addPage(
@@ -22,7 +31,7 @@ class PdfGeneratorService {
         pageFormat: PdfPageFormat.a4,
         margin: const pw.EdgeInsets.all(40),
         build: (context) => [
-          _buildHeader(data),
+          _buildHeader(data, logoBytes, fontKopRegular, fontKopBold),
           pw.SizedBox(height: 20),
           _buildSummary(data),
           pw.SizedBox(height: 20),
@@ -40,65 +49,56 @@ class PdfGeneratorService {
   }
 
   /// Build PDF header
-  pw.Widget _buildHeader(ReportData data) {
+  pw.Widget _buildHeader(ReportData data, Uint8List logoBytes, pw.Font fontRegular, pw.Font fontBold) {
     return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
+        // 1. Official Kop Surat
+        PdfTemplateHelper.buildKopSurat(
+          logoBytes: logoBytes,
+          fontRegular: fontRegular,
+          fontBold: fontBold,
+        ),
+        
+        pw.SizedBox(height: 10),
+        
+        // 2. Report Title & Metadata (Moved from old header)
         pw.Row(
           mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
           children: [
-            pw.Column(
+             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  'CleanOffice',
+                  data.title.toUpperCase(),
                   style: pw.TextStyle(
-                    fontSize: 24,
+                    fontSize: 14,
                     fontWeight: pw.FontWeight.bold,
-                    color: PdfColors.blue800,
+                    font: fontBold,
+                    decoration: pw.TextDecoration.underline,
                   ),
                 ),
-                pw.SizedBox(height: 4),
-                pw.Text(
-                  'Sistem Manajemen Kebersihan',
-                  style: const pw.TextStyle(
-                    fontSize: 12,
-                    color: PdfColors.grey700,
-                  ),
-                ),
-              ],
-            ),
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.end,
-              children: [
-                pw.Text(
-                  data.title,
-                  style: pw.TextStyle(
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.SizedBox(height: 4),
+                 pw.SizedBox(height: 2),
                 pw.Text(
                   data.subtitle,
-                  style: const pw.TextStyle(
+                   style: pw.TextStyle(
                     fontSize: 10,
                     color: PdfColors.grey700,
+                    font: fontRegular,
                   ),
                 ),
               ],
+             ),
+             
+             pw.Text(
+              'Dibuat: ${DateFormat('dd MMM yyyy, HH:mm', 'id_ID').format(data.generatedAt)}',
+              style: pw.TextStyle(
+                fontSize: 9,
+                color: PdfColors.grey600,
+                font: fontRegular,
+              ),
             ),
           ],
-        ),
-        pw.SizedBox(height: 10),
-        pw.Divider(thickness: 2, color: PdfColors.blue800),
-        pw.SizedBox(height: 8),
-        pw.Text(
-          'Digenerate: ${DateFormat('dd MMMM yyyy, HH:mm', 'id_ID').format(data.generatedAt)}',
-          style: const pw.TextStyle(
-            fontSize: 9,
-            color: PdfColors.grey600,
-          ),
         ),
       ],
     );
@@ -312,3 +312,4 @@ class PdfGeneratorService {
     return '-';
   }
 }
+

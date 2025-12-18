@@ -183,3 +183,4 @@ class _StatCardBaseState extends State<StatCardBase>
     );
   }
 }
+

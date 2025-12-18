@@ -6,7 +6,7 @@
 // - Report summary by status
 // - Report actions (create, update, delete)
 
-import 'dart:io';
+// import 'dart:io'; // REMOVED for Web Compatibility
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/report.dart';
@@ -44,12 +44,16 @@ class EmployeeReportsSummary {
   final int pending;
   final int inProgress;
   final int completed;
+  final int verified;
+  final int urgent;
   final int total;
 
   const EmployeeReportsSummary({
     required this.pending,
     required this.inProgress,
     required this.completed,
+    this.verified = 0,
+    this.urgent = 0,
     required this.total,
   });
 }
@@ -265,12 +269,9 @@ class EmployeeActions {
       // Support both File (mobile) and Uint8List (web)
       if (imageBytes != null) {
         bytes = imageBytes;
-      } else if (imageFile != null && imageFile is File) {
-        try {
-          bytes = await imageFile.readAsBytes();
-        } catch (e) {
-          _logger.warning('Error reading file: $e');
-        }
+      } else if (imageFile != null) {
+         // File logic removed for web compatibility. Pass imageBytes instead.
+         _logger.warning('Passing File object is deprecated. Use imageBytes.');
       }
 
       // Upload if we have bytes
@@ -363,14 +364,3 @@ class EmployeeActions {
     }
   }
 }
-
-// ==================== LEGACY COMPATIBILITY ====================
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-final appwriteDatabaseServiceProvider = supabaseDatabaseServiceProvider;
-
-/// Legacy provider - redirects to supabaseStorageServiceProvider
-@Deprecated('Use supabaseStorageServiceProvider instead')
-final appwriteStorageServiceProvider = supabaseStorageServiceProvider;

@@ -315,3 +315,4 @@ class TrendData extends Equatable {
         urgentReports,
       ];
 }
+

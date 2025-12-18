@@ -2,10 +2,12 @@
 // ✅ MIGRATED TO HOOKS_RIVERPOD
 // Add/Edit Inventory Item Screen with full form validation
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'dart:io';
+import 'package:image_picker/image_picker.dart'; // Added XFile
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
@@ -51,7 +53,7 @@ class InventoryAddEditScreen extends HookConsumerWidget {
 
     // ✅ HOOKS: State management
     final selectedCategory = useState<String>(item?.category ?? 'alat');
-    final imageFile = useState<File?>(null);
+    final imageFile = useState<XFile?>(null); // Changed to XFile
     final isSaving = useState(false);
     final isUploading = useState(false);
 
@@ -212,7 +214,7 @@ class InventoryAddEditScreen extends HookConsumerWidget {
   /// Build image picker
   static Widget _buildImagePicker(
     BuildContext context,
-    ValueNotifier<File?> imageFile,
+    ValueNotifier<XFile?> imageFile,
     InventoryItem? item,
   ) {
     return Container(
@@ -268,7 +270,9 @@ class InventoryAddEditScreen extends HookConsumerWidget {
                   ? ClipRRect(
                       borderRadius: BorderRadius.circular(12),
                       child: imageFile.value != null
-                          ? Image.file(imageFile.value!, fit: BoxFit.cover)
+                          ? (kIsWeb 
+                              ? Image.network(imageFile.value!.path, fit: BoxFit.cover) 
+                              : Image.file(File(imageFile.value!.path), fit: BoxFit.cover))
                           : Image.network(item!.imageUrl!, fit: BoxFit.cover),
                     )
                   : Center(
@@ -634,7 +638,7 @@ class InventoryAddEditScreen extends HookConsumerWidget {
     bool isEditMode,
     ValueNotifier<bool> isSaving,
     ValueNotifier<bool> isUploading,
-    ValueNotifier<File?> imageFile,
+    ValueNotifier<XFile?> imageFile,
     InventoryItem? item,
     TextEditingController nameController,
     TextEditingController currentStockController,
@@ -729,7 +733,7 @@ class InventoryAddEditScreen extends HookConsumerWidget {
     bool isEditMode,
     ValueNotifier<bool> isSaving,
     ValueNotifier<bool> isUploading,
-    ValueNotifier<File?> imageFile,
+    ValueNotifier<XFile?> imageFile,
     InventoryItem? item,
     TextEditingController nameController,
     TextEditingController currentStockController,
@@ -835,3 +839,4 @@ class InventoryAddEditScreen extends HookConsumerWidget {
     }
   }
 }
+

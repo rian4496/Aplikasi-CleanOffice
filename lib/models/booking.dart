@@ -185,3 +185,4 @@ class Booking {
     return '$startHour:$startMin - $endHour:$endMin';
   }
 }
+

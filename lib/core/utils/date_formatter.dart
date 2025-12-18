@@ -82,4 +82,7 @@ class DateFormatter {
   static String time(DateTime date) {
     return DateFormat('HH:mm', 'id_ID').format(date);
   }
+  
+  /// Alias untuk format (backward compatibility)
+  static String formatDate(DateTime date) => format(date);
 }

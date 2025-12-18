@@ -137,3 +137,4 @@ class EmployeeColors {
     return chartColors[index % chartColors.length];
   }
 }
+

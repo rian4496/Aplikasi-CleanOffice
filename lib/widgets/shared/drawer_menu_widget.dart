@@ -146,7 +146,7 @@ class DrawerMenuWidget extends StatelessWidget {
           ),
         ),
         content: const Text(
-          'Apakah anda ingin logout?',
+          'Apakah Anda ingin logout?',
           style: TextStyle(fontSize: 15),
         ),
         actions: [
@@ -154,7 +154,7 @@ class DrawerMenuWidget extends StatelessWidget {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text(
-              'BATAL',
+              'Batal',
               style: TextStyle(
                 color: Colors.blue,
                 fontWeight: FontWeight.w600,
@@ -168,7 +168,7 @@ class DrawerMenuWidget extends StatelessWidget {
               onLogout(); // Call logout callback
             },
             child: const Text(
-              'KELUAR',
+              'Keluar',
               style: TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.w600,

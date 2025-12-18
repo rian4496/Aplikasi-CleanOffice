@@ -265,3 +265,4 @@ class _StatItem {
 
   const _StatItem(this.label, this.value, this.color);
 }
+

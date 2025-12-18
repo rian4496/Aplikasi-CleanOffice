@@ -121,3 +121,4 @@ class WeeklyReportChart extends StatelessWidget {
     );
   }
 }
+

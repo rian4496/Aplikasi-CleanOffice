@@ -27,9 +27,9 @@ class AppConstants {
   // ==================== ROUTES ====================
   static const String loginRoute = '/login';
   static const String registerRoute = '/register';
-  static const String homeEmployeeRoute = '/home_employee';
-  static const String homeCleanerRoute = '/home_cleaner';
-  static const String homeAdminRoute = '/home_admin';
+  static const String homeEmployeeRoute = '/employee/dashboard';
+  static const String homeCleanerRoute = '/cleaner/dashboard';
+  static const String homeAdminRoute = '/admin/dashboard';
   static const String profileRoute = '/profile';
   static const String createReportRoute = '/create_report';
   static const String createRequestRoute = '/create_request';

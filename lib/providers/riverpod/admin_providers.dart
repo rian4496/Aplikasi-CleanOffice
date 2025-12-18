@@ -19,6 +19,9 @@ import './supabase_service_providers.dart';
 import './report_providers.dart';
 import './request_providers.dart' show availableCleanersProvider;
 
+// Re-export dashboard providers from admin_dashboard_provider.dart
+export './admin_dashboard_provider.dart' show adminDashboardDataProvider, recentActivitiesProvider;
+
 final _logger = AppLogger('AdminProviders');
 
 // ==================== AUTH PROVIDERS ====================
@@ -330,3 +333,4 @@ final updateUserRoleProvider = FutureProvider.family<void, (String, String)>((re
 // ==================== LEGACY COMPATIBILITY ====================
 // NOTE: supabaseDatabaseServiceProvider is now imported from supabase_service_providers.dart
 // The import at the top of this file handles this.
+

@@ -610,3 +610,4 @@ class InventoryAnalyticsScreen extends HookConsumerWidget {
     }
   }
 }
+

@@ -115,3 +115,4 @@ bool isSelectionMode(Ref ref) {
   final selectionState = ref.watch(selectionProvider);
   return selectionState.isSelectionMode;
 }
+

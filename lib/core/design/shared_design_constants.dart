@@ -208,3 +208,4 @@ class StatCardColorPair {
     required this.foreground,
   });
 }
+

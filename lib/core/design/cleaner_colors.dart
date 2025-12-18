@@ -178,3 +178,4 @@ class CleanerColors {
     return chartColors[index % chartColors.length];
   }
 }
+

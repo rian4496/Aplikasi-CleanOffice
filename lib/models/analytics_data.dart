@@ -232,3 +232,4 @@ class AnalyticsSummary {
     return '${date.day}/${date.month}/${date.year}';
   }
 }
+

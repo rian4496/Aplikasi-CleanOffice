@@ -112,3 +112,4 @@ Future<Map<String, dynamic>> summaryStats(Ref ref) async {
     error: (_, _) => {},
   );
 }
+

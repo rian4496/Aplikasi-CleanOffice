@@ -390,10 +390,3 @@ final filteredReportsProvider = Provider<AsyncValue<List<Report>>>((ref) {
     return filtered;
   });
 });
-
-// ==================== LEGACY COMPATIBILITY ====================
-// TODO: Remove after all screens are migrated
-
-/// Legacy provider - redirects to supabaseDatabaseServiceProvider
-@Deprecated('Use supabaseDatabaseServiceProvider instead')
-final appwriteDatabaseServiceProvider = supabaseDatabaseServiceProvider;

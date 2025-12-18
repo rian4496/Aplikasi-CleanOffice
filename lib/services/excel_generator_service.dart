@@ -174,3 +174,4 @@ class ExcelGeneratorService {
     sheet.setRowHeight(0, 25);
   }
 }
+

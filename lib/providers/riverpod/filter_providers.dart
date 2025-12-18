@@ -109,7 +109,7 @@ List<Report> _applyAdvancedFilter(List<Report> reports, ReportFilter filter) {
   // Filter by statuses
   if (filter.statuses != null && filter.statuses!.isNotEmpty) {
     filtered = filtered.where((r) {
-      return filter.statuses!.contains(r.status.toFirestore());
+      return filter.statuses!.contains(r.status.name);
     }).toList();
   }
 
@@ -163,3 +163,4 @@ List<Report> _applyAdvancedFilter(List<Report> reports, ReportFilter filter) {
 
   return filtered;
 }
+

@@ -44,3 +44,4 @@ class SystemStatusIndicator extends ConsumerWidget {
     );
   }
 }
+

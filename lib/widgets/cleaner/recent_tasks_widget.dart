@@ -339,3 +339,4 @@ class RecentTasksWidget extends StatelessWidget {
     return tasks;
   }
 }
+

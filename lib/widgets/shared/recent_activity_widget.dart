@@ -287,3 +287,4 @@ class RecentActivityWidget extends StatelessWidget {
     );
   }
 }
+

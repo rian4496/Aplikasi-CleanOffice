@@ -3,11 +3,11 @@
 // Helper functions for navigating to admin screens
 
 import 'package:flutter/material.dart';
-import '../screens/admin/dashboard/admin_dashboard_mobile_screen.dart';
-import '../screens/admin/reports/reports_list_screen.dart';
-import '../screens/admin/verification/verification_screen.dart';
-import '../screens/admin/analytics/analytics_screen.dart';
-import '../screens/admin/cleaners/cleaners_management_screen.dart';
+import '../screens/web_admin/dashboard/admin_dashboard_mobile_screen.dart';
+import '../screens/web_admin/reports/reports_list_screen.dart';
+import '../screens/web_admin/verification/verification_screen.dart';
+import '../screens/web_admin/analytics/analytics_screen.dart';
+import '../screens/web_admin/cleaners/cleaners_management_screen.dart';
 
 class AdminRoutes {
   static const String dashboardMobile = '/admin/dashboard-mobile';
@@ -65,3 +65,4 @@ class AdminRoutes {
     );
   }
 }
+

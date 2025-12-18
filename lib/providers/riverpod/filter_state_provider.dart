@@ -161,7 +161,7 @@ List<Report> _applyFilters(List<Report> reports, FilterState filterState) {
   // 2. Status filter
   if (filter.statuses != null && filter.statuses!.isNotEmpty) {
     filtered = filtered.where((r) {
-      return filter.statuses!.contains(r.status.toFirestore());
+      return filter.statuses!.contains(r.status.name);
     }).toList();
   }
   
@@ -193,3 +193,4 @@ List<Report> _applyFilters(List<Report> reports, FilterState filterState) {
   
   return filtered;
 }
+

@@ -296,3 +296,4 @@ enum RequestHistoryFilter {
   completed,
   cancelled,
 }
+

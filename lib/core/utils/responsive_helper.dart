@@ -193,3 +193,4 @@ class ResponsiveHelper {
     return MediaQuery.of(context).orientation == Orientation.landscape;
   }
 }
+

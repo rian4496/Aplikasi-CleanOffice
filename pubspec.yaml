@@ -42,6 +42,9 @@ dependencies:
   path: ^1.9.0
   dartz: ^0.10.1
 
+  # HTTP Client
+  http: ^1.2.0
+
   # Code Generation & Models
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
@@ -71,9 +74,9 @@ dependencies:
   fl_chart: ^1.1.1
 
   # Export & Reports
-  pdf: ^3.11.1
+  pdf: ^3.11.3
   excel: ^4.0.6
-  printing: ^5.13.4
+  printing: ^5.14.2
 
   # Notifications
   flutter_local_notifications: ^19.5.0
@@ -82,6 +85,12 @@ dependencies:
   emoji_picker_flutter: ^4.4.0
   connectivity_plus: ^7.0.0
   uuid: ^4.5.2
+  google_fonts: ^6.3.3
+  flutter_animate: ^4.5.2
+  flex_color_scheme: ^8.3.1
+  toastification: ^3.0.3
+  shimmer: ^3.0.0
+  lucide_icons: ^0.257.0
 
 dev_dependencies:
   flutter_test:
@@ -99,5 +108,8 @@ flutter:
   assets:
     - assets/images/welcome_illustration.png
     - assets/images/login_illustration.png
+    - assets/images/logo-pemprov-kalsel.png
+    - assets/images/vector_greeting.png
+    - assets/templates/
     - .env.development
     - .env.production

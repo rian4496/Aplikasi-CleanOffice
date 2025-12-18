@@ -88,3 +88,4 @@ class SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 }
+

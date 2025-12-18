@@ -185,3 +185,4 @@ class AdminConstants {
   static const int zIndexModal = 40;
   static const int zIndexToast = 50;
 }
+

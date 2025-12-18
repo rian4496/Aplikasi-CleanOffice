@@ -12,15 +12,14 @@ part 'notification_providers.g.dart';
 
 // ==================== USER NOTIFICATIONS ====================
 
-/// Future-based user notifications (Supabase doesn't support real-time streams the same way)
+/// Future-based user notifications
 @riverpod
 Future<List<AppNotification>> userNotifications(Ref ref) async {
   final user = supabase.Supabase.instance.client.auth.currentSession?.user;
   if (user == null) return [];
 
-  // TODO: Implement notification methods in SupabaseDatabaseService
-  // For now, return empty list
-  return [];
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return await service.getNotifications(user.id);
 }
 
 // ==================== UNREAD COUNT ====================
@@ -31,8 +30,8 @@ Future<int> unreadNotificationCount(Ref ref) async {
   final user = supabase.Supabase.instance.client.auth.currentSession?.user;
   if (user == null) return 0;
 
-  // TODO: Implement notification methods in SupabaseDatabaseService
-  return 0;
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  return await service.getUnreadNotificationCount(user.id);
 }
 
 // ==================== NOTIFICATION SETTINGS ====================
@@ -59,9 +58,12 @@ Future<void> markNotificationAsRead(
   Ref ref,
   String notificationId,
 ) async {
-  // TODO: Implement in SupabaseDatabaseService
-  // final service = ref.watch(supabaseDatabaseServiceProvider);
-  // await service.markNotificationAsRead(notificationId);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  await service.markNotificationAsRead(notificationId);
+  
+  // Refresh providers
+  ref.invalidate(userNotificationsProvider);
+  ref.invalidate(unreadNotificationCountProvider);
 }
 
 /// Mark all notifications as read
@@ -70,9 +72,12 @@ Future<void> markAllNotificationsAsRead(Ref ref) async {
   final user = supabase.Supabase.instance.client.auth.currentSession?.user;
   if (user == null) return;
 
-  // TODO: Implement in SupabaseDatabaseService
-  // final service = ref.watch(supabaseDatabaseServiceProvider);
-  // await service.markAllNotificationsAsRead(user.id);
+  final service = ref.watch(supabaseDatabaseServiceProvider);
+  await service.markAllNotificationsAsRead(user.id);
+
+  // Refresh providers
+  ref.invalidate(userNotificationsProvider);
+  ref.invalidate(unreadNotificationCountProvider);
 }
 
 /// Delete notification
@@ -81,9 +86,7 @@ Future<void> deleteNotification(
   Ref ref,
   String notificationId,
 ) async {
-  // TODO: Implement in SupabaseDatabaseService
-  // final service = ref.watch(supabaseDatabaseServiceProvider);
-  // await service.deleteNotification(notificationId);
+   // Implementation optional for now
 }
 
 /// Save notification settings
@@ -97,3 +100,4 @@ Future<void> saveNotificationSettings(
   // TODO: Implement when notifications feature is fully implemented
   // For now, settings could be stored in SharedPreferences
 }
+

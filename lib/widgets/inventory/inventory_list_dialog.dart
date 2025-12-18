@@ -27,3 +27,4 @@ class InventoryListDialog extends StatelessWidget {
     );
   }
 }
+

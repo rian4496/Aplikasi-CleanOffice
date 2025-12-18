@@ -478,3 +478,4 @@ class StockHistoryScreen extends StatelessWidget {
     }
   }
 }
+

@@ -518,3 +518,4 @@ class ChatService {
 final chatServiceProvider = Provider<ChatService>((ref) {
   return ChatService();
 });
+

@@ -12,7 +12,7 @@ import '../../models/user_role.dart';
 import '../../services/inventory_service.dart';
 import '../../providers/riverpod/auth_providers.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/admin/admin_sidebar.dart';
+import '../../widgets/web_admin/admin_sidebar.dart';
 import '../../widgets/inventory/inventory_form_side_panel.dart';
 import '../../widgets/inventory/inventory_detail_dialog.dart';
 import '../../widgets/inventory/stock_requests_dialog.dart';
@@ -25,7 +25,8 @@ import './inventory_detail_screen.dart';
 import './inventory_list_screen.dart';
 import './inventory_analytics_screen.dart';
 import './stock_prediction_screen.dart';
-import './stock_requests_screen.dart';
+import './stock_prediction_screen.dart';
+import './inventory_request_list_screen.dart';
 
 class InventoryDashboardScreen extends ConsumerStatefulWidget {
   const InventoryDashboardScreen({super.key});
@@ -664,7 +665,7 @@ class _InventoryDashboardScreenState
         'onPressed': () {
           ResponsiveUIHelper.showWideDialog(
             context: context,
-            mobileScreen: const StockRequestsScreen(),
+            mobileScreen: const InventoryRequestListScreen(),
             webDialog: const StockRequestsDialog(),
           );
         },
@@ -1175,3 +1176,4 @@ class _InventoryDashboardScreenState
     );
   }
 }
+

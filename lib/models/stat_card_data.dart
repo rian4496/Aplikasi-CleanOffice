@@ -51,3 +51,4 @@ class StatCardData {
     return Colors.grey;
   }
 }
+

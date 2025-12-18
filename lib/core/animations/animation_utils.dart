@@ -363,3 +363,4 @@ class _PulseAnimationState extends State<PulseAnimation>
     return ScaleTransition(scale: _animation, child: widget.child);
   }
 }
+

@@ -139,3 +139,4 @@ class InventoryEmptyState extends StatelessWidget {
     );
   }
 }
+

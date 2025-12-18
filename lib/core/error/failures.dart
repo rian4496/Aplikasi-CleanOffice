@@ -29,11 +29,11 @@ class AuthFailure extends Failure {
   }
 }
 
-class FirestoreFailure extends Failure {
-  const FirestoreFailure({required super.message, super.code});
+class DatabaseFailure extends Failure {
+  const DatabaseFailure({required super.message, super.code});
 
-  factory FirestoreFailure.fromException(DatabaseException e) {
-    return FirestoreFailure(message: e.message, code: e.code);
+  factory DatabaseFailure.fromException(DatabaseException e) {
+    return DatabaseFailure(message: e.message, code: e.code);
   }
 }
 
@@ -151,7 +151,7 @@ Failure exceptionToFailure(AppException exception) {
   if (exception is AuthException) {
     return AuthFailure.fromException(exception);
   } else if (exception is DatabaseException) {
-    return FirestoreFailure.fromException(exception);
+    return DatabaseFailure.fromException(exception);
   } else if (exception is StorageException) {
     return StorageFailure.fromException(exception);
   } else if (exception is ValidationException) {
@@ -172,3 +172,4 @@ Failure exceptionToFailure(AppException exception) {
 
   return UnexpectedFailure(message: exception.message, code: exception.code);
 }
+

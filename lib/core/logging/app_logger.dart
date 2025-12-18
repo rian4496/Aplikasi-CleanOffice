@@ -200,3 +200,4 @@ extension LevelExtension on Level {
   bool get isWarning => this >= Level.WARNING;
   bool get isInfo => this >= Level.INFO;
 }
+

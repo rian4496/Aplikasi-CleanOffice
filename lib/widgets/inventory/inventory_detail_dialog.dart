@@ -33,3 +33,4 @@ class InventoryDetailDialog extends StatelessWidget {
     );
   }
 }
+

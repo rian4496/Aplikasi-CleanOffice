@@ -101,3 +101,4 @@ final locationsByBuildingProvider = FutureProvider<Map<String, List<Location>>>(
   
   return grouped;
 });
+

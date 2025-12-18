@@ -105,3 +105,4 @@ class IconBadge extends StatelessWidget {
     );
   }
 }
+

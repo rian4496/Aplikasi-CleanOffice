@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
-import 'admin/advanced_filter_dialog.dart';
+import 'web_admin/advanced_filter_dialog.dart';
 
 /// Dashboard header widget with search, notifications and profile
 class DashboardHeader extends StatelessWidget {
@@ -66,7 +66,7 @@ class DashboardHeader extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(30),
-                      boxShadow: [AppTheme.softShadow],
+                      boxShadow: AppTheme.softShadow,
                     ),
                     child: Row(
                       children: [
@@ -137,3 +137,4 @@ class DashboardHeader extends StatelessWidget {
     );
   }
 }
+

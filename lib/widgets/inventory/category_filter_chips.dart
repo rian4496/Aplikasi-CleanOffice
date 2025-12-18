@@ -117,3 +117,4 @@ class CategoryFilterChips extends StatelessWidget {
     );
   }
 }
+

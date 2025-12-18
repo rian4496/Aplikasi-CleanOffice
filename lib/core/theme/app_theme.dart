@@ -1,208 +1,189 @@
-// lib/core/theme/app_theme.dart
-
+import 'package:flex_color_scheme/flex_color_scheme.dart';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // ==================== PALET WARNA UTAMA (MODERN) ====================
-
-  // Primary Brand Colors (Purple/Blue Gradient)
-  static const Color primary = Color(0xFF7B5AFF); // Vibrant Purple
-  static const Color primaryDark = Color(0xFF5D5FEF); // Deep Purple/Blue
-  static const Color primaryLight = Color(0xFFE9E3FF); // Light Purple
-
-  // Secondary/Accent Colors
-  static const Color secondary = Color(0xFF6AD2FF); // Light Blue
-  static const Color accent = Color(0xFF4318FF); // Electric Blue
-
-  // Status Colors
-  static const Color success = Color(0xFF05CD99); // Mint Green
-  static const Color warning = Color(0xFFFFB547); // Orange/Yellow
-  static const Color error = Color(0xFFEE5D50); // Soft Red
-  static const Color info = Color(0xFF11CDEF); // Cyan
-
-  // Neutral Colors
-  static const Color background = Color(0xFFF4F7FE); // Light Grayish Blue (Dashboard Bg)
-  static const Color card = Colors.white;
-  static const Color textPrimary = Color(0xFF2B3674); // Deep Navy (Main Text)
-  static const Color textSecondary = Color(0xFFA3AED0); // Cool Gray (Subtitles)
-  static const Color textHint = Color(0xFFBDBDBD);
-  static const Color divider = Color(0xFFE0E5F2);
-
-  // ==================== DASHBOARD SPECIFIC COLORS ====================
-
-  // Header Gradient (Light Blue - Softer)
-  static const Color headerGradientStart = Color(0xFF64B5F6); // Light Blue
-  static const Color headerGradientEnd = Color(0xFF42A5F5);   // Medium Blue (lighter, less dominant)
-
-  // Stat Card Gradients
-  static const List<Color> blueGradient = [Color(0xFF4481EB), Color(0xFF04BEFE)];
-  static const List<Color> purpleGradient = [Color(0xFF89216B), Color(0xFFDA4453)];
-
-  // Chart Colors
-  static const Color chartPrimary = Color(0xFF4318FF);
-  static const Color chartSecondary = Color(0xFF6AD2FF);
-  static const Color chartTertiary = Color(0xFFEFF4FB);
+  // Brand Colors (Kept for backward compatibility)
+  static const Color primary = Color(0xFF1A4D8C); // Deep Navy Kalsel
+  static const Color primaryLight = Color(0xFF3D6FAC); // Lighter Navy
+  static const Color primaryDark = Color(0xFF0F3159); // Darker Navy
+  static const Color secondary = Color(0xFFFFC107); // Golden Accent
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF8F9FB); // Ghost White
+  static const Color error = Color(0xFFD32F2F);
+  static const Color modernBg = Color(0xFFF3F4F6); // Light gray modern background
   
-  // Missing Colors from Error Log
-  static const Color blueAccent = Color(0xFF4481EB);
-  static const Color orangeAccent = Color(0xFFFFB547);
-  static const Color greenAccent = Color(0xFF05CD99);
-  static const Color purpleAccent = Color(0xFF89216B);
+  // Gradient Colors
+  static const Color headerGradientStart = Color(0xFF1A4D8C); // Same as primary
+  static const Color headerGradientEnd = Color(0xFF2E6CB5); // Lighter blue
   
-  static const Color chartPink = Color(0xFFFF7675);
-  static const Color chartNavy = Color(0xFF2B3674);
-  static const Color chartMint = Color(0xFF00B894);
-  static const Color chartYellow = Color(0xFFFDCB6E);
+  // Semantic Colors
+  static const Color warning = Color(0xFFFFA726); // Orange
+  static const Color info = Color(0xFF29B6F6); // Light Blue
+  static const Color success = Color(0xFF66BB6A); // Green
   
-  static const Color modernBg = Color(0xFFF4F7FE);
+  // Text Colors
+  static const Color textPrimary = Color(0xFF1F2937); // Dark Gunmetal
+  static const Color textSecondary = Color(0xFF6B7280); // Slate Gray
+  static const Color textHint = Color(0xFF9CA3AF); // Gray-400 for hint text
 
-  // ==================== STYLES & SHADOWS ====================
+  // Spacing
+  static const double spacingEmpty = 0.0;
+  static const double spacingXs = 4.0;
+  static const double spacingSm = 8.0;
+  static const double spacingMd = 16.0;
+  static const double spacingLg = 24.0;
+  static const double spacingXl = 32.0;
 
+  // Components Radius
+  static final BorderRadius radiusMd = BorderRadius.circular(12.0);
+  static final BorderRadius radiusLg = BorderRadius.circular(16.0);
+  static final BorderRadius cardRadius = BorderRadius.circular(12.0); // Alias for cards
+  
   // Shadows
-  static BoxShadow get cardShadow => BoxShadow(
-    color: const Color(0xFF7090B0).withOpacity(0.08),
-    blurRadius: 40,
-    offset: const Offset(0, 8),
-  );
+  static final List<BoxShadow> softShadow = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.04),
+      blurRadius: 6,
+      offset: const Offset(0, 2),
+    ),
+  ];
+
+  static final List<BoxShadow> shadowSm = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.05),
+      blurRadius: 4,
+      offset: const Offset(0, 2),
+    ),
+  ];
+
+  static final List<BoxShadow> shadowMd = [
+    BoxShadow(
+      color: Colors.black.withOpacity(0.08),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
+    ),
+  ];
   
-  static BoxShadow get softShadow => BoxShadow(
-    color: const Color(0xFF7090B0).withOpacity(0.05),
-    blurRadius: 20,
+  // Accent Colors (for dashboard stats)
+  static const Color orangeAccent = Color(0xFFFF9800);
+  static const Color greenAccent = Color(0xFF4CAF50);
+  static const Color purpleAccent = Color(0xFF9C27B0);
+  static const Color blueAccent = Color(0xFF2196F3);
+  
+  // Chart Colors
+  static const Color chartPrimary = Color(0xFF1A4D8C);
+  static const Color chartSecondary = Color(0xFF4CAF50);
+  static const Color chartYellow = Color(0xFFFFC107); // Amber/Yellow
+  static const Color chartMint = Color(0xFF26A69A); // Teal/Mint  
+  static const Color chartPink = Color(0xFFE91E63); // Pink
+  static const Color chartShadow = Color(0xFF455A64); // Blue Grey 700
+  
+  // Card & Layout Colors
+  static const Color card = Color(0xFFFFFFFF); // White card background
+  static const Color divider = Color(0xFFE5E7EB); // Gray-200 divider
+  static const Color chartNavy = Color(0xFF1A4D8C); // Same as primary for charts
+  
+  // Card Shadow
+  static final BoxShadow cardShadow = BoxShadow(
+    color: Colors.black.withOpacity(0.05),
+    blurRadius: 10,
     offset: const Offset(0, 4),
   );
 
-  // Border Radius
-  static const double cardRadius = 20.0;
-  static const double buttonRadius = 16.0;
-  static const double inputRadius = 16.0;
+  // Status Colors (Badges)
+  static const Color badgePending = Color(0xFFFCD34D); // Yellow 300
+  static const Color badgeInProgress = Color(0xFF60A5FA); // Blue 400
+  static const Color badgeCompleted = Color(0xFF34D399); // Green 400
+  static const Color badgeUrgent = Color(0xFFF87171); // Red 400
 
-  // ==================== THEME DATA ====================
+  static Color getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return badgePending;
+      case 'inprogress':
+      case 'in_progress':
+        return badgeInProgress;
+      case 'completed':
+      case 'verified':
+        return badgeCompleted;
+      case 'urgent':
+        return badgeUrgent;
+      default:
+        return textSecondary;
+    }
+  }
 
+  // ✅ FLEX COLOR SCHEME IMPLEMENTATION
   static ThemeData get lightTheme {
-    return ThemeData(
-      useMaterial3: true,
-      brightness: Brightness.light,
-      fontFamily: 'DM Sans', // Modern font choice (needs to be added to pubspec)
-
-      // Color Scheme
-      colorScheme: const ColorScheme.light(
+    return FlexThemeData.light(
+      colors: const FlexSchemeColor(
         primary: primary,
-        onPrimary: Colors.white,
+        primaryContainer: Color(0xFFD0E4FF),
         secondary: secondary,
-        onSecondary: Colors.white,
+        secondaryContainer: Color(0xFFFFD740),
+        tertiary: Color(0xFF006875),
+        tertiaryContainer: Color(0xFF95F0FF),
+        appBarColor: Color(0xFFFFD740), // Same as secondaryContainer
         error: error,
-        onError: Colors.white,
-        surface: card,
-        onSurface: textPrimary,
       ),
-
-      // Scaffold
-      scaffoldBackgroundColor: background,
-
-      // App Bar
-      appBarTheme: const AppBarTheme(
-        elevation: 0,
-        centerTitle: false,
-        backgroundColor: background, // Transparent look
-        foregroundColor: textPrimary,
-        iconTheme: IconThemeData(color: textPrimary),
-        titleTextStyle: TextStyle(
-          color: textPrimary,
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          fontFamily: 'DM Sans',
-        ),
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 7,
+      subThemesData: const FlexSubThemesData(
+        blendOnLevel: 10,
+        blendOnColors: false,
+        useTextTheme: true,
+        useM2StyleDividerInM3: true,
+        defaultRadius: 12.0,
+        elevatedButtonSchemeColor: SchemeColor.onPrimaryContainer,
+        elevatedButtonSecondarySchemeColor: SchemeColor.primaryContainer,
+        inputDecoratorBorderType: FlexInputBorderType.outline,
+        inputDecoratorRadius: 12.0,
+        fabUseShape: true,
+        fabRadius: 16.0,
+        chipRadius: 8.0,
+        cardRadius: 12.0,
+        popupMenuRadius: 8.0,
       ),
-
-      // Card
-      cardTheme: CardThemeData(
-        elevation: 0, // We use custom shadows
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(cardRadius)),
-        color: card,
-        margin: EdgeInsets.zero,
+      visualDensity: VisualDensity.comfortable,
+      useMaterial3: true,
+      swapLegacyOnMaterial3: true,
+      fontFamily: GoogleFonts.inter().fontFamily,
+    );
+  }
+  
+  static ThemeData get darkTheme {
+    return FlexThemeData.dark(
+      colors: const FlexSchemeColor(
+        primary: Color(0xFF9ECAFF),
+        primaryContainer: Color(0xFF003258),
+        secondary: Color(0xFFFFB300),
+        secondaryContainer: Color(0xFFC76800),
+        tertiary: Color(0xFF4DD0E1),
+        tertiaryContainer: Color(0xFF004D40),
+        appBarColor: Color(0xFFC76800), // Same as secondaryContainer
+        error: Color(0xFFCF6679),
       ),
-      
-      // TextTheme
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 34,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-          letterSpacing: -1.0,
-        ),
-        displayMedium: TextStyle(
-          fontSize: 24,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-          letterSpacing: -0.5,
-        ),
-        titleLarge: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: textPrimary,
-        ),
-        titleMedium: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: textPrimary,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          color: textSecondary,
-        ),
-        bodyMedium: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-          color: textSecondary,
-        ),
-        labelLarge: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: primary,
-        ),
+      surfaceMode: FlexSurfaceMode.levelSurfacesLowScaffold,
+      blendLevel: 13,
+      subThemesData: const FlexSubThemesData(
+        blendOnLevel: 20,
+        useTextTheme: true,
+        useM2StyleDividerInM3: true,
+        defaultRadius: 12.0,
+        inputDecoratorBorderType: FlexInputBorderType.outline,
+        inputDecoratorRadius: 12.0,
+        fabUseShape: true,
+        fabRadius: 16.0,
+        chipRadius: 8.0,
+        cardRadius: 12.0,
+        popupMenuRadius: 8.0,
       ),
-      
-      // ElevatedButton
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(buttonRadius),
-          ),
-          textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-        ),
-      ),
-
-      // Input Decoration
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: BorderSide.none, // Clean look
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(inputRadius),
-          borderSide: const BorderSide(color: Colors.black, width: 1), // Black, normal weight
-        ),
-        hintStyle: const TextStyle(color: textSecondary, fontSize: 14),
-      ),
-      
-      // Text Selection (Cursor & Selection Color)
-      textSelectionTheme: const TextSelectionThemeData(
-        cursorColor: Colors.black, // Black cursor
-        selectionColor: Color(0x40000000), // Light black selection
-        selectionHandleColor: Colors.black,
-      ),
+      visualDensity: VisualDensity.comfortable,
+      useMaterial3: true,
+      swapLegacyOnMaterial3: true,
+      fontFamily: GoogleFonts.inter().fontFamily,
     );
   }
 }
+

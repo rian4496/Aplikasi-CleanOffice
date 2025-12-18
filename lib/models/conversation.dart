@@ -1,5 +1,5 @@
 // lib/models/conversation.dart
-// Model untuk conversation (chat thread)
+// Conversation Model for Supabase
 
 import 'dart:convert';
 import 'package:intl/intl.dart';
@@ -9,11 +9,11 @@ enum ConversationType {
   direct,
   group;
 
-  String toFirestore() {
+  String toDatabase() {
     return name;
   }
 
-  static ConversationType fromFirestore(String value) {
+  static ConversationType fromDatabase(String value) {
     return ConversationType.values.firstWhere(
       (e) => e.name == value,
       orElse: () => ConversationType.direct,
@@ -26,11 +26,11 @@ enum ChatContextType {
   report,
   request;
 
-  String toFirestore() {
+  String toDatabase() {
     return name;
   }
 
-  static ChatContextType? fromFirestore(String? value) {
+  static ChatContextType? fromDatabase(String? value) {
     if (value == null) return null;
     return ChatContextType.values.firstWhere(
       (e) => e.name == value,
@@ -79,48 +79,6 @@ class Conversation {
     required this.updatedAt,
   }) : unreadCounts = unreadCounts ?? {};
 
-  /// Create from Appwrite document
-  factory Conversation.fromAppwrite(Map<String, dynamic> data) {
-    // Parse unreadCounts JSON string to Map
-    Map<String, int> unreadCountsMap = {};
-    if (data['unreadCounts'] != null && data['unreadCounts'] is String) {
-      try {
-        final decoded = jsonDecode(data['unreadCounts']) as Map<String, dynamic>;
-        unreadCountsMap = decoded.map((key, value) => MapEntry(key, value as int));
-      } catch (e) {
-        unreadCountsMap = {};
-      }
-    }
-
-    return Conversation(
-      id: data['\$id'] ?? '',
-      type: ConversationType.fromFirestore(data['type'] ?? 'direct'),
-      name: data['name'],
-      participantIds: data['participantIds'] != null
-          ? List<String>.from(data['participantIds'])
-          : [],
-      participantNames: data['participantNames'] != null
-          ? List<String>.from(data['participantNames'])
-          : [],
-      participantRoles: data['participantRoles'] != null
-          ? List<String>.from(data['participantRoles'])
-          : [],
-      createdBy: data['createdBy'] ?? '',
-      lastMessageText: data['lastMessageText'],
-      lastMessageAt: data['lastMessageAt'] != null
-          ? DateTime.parse(data['lastMessageAt'])
-          : null,
-      lastMessageBy: data['lastMessageBy'],
-      groupAvatarUrl: data['groupAvatarUrl'],
-      isArchived: data['isArchived'] ?? false,
-      contextType: ChatContextType.fromFirestore(data['contextType']),
-      contextId: data['contextId'],
-      unreadCounts: unreadCountsMap,
-      createdAt: DateTime.parse(data['\$createdAt']),
-      updatedAt: DateTime.parse(data['\$updatedAt']),
-    );
-  }
-
   /// Create from Supabase (snake_case)
   factory Conversation.fromSupabase(Map<String, dynamic> data) {
     Map<String, int> unreadCountsMap = {};
@@ -140,7 +98,7 @@ class Conversation {
 
     return Conversation(
       id: data['id']?.toString() ?? '',
-      type: ConversationType.fromFirestore(data['type'] ?? 'direct'),
+      type: ConversationType.fromDatabase(data['type'] ?? 'direct'),
       name: data['name'],
       participantIds: data['participant_ids'] != null
           ? List<String>.from(data['participant_ids'])
@@ -161,7 +119,7 @@ class Conversation {
       lastMessageBy: data['last_message_by'],
       groupAvatarUrl: data['group_avatar_url'],
       isArchived: data['is_archived'] ?? false,
-      contextType: ChatContextType.fromFirestore(data['context_type']),
+      contextType: ChatContextType.fromDatabase(data['context_type']),
       contextId: data['context_id'],
       unreadCounts: unreadCountsMap,
       createdAt: data['created_at'] != null 
@@ -217,23 +175,23 @@ class Conversation {
     );
   }
 
-  /// Convert to Appwrite document data
-  Map<String, dynamic> toAppwrite() {
+  /// Convert to Supabase document data (snake_case)
+  Map<String, dynamic> toSupabase() {
     return {
-      'type': type.toFirestore(),
+      'type': type.toDatabase(),
       'name': name,
-      'participantIds': participantIds,
-      'participantNames': participantNames,
-      'participantRoles': participantRoles,
-      'createdBy': createdBy,
-      'lastMessageText': lastMessageText,
-      'lastMessageAt': lastMessageAt?.toIso8601String(),
-      'lastMessageBy': lastMessageBy,
-      'groupAvatarUrl': groupAvatarUrl,
-      'isArchived': isArchived,
-      'contextType': contextType?.toFirestore(),
-      'contextId': contextId,
-      'unreadCounts': jsonEncode(unreadCounts),
+      'participant_ids': participantIds,
+      'participant_names': participantNames,
+      'participant_roles': participantRoles,
+      'created_by': createdBy,
+      'last_message_text': lastMessageText,
+      'last_message_at': lastMessageAt?.toIso8601String(),
+      'last_message_by': lastMessageBy,
+      'group_avatar_url': groupAvatarUrl,
+      'is_archived': isArchived,
+      'context_type': contextType?.toDatabase(),
+      'context_id': contextId,
+      'unread_counts': jsonEncode(unreadCounts),
     };
   }
 
@@ -389,3 +347,4 @@ class Conversation {
     return 'Conversation(id: $id, type: $type, participants: ${participantNames.join(', ')}, lastMessage: ${getLastMessagePreview()})';
   }
 }
+

@@ -1,5 +1,5 @@
 // lib/models/user_profile.dart
-// MIGRATED TO APPWRITE - No Firebase dependencies
+// User Profile Model for Supabase
 
 import 'user_role.dart';
 
@@ -50,7 +50,7 @@ class UserProfile {
   }
 
   factory UserProfile.fromMap(Map<String, dynamic> map) {
-    // Handle joinDate from Appwrite (String ISO8601)
+    // Handle joinDate from various formats (String ISO8601)
     DateTime parseJoinDate(dynamic value) {
       if (value == null) return DateTime.now();
       if (value is DateTime) return value;
@@ -59,8 +59,8 @@ class UserProfile {
     }
 
     return UserProfile(
-      uid: map['uid'] ?? map['\$id'] ?? '',
-      displayName: map['displayName'] ?? '',
+      uid: map['uid'] ?? map['id'] ?? '',
+      displayName: map['displayName'] ?? map['display_name'] ?? '',
       email: map['email'] ?? '',
       photoURL: map['photoURL'],
       phoneNumber: map['phoneNumber'],
@@ -72,42 +72,6 @@ class UserProfile {
       verificationStatus: map['verificationStatus'] ?? 'pending',
       location: map['location'],
     );
-  }
-
-  /// Factory constructor for Appwrite document
-  factory UserProfile.fromAppwrite(Map<String, dynamic> data) {
-    return UserProfile(
-      uid: data['\$id'] as String? ?? data['uid'] as String? ?? '',
-      displayName: data['displayName'] as String? ?? data['name'] as String? ?? '',
-      email: data['email'] as String? ?? '',
-      photoURL: data['photoURL'] as String? ?? data['photoUrl'] as String?,
-      phoneNumber: data['phoneNumber'] as String? ?? data['phone'] as String?,
-      role: data['role'] as String? ?? UserRole.employee,
-      joinDate: DateTime.tryParse(data['\$createdAt'] as String? ?? '') ??
-          DateTime.tryParse(data['joinDate'] as String? ?? '') ??
-          DateTime.now(),
-      departmentId: data['departmentId'] as String?,
-      employeeId: data['employeeId'] as String?,
-      status: data['status'] as String? ?? 'inactive',
-      verificationStatus: data['verificationStatus'] as String? ?? 'pending',
-      location: data['location'] as String?,
-    );
-  }
-
-  /// Convert to Appwrite document format
-  Map<String, dynamic> toAppwrite() {
-    return {
-      'displayName': displayName,
-      'email': email,
-      'photoURL': photoURL,
-      'phoneNumber': phoneNumber,
-      'role': role,
-      'departmentId': departmentId,
-      'employeeId': employeeId,
-      'status': status,
-      'verificationStatus': verificationStatus,
-      'location': location,
-    };
   }
 
   /// Factory constructor for Supabase document
@@ -174,6 +138,9 @@ class UserProfile {
   }
 
   bool get isActive => status == 'active';
+  bool get isAdmin => role == UserRole.admin;
+  bool get isKasubbag => role == UserRole.kasubbag;
+  bool get isTeknisi => role == UserRole.teknisi;
   bool get isCleaner => role == UserRole.cleaner;
   bool get isEmployee => role == UserRole.employee;
 
@@ -192,3 +159,4 @@ class UserProfile {
     }
   }
 }
+

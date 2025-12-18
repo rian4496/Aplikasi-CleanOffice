@@ -105,3 +105,4 @@ final connectionStatusProvider = StreamProvider<bool>((ref) {
   final service = ref.watch(realtimeServiceProvider);
   return service.statusStream;
 });
+

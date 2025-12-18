@@ -819,3 +819,4 @@ class InventoryListScreen extends HookConsumerWidget {
     );
   }
 }
+

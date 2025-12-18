@@ -7,7 +7,7 @@ targets:
       # Freezed configuration
       freezed:
         generate_for:
-          - lib/models/*.dart
+          - lib/models/**/*.dart
         options:
           # Generate copyWith method
           copy_with: true
@@ -27,7 +27,7 @@ targets:
       # JSON Serializable configuration
       json_serializable:
         generate_for:
-          - lib/models/*.dart
+          - lib/models/**/*.dart
         options:
           # Explicit toJson method
           explicit_to_json: true

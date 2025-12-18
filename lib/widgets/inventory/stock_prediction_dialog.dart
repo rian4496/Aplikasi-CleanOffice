@@ -27,3 +27,4 @@ class StockPredictionDialog extends StatelessWidget {
     );
   }
 }
+

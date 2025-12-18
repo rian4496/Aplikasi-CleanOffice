@@ -38,3 +38,4 @@ class ConnectivityNotifier extends _$ConnectivityNotifier {
     return results.isNotEmpty && !results.contains(ConnectivityResult.none);
   }
 }
+

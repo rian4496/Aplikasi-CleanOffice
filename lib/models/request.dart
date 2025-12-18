@@ -1,5 +1,5 @@
 // lib/models/request.dart
-// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
+// Request Model for Supabase
 
 import 'package:flutter/material.dart';
 import '../core/theme/app_theme.dart';
@@ -46,8 +46,6 @@ enum RequestStatus {
     }
   }
 
-  // Keep for compatibility
-  String toFirestore() => toDatabase();
 
   String get displayName {
     switch (this) {
@@ -165,7 +163,7 @@ class Request {
     return null;
   }
 
-  /// Convert dari Map ke Request object (Appwrite compatible)
+  /// Convert dari Map ke Request object
   factory Request.fromMap(String id, Map<String, dynamic> data) {
     return Request(
       id: id,
@@ -180,33 +178,6 @@ class Request {
       preferredDateTime: _parseDate(data['preferredDateTime']),
       assignedTo: data['assignedTo'] as String?,
       assignedToName: data['assignedToName'] as String?,
-      assignedAt: _parseDate(data['assignedAt']),
-      assignedBy: data['assignedBy'] as String?,
-      imageUrl: data['imageUrl'] as String?,
-      completionImageUrl: data['completionImageUrl'] as String?,
-      completionNotes: data['completionNotes'] as String?,
-      startedAt: _parseDate(data['startedAt']),
-      completedAt: _parseDate(data['completedAt']),
-      deletedAt: _parseDate(data['deletedAt']),
-      deletedBy: data['deletedBy'] as String?,
-    );
-  }
-
-  /// Convert dari Appwrite document ke Request object
-  factory Request.fromAppwrite(Map<String, dynamic> data) {
-    return Request(
-      id: data['\$id'] as String? ?? '',
-      location: data['location'] as String? ?? '',
-      description: data['description'] as String? ?? '',
-      requestedBy: data['requesterId'] as String? ?? data['requestedBy'] as String? ?? '',
-      requestedByName: data['requesterName'] as String? ?? data['requestedByName'] as String? ?? '',
-      requestedByRole: data['requestedByRole'] as String? ?? 'employee',
-      status: RequestStatus.fromString(data['status'] as String? ?? 'pending'),
-      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
-      isUrgent: data['isUrgent'] as bool? ?? false,
-      preferredDateTime: _parseDate(data['preferredTime'] ?? data['preferredDateTime']),
-      assignedTo: data['cleanerId'] as String? ?? data['assignedTo'] as String?,
-      assignedToName: data['cleanerName'] as String? ?? data['assignedToName'] as String?,
       assignedAt: _parseDate(data['assignedAt']),
       assignedBy: data['assignedBy'] as String?,
       imageUrl: data['imageUrl'] as String?,
@@ -246,29 +217,6 @@ class Request {
     );
   }
 
-  /// Convert Request object ke Map untuk Appwrite
-  Map<String, dynamic> toAppwrite() {
-    return {
-      'requesterId': requestedBy,
-      'requesterName': requestedByName,
-      'location': location,
-      'description': description,
-      'isUrgent': isUrgent,
-      'preferredTime': preferredDateTime?.toIso8601String(),
-      'status': status.toDatabase(),
-      'cleanerId': assignedTo,
-      'cleanerName': assignedToName,
-      'assignedAt': assignedAt?.toIso8601String(),
-      'startedAt': startedAt?.toIso8601String(),
-      'completedAt': completedAt?.toIso8601String(),
-      'imageUrl': imageUrl,
-      'completionImageUrl': completionImageUrl,
-      'completionNotes': completionNotes,
-      'deletedAt': deletedAt?.toIso8601String(),
-      'deletedBy': deletedBy,
-    };
-  }
-
   /// Convert Request object ke Map untuk Supabase (snake_case)
   Map<String, dynamic> toSupabase() {
     return {
@@ -293,9 +241,6 @@ class Request {
       'deleted_by': deletedBy,
     };
   }
-
-  // Keep for compatibility
-  Map<String, dynamic> toFirestore() => toAppwrite();
 
   Request copyWith({
     String? id,
@@ -396,3 +341,4 @@ class Request {
         'requestedBy: $requestedByName, assignedTo: $assignedToName)';
   }
 }
+

@@ -688,3 +688,4 @@ class AllReportsScreen extends HookConsumerWidget {
     return filtered;
   }
 }
+

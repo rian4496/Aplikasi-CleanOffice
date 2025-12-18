@@ -1,5 +1,5 @@
 // lib/models/work_schedule.dart
-// ✅ MIGRATED TO APPWRITE - No Firebase dependencies
+// WorkSchedule Model for Supabase
 
 import 'package:flutter/material.dart' show TimeOfDay;
 
@@ -36,70 +36,60 @@ class WorkSchedule {
     return null;
   }
 
-  Map<String, dynamic> toMap() {
-    return {
-      'userId': userId,
-      'shift': shift,
-      'workDays': workDays,
-      'shiftStart': '${shiftStart.hour}:${shiftStart.minute}',
-      'shiftEnd': '${shiftEnd.hour}:${shiftEnd.minute}',
-      'location': location,
-      'assignedBy': assignedBy,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
-    };
+  // Helper to parse TimeOfDay from string
+  static TimeOfDay _parseTime(String? value) {
+    if (value == null || value.isEmpty) {
+      return const TimeOfDay(hour: 0, minute: 0);
+    }
+    final parts = value.split(':');
+    return TimeOfDay(
+      hour: int.tryParse(parts[0]) ?? 0,
+      minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0,
+    );
   }
-
-  /// Convert to Appwrite document format
-  Map<String, dynamic> toAppwrite() => toMap();
 
   factory WorkSchedule.fromMap(String id, Map<String, dynamic> map) {
-    final startTime = map['shiftStart'].toString().split(':');
-    final endTime = map['shiftEnd'].toString().split(':');
-
     return WorkSchedule(
       id: id,
-      userId: map['userId'] ?? '',
+      userId: map['userId'] ?? map['user_id'] ?? '',
       shift: map['shift'] ?? '',
-      workDays: List<String>.from(map['workDays'] ?? []),
-      shiftStart: TimeOfDay(
-        hour: int.parse(startTime[0]),
-        minute: int.parse(startTime[1]),
-      ),
-      shiftEnd: TimeOfDay(
-        hour: int.parse(endTime[0]),
-        minute: int.parse(endTime[1]),
-      ),
+      workDays: List<String>.from(map['workDays'] ?? map['work_days'] ?? []),
+      shiftStart: _parseTime(map['shiftStart'] ?? map['shift_start']),
+      shiftEnd: _parseTime(map['shiftEnd'] ?? map['shift_end']),
       location: map['location'] ?? '',
-      assignedBy: map['assignedBy'] ?? '',
-      createdAt: _parseDate(map['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(map['updatedAt']),
+      assignedBy: map['assignedBy'] ?? map['assigned_by'] ?? '',
+      createdAt: _parseDate(map['createdAt']) ?? _parseDate(map['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDate(map['updatedAt']) ?? _parseDate(map['updated_at']),
     );
   }
 
-  /// Factory from Appwrite document
-  factory WorkSchedule.fromAppwrite(Map<String, dynamic> data) {
-    final startTime = data['shiftStart'].toString().split(':');
-    final endTime = data['shiftEnd'].toString().split(':');
-
+  /// Create from Supabase (snake_case)
+  factory WorkSchedule.fromSupabase(Map<String, dynamic> data) {
     return WorkSchedule(
-      id: data['\$id'] ?? data['id'] ?? '',
-      userId: data['userId'] ?? '',
+      id: data['id']?.toString() ?? '',
+      userId: data['user_id'] ?? '',
       shift: data['shift'] ?? '',
-      workDays: List<String>.from(data['workDays'] ?? []),
-      shiftStart: TimeOfDay(
-        hour: int.parse(startTime[0]),
-        minute: int.parse(startTime[1]),
-      ),
-      shiftEnd: TimeOfDay(
-        hour: int.parse(endTime[0]),
-        minute: int.parse(endTime[1]),
-      ),
+      workDays: List<String>.from(data['work_days'] ?? []),
+      shiftStart: _parseTime(data['shift_start']),
+      shiftEnd: _parseTime(data['shift_end']),
       location: data['location'] ?? '',
-      assignedBy: data['assignedBy'] ?? '',
-      createdAt: _parseDate(data['\$createdAt']) ?? _parseDate(data['createdAt']) ?? DateTime.now(),
-      updatedAt: _parseDate(data['\$updatedAt']) ?? _parseDate(data['updatedAt']),
+      assignedBy: data['assigned_by'] ?? '',
+      createdAt: _parseDate(data['created_at']) ?? DateTime.now(),
+      updatedAt: _parseDate(data['updated_at']),
     );
+  }
+
+  /// Convert to Supabase document format (snake_case)
+  Map<String, dynamic> toSupabase() {
+    return {
+      'user_id': userId,
+      'shift': shift,
+      'work_days': workDays,
+      'shift_start': formatTimeOfDay(shiftStart),
+      'shift_end': formatTimeOfDay(shiftEnd),
+      'location': location,
+      'assigned_by': assignedBy,
+    };
   }
 
   WorkSchedule copyWith({
@@ -175,3 +165,4 @@ class WorkSchedule {
     }
   }
 }
+

@@ -3,16 +3,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/asset.dart';
 import '../../providers/riverpod/asset_providers.dart';
 import '../../providers/riverpod/master_data_providers.dart';
-import '../../widgets/admin/admin_sidebar.dart';
+import '../../services/asset_export_service.dart';
+import '../../widgets/web_admin/admin_sidebar.dart';
 import 'asset_form_screen.dart';
 import 'asset_detail_screen.dart';
 
 class AssetListScreen extends ConsumerStatefulWidget {
-  const AssetListScreen({super.key});
+  final String? assetType; // 'movable', 'immovable', or null for all
+  
+  const AssetListScreen({super.key, this.assetType});
 
   @override
   ConsumerState<AssetListScreen> createState() => _AssetListScreenState();
@@ -24,53 +29,88 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   String? _selectedCondition;
   int? _expandedRowIndex;
 
+  // Get current route based on assetType
+  String get _currentRoute {
+    switch (widget.assetType) {
+      case 'movable':
+        return 'assets_movable';
+      case 'immovable':
+        return 'assets_immovable';
+      default:
+        return 'assets';
+    }
+  }
+
+  // Get page title based on assetType
+  String get _pageTitle {
+    switch (widget.assetType) {
+      case 'movable':
+        return 'Aset Bergerak';
+      case 'immovable':
+        return 'Aset Tidak Bergerak';
+      default:
+        return 'Manajemen Aset';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final assetsAsync = ref.watch(allAssetsProvider);
     final categoriesAsync = ref.watch(assetCategoriesProvider);
     final conditionsAsync = ref.watch(assetConditionsProvider);
+    final typesAsync = ref.watch(assetTypesProvider);
     final isWideScreen = MediaQuery.of(context).size.width > 900;
 
-    return Scaffold(
-      body: Row(
-        children: [
-          // Sidebar for wide screens
-          if (isWideScreen)
-            const AdminSidebar(currentRoute: 'assets'),
-          
-          // Main content
-          Expanded(
-            child: Column(
-              children: [
-                // Header
-                _buildHeader(context),
-                
-                // Toolbar
-                _buildToolbar(context, categoriesAsync, conditionsAsync),
-                
-                // DataTable
-                Expanded(
-                  child: assetsAsync.when(
-                    data: (assets) => _buildDataTable(context, _filterAssets(assets)),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (e, _) => Center(child: Text('Error: $e')),
-                  ),
-                ),
-              ],
+    // ShellRoute handles the Scaffold and Sidebar for Desktop.
+    // However, if we are on Mobile (not isWideScreen), we might need a Scaffold if the Shell passes through.
+    // But AdminShellLayout logic returns child on mobile.
+    // So if Mobile, we return Scaffold. If Desktop, we return content.
+    // Actually, to keep it simple and consistent:
+    // If the Shell is handling the outer frame, we just return the content.
+    // But on mobile, we need the AppBar defined here (or in the shell).
+    // Let's assume this widget is the "Page Content".
+
+    final content = Column(
+      children: [
+        // Header
+        _buildHeader(context),
+        
+        // Toolbar
+        _buildToolbar(context, categoriesAsync, conditionsAsync),
+        
+        // DataTable - combine assets with categories for proper filtering
+        Expanded(
+          child: assetsAsync.when(
+            data: (assets) => categoriesAsync.when(
+              data: (categories) => _buildDataTable(context, _filterAssets(assets, categories)),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error loading categories: $e')),
             ),
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, _) => Center(child: Text('Error: $e')),
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _navigateToForm(context, null),
-        icon: const Icon(Icons.add),
-        label: const Text('Tambah Aset'),
-        backgroundColor: AppTheme.primary,
-      ),
+        ),
+      ],
+    );
+
+    // If wrapped in Shell (Desktop), return content.
+    // If standalone (Mobile navigation), wrap in Scaffold with Sidebar/Drawer support if needed?
+    // Current mobile sidebar is generally a Drawer.
+    // For now, consistent with AdminDashboardScreen:
+    // On Desktop, Shell handles structure.
+    // On Mobile, we treat it as a full screen with Back button (handled in _buildHeader).
+    
+    // To ensure background color consistency
+    return Container(
+      color: AppTheme.modernBg,
+      child: content,
     );
   }
 
   Widget _buildHeader(BuildContext context) {
+    // Determine if we came from folder navigation (has assetType)
+    final hasAssetTypeFilter = widget.assetType != null;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -85,29 +125,36 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
       ),
       child: Row(
         children: [
-          // Back button for mobile
-          if (MediaQuery.of(context).size.width <= 900)
+          // Simple back button (only when navigated from folder)
+          if (hasAssetTypeFilter) ...[
             IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () => Navigator.pop(context),
+              icon: Icon(Icons.arrow_back, color: Colors.grey[700]),
+              onPressed: () => context.go('/admin/master/aset'),
+              tooltip: 'Kembali ke Master Aset',
             ),
+            const SizedBox(width: 8),
+          ],
           
           const Icon(Icons.inventory_2, color: AppTheme.primary, size: 28),
           const SizedBox(width: 12),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+                  Text(
+                    _pageTitle,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
               Text(
-                'Manajemen Aset',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              Text(
-                'Kelola data aset BRIDA',
-                style: TextStyle(
+                widget.assetType == 'movable' 
+                    ? 'Kendaraan, Peralatan, Elektronik, dll'
+                    : widget.assetType == 'immovable'
+                        ? 'Gedung, Tanah, Infrastruktur, dll'
+                        : 'Kelola data aset BRIDA',
+                style: const TextStyle(
                   fontSize: 12,
                   color: Colors.grey,
                 ),
@@ -116,24 +163,98 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           const Spacer(),
           
-          // Export buttons
-          OutlinedButton.icon(
-            onPressed: _exportToPdf,
-            icon: const Icon(Icons.picture_as_pdf, size: 18),
-            label: const Text('Export PDF'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-            ),
+          // Export dropdown
+          PopupMenuButton<String>(
+            icon: Icon(Icons.download, color: Colors.grey[700]),
+            tooltip: 'Export Data',
+            onSelected: (value) {
+              if (value == 'pdf') {
+                _exportToPdf();
+              } else if (value == 'excel') {
+                _exportToExcel();
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'excel',
+                child: Row(
+                  children: [
+                    Icon(Icons.table_chart, color: Colors.green, size: 20),
+                    SizedBox(width: 12),
+                    Text('Export Excel (.xlsx)'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'pdf',
+                child: Row(
+                  children: [
+                    Icon(Icons.picture_as_pdf, color: Colors.red, size: 20),
+                    SizedBox(width: 12),
+                    Text('Export PDF (Print)'),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
-          OutlinedButton.icon(
-            onPressed: _exportToExcel,
-            icon: const Icon(Icons.table_chart, size: 18),
-            label: const Text('Export Excel'),
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.green,
+          // Add Button (Popup if type unknown, Direct if type known)
+          if (widget.assetType != null)
+            ElevatedButton.icon(
+              onPressed: () => _navigateToForm(context, null),
+              icon: const Icon(Icons.add, size: 18, color: Colors.white),
+              label: const Text('Tambah Aset'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+              ),
+            )
+          else
+            PopupMenuButton<String>(
+              offset: const Offset(0, 40),
+              tooltip: 'Pilih jenis aset',
+              onSelected: (type) => _navigateToFormWithType(context, type),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'movable',
+                  child: Row(
+                    children: [
+                      Icon(Icons.commute, color: Colors.blue, size: 20),
+                      SizedBox(width: 12),
+                      Text('Aset Bergerak'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'immovable',
+                  child: Row(
+                    children: [
+                      Icon(Icons.domain, color: Colors.orange, size: 20),
+                      SizedBox(width: 12),
+                      Text('Aset Tidak Bergerak'),
+                    ],
+                  ),
+                ),
+              ],
+              child: ElevatedButton.icon(
+                onPressed: null, // Let PopupMenu handle tap
+                icon: const Icon(Icons.add, size: 18, color: Colors.white),
+                label: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Tambah Aset'),
+                    SizedBox(width: 4),
+                    Icon(Icons.arrow_drop_down, size: 18, color: Colors.white),
+                  ],
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor: Colors.white,
+                  disabledBackgroundColor: AppTheme.primary,
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -168,27 +289,46 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           const SizedBox(width: 12),
           
-          // Category filter
+          // Category filter - filtered by asset type
           Expanded(
             child: categoriesAsync.when(
-              data: (categories) => DropdownButtonFormField<String>(
-                value: _selectedCategory,
-                decoration: InputDecoration(
-                  labelText: 'Kategori',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Semua')),
-                  ...categories.map((c) => DropdownMenuItem(
-                    value: c.id,
-                    child: Text(c.name),
-                  )),
-                ],
-                onChanged: (value) => setState(() => _selectedCategory = value),
-              ),
+              data: (categories) {
+                // Filter categories based on asset type
+                List<dynamic> filteredCategories;
+                if (widget.assetType == 'movable') {
+                  // Aset Bergerak: Alat Kantor, Furniture, Elektronik, Kendaraan, dll
+                  filteredCategories = categories.where((c) => 
+                    ['kendaraan', 'komputer', 'lab', 'elektronik', 'furniture', 'alat_kantor'].contains(c.code)
+                  ).toList();
+                } else if (widget.assetType == 'immovable') {
+                  // Aset Tidak Bergerak: Tanah, Gedung, Infrastruktur
+                  filteredCategories = categories.where((c) => 
+                    ['gedung', 'tanah', 'infrastruktur', 'instalasi'].contains(c.code)
+                  ).toList();
+                } else {
+                  // All categories
+                  filteredCategories = categories;
+                }
+                
+                return DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Kategori',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  items: <DropdownMenuItem<String>>[
+                    const DropdownMenuItem<String>(value: null, child: Text('Semua Kategori')),
+                    ...filteredCategories.map((c) => DropdownMenuItem<String>(
+                      value: c.id,
+                      child: Text(c.name),
+                    )),
+                  ],
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                );
+              },
               loading: () => const LinearProgressIndicator(),
               error: (_, __) => const Text('Error'),
             ),
@@ -207,9 +347,9 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 ),
-                items: [
-                  const DropdownMenuItem(value: null, child: Text('Semua')),
-                  ...conditions.map((c) => DropdownMenuItem(
+                items: <DropdownMenuItem<String>>[
+                  const DropdownMenuItem<String>(value: null, child: Text('Semua')),
+                  ...conditions.map((c) => DropdownMenuItem<String>(
                     value: c.id,
                     child: Row(
                       children: [
@@ -275,7 +415,22 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
         padding: const EdgeInsets.all(16),
         child: Card(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Total Count (Top of Table)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  'Total Data: ${assets.length} aset',
+                  style: TextStyle(
+                    color: Colors.grey[700],
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+              Divider(height: 1, color: Colors.grey[200]),
+
               // Header row
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -407,19 +562,12 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 },
               ),
               
-              // Footer
+              // Footer removed (moved total to header)
               Container(
-                padding: const EdgeInsets.all(12),
+                height: 12,
                 decoration: BoxDecoration(
-                  color: Colors.grey[100],
+                  color: Colors.white,
                   borderRadius: const BorderRadius.vertical(bottom: Radius.circular(12)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text('Total: ${assets.length} aset'),
-                    // Pagination could be added here
-                  ],
                 ),
               ),
             ],
@@ -539,8 +687,36 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     );
   }
 
-  List<Asset> _filterAssets(List<Asset> assets) {
+  List<Asset> _filterAssets(List<Asset> assets, List<dynamic> categories) {
+    // Define which category codes belong to movable/immovable
+    const movableCodes = ['kendaraan', 'komputer', 'lab', 'elektronik', 'furniture', 'alat_kantor'];
+    const immovableCodes = ['gedung', 'tanah', 'infrastruktur', 'instalasi'];
+    
+    // Create a lookup map: categoryId -> categoryCode
+    final categoryCodeMap = <String, String>{};
+    for (final cat in categories) {
+      categoryCodeMap[cat.id] = cat.code ?? '';
+    }
+    
     return assets.where((asset) {
+      // Filter by asset type (movable/immovable) using category_id lookup
+      if (widget.assetType != null && asset.categoryId != null) {
+        final categoryCode = categoryCodeMap[asset.categoryId] ?? '';
+        
+        if (widget.assetType == 'movable') {
+          if (!movableCodes.contains(categoryCode)) {
+            return false;
+          }
+        } else if (widget.assetType == 'immovable') {
+          if (!immovableCodes.contains(categoryCode)) {
+            return false;
+          }
+        }
+      } else if (widget.assetType != null && asset.categoryId == null) {
+        // If no category_id set, exclude from filtered view
+        return false;
+      }
+      
       // Search filter
       if (_searchQuery.isNotEmpty) {
         final query = _searchQuery.toLowerCase();
@@ -551,7 +727,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
         }
       }
       
-      // Category filter
+      // Category filter (dropdown selection)
       if (_selectedCategory != null && asset.categoryId != _selectedCategory) {
         return false;
       }
@@ -566,21 +742,24 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   }
 
   void _navigateToForm(BuildContext context, Asset? asset) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AssetFormScreen(asset: asset),
-      ),
-    ).then((_) => ref.invalidate(allAssetsProvider));
+    if (asset != null) {
+      // Preserve assetType in URL to ensure context is kept
+      final typeParam = widget.assetType != null ? '?type=${widget.assetType}' : '';
+      context.go('/admin/assets/edit/${asset.id}$typeParam', extra: asset);
+    } else {
+      // Pass assetType to form if navigated from folder
+      final typeParam = widget.assetType != null ? '?type=${widget.assetType}' : '';
+      context.go('/admin/assets/new$typeParam');
+    }
+  }
+
+  void _navigateToFormWithType(BuildContext context, String type) {
+    context.go('/admin/assets/new?type=$type');
   }
 
   void _navigateToDetail(BuildContext context, Asset asset) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => AssetDetailScreen(asset: asset),
-      ),
-    );
+    final typeParam = widget.assetType != null ? '?type=${widget.assetType}' : '';
+    context.go('/admin/assets/detail/${asset.id}$typeParam', extra: asset);
   }
 
   void _confirmDelete(BuildContext context, Asset asset) {
@@ -608,21 +787,58 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   }
 
   Future<void> _deleteAsset(Asset asset) async {
-    // TODO: Implement delete
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Fitur hapus belum diimplementasi')),
-    );
+    try {
+      await Supabase.instance.client.from('assets').delete().eq('id', asset.id);
+      
+      // Refresh list
+      ref.invalidate(allAssetsProvider);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Aset berhasil dihapus'), backgroundColor: Colors.green),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus aset: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   void _exportToPdf() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Export PDF - Coming soon')),
-    );
+    final assetsAsync = ref.read(allAssetsProvider);
+    final categoriesAsync = ref.read(assetCategoriesProvider);
+    assetsAsync.whenData((assets) {
+      categoriesAsync.whenData((categories) {
+        final filtered = _filterAssets(assets, categories);
+        if (filtered.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data untuk di-export')),
+          );
+          return;
+        }
+        AssetExportService.exportToPdf(context, filtered);
+      });
+    });
   }
 
   void _exportToExcel() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Export Excel - Coming soon')),
-    );
+    final assetsAsync = ref.read(allAssetsProvider);
+    final categoriesAsync = ref.read(assetCategoriesProvider);
+    assetsAsync.whenData((assets) {
+      categoriesAsync.whenData((categories) {
+        final filtered = _filterAssets(assets, categories);
+        if (filtered.isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Tidak ada data untuk di-export')),
+          );
+          return;
+        }
+        AssetExportService.exportToExcel(context, filtered);
+      });
+    });
   }
 }
+

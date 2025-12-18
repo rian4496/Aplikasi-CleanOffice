@@ -252,3 +252,4 @@ class NotificationPanel extends ConsumerWidget {
     }
   }
 }
+

@@ -27,3 +27,4 @@ class InventoryAnalyticsDialog extends StatelessWidget {
     );
   }
 }
+

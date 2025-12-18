@@ -66,3 +66,4 @@ void clearSelection(WidgetRef ref) {
   ref.read(selectedReportIdsProvider.notifier).clear();
   ref.read(selectionModeProvider.notifier).set(false);
 }
+

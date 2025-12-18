@@ -3,95 +3,140 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/asset.dart';
+import '../../models/ticket.dart';
+import '../shared/ticket_form_screen.dart';
+import 'asset_maintenance_history_screen.dart'; // Added
 import 'asset_form_screen.dart';
 
 class AssetDetailScreen extends ConsumerWidget {
   final Asset asset;
+  final String? assetType;
 
-  const AssetDetailScreen({super.key, required this.asset});
+  const AssetDetailScreen({
+    super.key, 
+    required this.asset,
+    this.assetType,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Aset'),
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code),
-            onPressed: () => _showQrCode(context),
-            tooltip: 'Lihat QR Code',
+    return Container(
+      color: AppTheme.modernBg,
+      child: Column(
+        children: [
+          // Custom AppBar/Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (assetType != null) {
+                      context.go('/admin/assets?type=$assetType');
+                    } else {
+                      context.go('/admin/master/aset');
+                    }
+                  },
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Detail Aset',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
+                  ),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.qr_code),
+                  onPressed: () => _showQrCode(context),
+                  tooltip: 'Lihat QR Code',
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _navigateToEdit(context),
+                  tooltip: 'Edit',
+                ),
+              ],
+            ),
           ),
-          IconButton(
-            icon: const Icon(Icons.edit),
-            onPressed: () => _navigateToEdit(context),
-            tooltip: 'Edit',
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header with image
-            _buildHeader(context),
-            
-            // Info sections
-            Padding(
-              padding: const EdgeInsets.all(16),
+
+          // Scrollable Content
+          Expanded(
+            child: SingleChildScrollView(
               child: Column(
                 children: [
-                  _buildInfoCard(
-                    title: 'Informasi Dasar',
-                    icon: Icons.info_outline,
-                    items: [
-                      _InfoItem('Nama', asset.name),
-                      _InfoItem('Kode QR', asset.qrCode),
-                      _InfoItem('Deskripsi', asset.description ?? '-'),
-                      _InfoItem('Status', asset.status.displayName),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                  // Header with image
+                  _buildHeader(context),
                   
-                  _buildInfoCard(
-                    title: 'Klasifikasi',
-                    icon: Icons.category_outlined,
-                    items: [
-                      _InfoItem('Kategori', asset.category),
-                      _InfoItem('Lokasi', asset.locationName ?? '-'),
-                      _InfoItem('Kondisi', asset.condition.displayName),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  _buildInfoCard(
-                    title: 'Informasi Pembelian',
-                    icon: Icons.shopping_cart_outlined,
-                    items: [
-                      _InfoItem('Tanggal Pembelian', asset.purchaseDateFormatted ?? '-'),
-                      _InfoItem('Harga Pembelian', asset.purchasePriceFormatted ?? '-'),
-                      _InfoItem('Garansi Sampai', asset.warrantyUntilFormatted ?? '-'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  if (asset.notes != null && asset.notes!.isNotEmpty)
-                    _buildInfoCard(
-                      title: 'Catatan',
-                      icon: Icons.note_alt_outlined,
-                      items: [
-                        _InfoItem('', asset.notes!),
+                  // Info sections
+                  Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        _buildInfoCard(
+                          title: 'Informasi Dasar',
+                          icon: Icons.info_outline,
+                          items: [
+                            _InfoItem('Nama', asset.name),
+                            _InfoItem('Kode QR', asset.qrCode),
+                            _InfoItem('Deskripsi', asset.description ?? '-'),
+                            _InfoItem('Status', asset.status.displayName),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        _buildInfoCard(
+                          title: 'Klasifikasi',
+                          icon: Icons.category_outlined,
+                          items: [
+                            _InfoItem('Kategori', asset.category),
+                            _InfoItem('Lokasi', asset.locationName ?? '-'),
+                            _InfoItem('Kondisi', asset.condition.displayName),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        _buildInfoCard(
+                          title: 'Informasi Pembelian',
+                          icon: Icons.shopping_cart_outlined,
+                          items: [
+                            _InfoItem('Tanggal Pembelian', asset.purchaseDateFormatted ?? '-'),
+                            _InfoItem('Harga Pembelian', asset.purchasePriceFormatted ?? '-'),
+                            _InfoItem('Garansi Sampai', asset.warrantyUntilFormatted ?? '-'),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        if (asset.notes != null && asset.notes!.isNotEmpty)
+                          _buildInfoCard(
+                            title: 'Catatan',
+                            icon: Icons.note_alt_outlined,
+                            items: [
+                              _InfoItem('', asset.notes!),
+                            ],
+                          ),
                       ],
                     ),
+                  ),
                 ],
               ),
             ),
-          ],
-        ),
+          ),
+
+          // Bottom Bar
+          _buildBottomBar(context),
+        ],
       ),
-      bottomNavigationBar: _buildBottomBar(context),
     );
   }
 
@@ -206,7 +251,7 @@ class AssetDetailScreen extends ConsumerWidget {
           Expanded(
             child: ElevatedButton.icon(
               onPressed: () => _createMaintenanceRequest(context),
-              icon: const Icon(Icons.build),
+              icon: const Icon(Icons.build, color: Colors.white),
               label: const Text('Request Maintenance'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
@@ -272,23 +317,31 @@ class AssetDetailScreen extends ConsumerWidget {
   }
 
   void _navigateToEdit(BuildContext context) {
+    final typeParam = assetType != null ? '?type=$assetType' : '';
+    context.go('/admin/assets/edit/${asset.id}$typeParam', extra: asset);
+  }
+
+  void _showMaintenanceHistory(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => AssetFormScreen(asset: asset),
+        builder: (context) => AssetMaintenanceHistoryScreen(
+          assetId: asset.id,
+          assetName: asset.name,
+        ),
       ),
     );
   }
 
-  void _showMaintenanceHistory(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Riwayat Maintenance - Coming soon')),
-    );
-  }
-
   void _createMaintenanceRequest(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Request Maintenance - Coming soon')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TicketFormScreen(
+          initialType: TicketType.kerusakan,
+          initialAssetId: asset.id,
+        ),
+      ),
     );
   }
 }
@@ -299,3 +352,4 @@ class _InfoItem {
 
   _InfoItem(this.label, this.value);
 }
+

@@ -293,3 +293,4 @@ class ReportCompletionPhotoSection extends StatelessWidget {
     );
   }
 }
+

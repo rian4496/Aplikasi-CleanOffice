@@ -11,10 +11,12 @@ import '../../models/inventory_item.dart';
 import '../../models/user_role.dart';
 import '../../services/inventory_service.dart';
 import '../../providers/riverpod/auth_providers.dart';
+import '../../models/stock_history.dart';
 import '../../widgets/inventory/stock_adjustment_dialog.dart';
+import '../../widgets/inventory/stock_history_dialog.dart';
 import '../../widgets/inventory/request_stock_dialog.dart';
-import './inventory_add_edit_screen.dart';
-import './stock_history_screen.dart';
+import '../../widgets/inventory/inventory_form_dialog.dart';
+
 
 class InventoryDetailScreen extends ConsumerStatefulWidget {
   final String itemId;
@@ -60,7 +62,7 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
           return _buildContent(item, isAdmin);
         },
       ),
-      floatingActionButton: isAdmin ? _buildFAB() : null,
+      // floatingActionButton: isAdmin ? _buildFAB() : null, // Hide FAB in detail/history for cleaner look
     );
   }
 
@@ -112,8 +114,7 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
           const SizedBox(height: 16),
           _buildStockCard(item),
           const SizedBox(height: 16),
-          _buildActionsCard(item, isAdmin),
-          const SizedBox(height: 16),
+
           _buildDescriptionCard(item),
           const SizedBox(height: 24),
         ],
@@ -286,16 +287,133 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.inventory_2, color: AppTheme.primary, size: 20),
-              SizedBox(width: 8),
-              Text(
+              const Icon(Icons.inventory_2, color: AppTheme.primary, size: 20),
+              const SizedBox(width: 8),
+              const Text(
                 'Informasi Stok',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              // Quick Actions Dropdown
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'add':
+                      _showStockAdjustmentDialog(item, isAdd: true);
+                      break;
+                    case 'remove':
+                      _showStockAdjustmentDialog(item, isAdd: false);
+                      break;
+                    case 'edit':
+                      _editItem(item);
+                      break;
+                    case 'history':
+                      _viewHistory(item);
+                      break;
+                    case 'request':
+                      _showRequestDialog(item);
+                      break;
+                  }
+                },
+                itemBuilder: (context) {
+                  final userProfile = ref.read(currentUserProfileProvider).value;
+                  final isAdmin = userProfile?.role == UserRole.admin;
+
+                  if (isAdmin) {
+                    return [
+                      const PopupMenuItem(
+                        value: 'add',
+                        child: Row(
+                          children: [
+                            Icon(Icons.add_circle_outline, color: AppTheme.success, size: 20),
+                            SizedBox(width: 12),
+                            Text('Tambah Stok'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'remove',
+                        child: Row(
+                          children: [
+                            Icon(Icons.remove_circle_outline, color: AppTheme.warning, size: 20),
+                            SizedBox(width: 12),
+                            Text('Kurangi Stok'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'edit',
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit, color: AppTheme.info, size: 20),
+                            SizedBox(width: 12),
+                            Text('Edit Item'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                         value: 'history',
+                         child: Row(
+                           children: [
+                             Icon(Icons.history, color: Colors.deepPurple, size: 20),
+                             SizedBox(width: 12),
+                             Text('Riwayat'),
+                           ],
+                         ),
+                       ),
+                    ];
+                  } else {
+                    return [
+                       const PopupMenuItem(
+                        value: 'request',
+                        child: Row(
+                          children: [
+                            Icon(Icons.request_page, color: AppTheme.primary, size: 20),
+                            SizedBox(width: 12),
+                            Text('Ajukan Permintaan'),
+                          ],
+                        ),
+                      ),
+                       const PopupMenuItem(
+                         value: 'history',
+                         child: Row(
+                           children: [
+                             Icon(Icons.history, color: Colors.deepPurple, size: 20),
+                             SizedBox(width: 12),
+                             Text('Riwayat'),
+                           ],
+                         ),
+                       ),
+                    ];
+                  }
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Row(
+                    children: [
+                       Text(
+                        'Aksi Cepat',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.keyboard_arrow_down, size: 16, color: Colors.grey[700]),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -338,13 +456,24 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
 
           // Stock Progress
           Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
             children: [
               Text(
-                '${item.currentStock} / ${item.maxStock} ${item.unit}',
+                '${item.currentStock} / ${item.maxStock}',
                 style: const TextStyle(
-                  fontSize: 18,
+                  fontSize: 20,
                   fontWeight: FontWeight.bold,
                   color: AppTheme.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                item.unit,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[600],
                 ),
               ),
               const Spacer(),
@@ -376,7 +505,8 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
               Expanded(
                 child: _buildStockInfo(
                   'Minimum',
-                  '${item.minStock} ${item.unit}',
+                  '${item.minStock}',
+                  item.unit,
                   Icons.warning_amber,
                   AppTheme.warning,
                 ),
@@ -385,7 +515,8 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
               Expanded(
                 child: _buildStockInfo(
                   'Maximum',
-                  '${item.maxStock} ${item.unit}',
+                  '${item.maxStock}',
+                  item.unit,
                   Icons.vertical_align_top,
                   AppTheme.info,
                 ),
@@ -397,7 +528,7 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
     );
   }
 
-  Widget _buildStockInfo(String label, String value, IconData icon, Color color) {
+  Widget _buildStockInfo(String label, String value, String unit, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -422,13 +553,28 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                unit,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: color.withOpacity(0.8),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -436,109 +582,7 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
   }
 
   // ==================== ACTIONS CARD ====================
-  Widget _buildActionsCard(InventoryItem item, bool isAdmin) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.touch_app, color: AppTheme.primary, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Aksi Cepat',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
 
-          if (isAdmin) ...[
-            // Admin Actions
-            _buildActionButton(
-              icon: Icons.add_circle_outline,
-              label: 'Tambah Stok',
-              color: AppTheme.success,
-              onPressed: () => _showStockAdjustmentDialog(item, isAdd: true),
-            ),
-            const SizedBox(height: 12),
-            _buildActionButton(
-              icon: Icons.remove_circle_outline,
-              label: 'Kurangi Stok',
-              color: AppTheme.warning,
-              onPressed: () => _showStockAdjustmentDialog(item, isAdd: false),
-            ),
-            const SizedBox(height: 12),
-            _buildActionButton(
-              icon: Icons.edit,
-              label: 'Edit Item',
-              color: AppTheme.info,
-              onPressed: () => _editItem(item),
-            ),
-            const SizedBox(height: 12),
-            _buildActionButton(
-              icon: Icons.history,
-              label: 'Lihat Riwayat Stok',
-              color: Colors.deepPurple,
-              onPressed: () => _viewHistory(item),
-            ),
-          ] else ...[
-            // Cleaner Actions
-            _buildActionButton(
-              icon: Icons.request_page,
-              label: 'Ajukan Permintaan Stok',
-              color: AppTheme.primary,
-              onPressed: () => _showRequestDialog(item),
-            ),
-            const SizedBox(height: 12),
-            _buildActionButton(
-              icon: Icons.history,
-              label: 'Lihat Riwayat Stok',
-              color: Colors.deepPurple,
-              onPressed: () => _viewHistory(item),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActionButton({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onPressed,
-  }) {
-    return SizedBox(
-      width: double.infinity,
-      child: OutlinedButton.icon(
-        icon: Icon(icon, size: 20),
-        label: Text(label),
-        onPressed: onPressed,
-        style: OutlinedButton.styleFrom(
-          foregroundColor: color,
-          side: BorderSide(color: color),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-        ),
-      ),
-    );
-  }
 
   // ==================== DESCRIPTION CARD ====================
   Widget _buildDescriptionCard(InventoryItem item) {
@@ -641,11 +685,9 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
   // ==================== METHODS ====================
 
   Future<void> _editItem(InventoryItem item) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InventoryAddEditScreen(item: item),
-      ),
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => InventoryFormDialog(item: item),
     );
 
     if (result == true) {
@@ -721,11 +763,10 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
   }
 
   void _viewHistory(InventoryItem item) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => StockHistoryScreen(item: item),
-      ),
+    showDialog(
+      context: context,
+      builder: (context) => StockHistoryDialog(item: item),
     );
   }
 }
+

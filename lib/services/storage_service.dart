@@ -4,6 +4,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart'; // Added XFile support
 
 import 'supabase_storage_service.dart';
 
@@ -32,15 +33,15 @@ class StorageService {
     );
   }
 
-  Future<String> uploadInventoryImage(File imageFile) async {
+  Future<String> uploadInventoryImage(XFile imageFile) async {
     return _supabaseStorage.uploadInventoryImage(imageFile);
   }
 
-  Future<String> uploadReportImage(File imageFile, String userId) async {
+  Future<String> uploadReportImage(XFile imageFile, String userId) async {
     return _supabaseStorage.uploadReportImage(imageFile, userId);
   }
 
-  Future<String> uploadProfileImage(File imageFile, String userId) async {
+  Future<String> uploadProfileImage(XFile imageFile, String userId) async {
     return _supabaseStorage.uploadProfileImage(imageFile, userId);
   }
 
@@ -74,3 +75,4 @@ class StorageService {
 final storageServiceProvider = Provider<StorageService>((ref) {
   return StorageService();
 });
+

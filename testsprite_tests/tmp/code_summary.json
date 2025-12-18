@@ -1,0 +1,239 @@
+{
+    "tech_stack": [
+        "Dart",
+        "Flutter 3.9.2+",
+        "Supabase (Backend)",
+        "Riverpod 3.0 (State Management)",
+        "Go Router 17.0 (Navigation)",
+        "Freezed (Code Generation)",
+        "Hooks Riverpod (Reactive UI)",
+        "Material Design 3"
+    ],
+    "features": [
+        {
+            "name": "Authentication",
+            "description": "User authentication with Supabase including login, registration, and session management",
+            "files": [
+                "lib/screens/auth/login_screen.dart",
+                "lib/providers/riverpod/auth_providers.dart",
+                "lib/services/auth_service.dart"
+            ]
+        },
+        {
+            "name": "Report Management",
+            "description": "Cleaning reports creation, tracking, and verification with status workflow (pending → assigned → inProgress → completed → verified)",
+            "files": [
+                "lib/models/report.dart",
+                "lib/screens/web_admin/reports/reports_list_screen.dart",
+                "lib/screens/web_admin/reports/reports_list_screen_hooks.dart",
+                "lib/screens/web_admin/all_reports_management_screen.dart",
+                "lib/screens/web_admin/verification/verification_screen.dart",
+                "lib/widgets/web_admin/cards/mobile_report_card.dart",
+                "lib/providers/riverpod/report_providers.dart",
+                "lib/repositories/report_repository.dart"
+            ]
+        },
+        {
+            "name": "Request Management",
+            "description": "Service request system for employees to request cleaning services with assignment to cleaners",
+            "files": [
+                "lib/models/request.dart",
+                "lib/screens/shared/request_detail_screen.dart",
+                "lib/screens/employee/request_history_screen.dart",
+                "lib/widgets/shared/request_card_widget.dart",
+                "lib/widgets/cleaner/available_requests_widget.dart",
+                "lib/widgets/admin/request_management_widget.dart",
+                "lib/providers/riverpod/request_providers.dart"
+            ]
+        },
+        {
+            "name": "Admin Dashboard",
+            "description": "Comprehensive admin dashboard with statistics, analytics, charts, and management tools",
+            "files": [
+                "lib/screens/web_admin/dashboard/admin_dashboard_v8.dart",
+                "lib/screens/web_admin/dashboard/admin_dashboard_mobile_screen.dart",
+                "lib/screens/web_admin/dashboard/admin_dashboard_unified_screen.dart",
+                "lib/screens/web_admin/modern_dashboard_screen.dart",
+                "lib/screens/web_admin/admin_dashboard_screen.dart",
+                "lib/widgets/web_admin/recent_activities_widget.dart",
+                "lib/widgets/web_admin/charts/dashboard_charts.dart",
+                "lib/widgets/web_admin/charts/weekly_report_chart.dart",
+                "lib/providers/riverpod/admin_dashboard_provider.dart",
+                "lib/providers/riverpod/admin_stats_provider.dart"
+            ]
+        },
+        {
+            "name": "Cleaner Management",
+            "description": "Management of cleaning staff including profiles, assignments, and performance tracking",
+            "files": [
+                "lib/screens/web_admin/cleaner_management_screen.dart",
+                "lib/screens/cleaner/cleaner_home_screen.dart",
+                "lib/screens/cleaner/create_cleaning_report_screen.dart",
+                "lib/widgets/cleaner/available_requests_widget.dart",
+                "lib/providers/riverpod/cleaner_providers.dart"
+            ]
+        },
+        {
+            "name": "Employee Management",
+            "description": "Employee profiles and service request capabilities",
+            "files": [
+                "lib/screens/employee/employee_home_screen_enhanced.dart",
+                "lib/screens/employee/create_report_screen.dart",
+                "lib/providers/riverpod/employee_providers.dart"
+            ]
+        },
+        {
+            "name": "Inventory Management",
+            "description": "Tracking and management of cleaning supplies and equipment",
+            "files": [
+                "lib/models/inventory_item.dart",
+                "lib/screens/inventory/inventory_list_screen.dart",
+                "lib/services/inventory_service.dart",
+                "lib/providers/riverpod/inventory_providers.dart"
+            ]
+        },
+        {
+            "name": "Master Data Management",
+            "description": "Management of master data including organizations, employees, budgets, assets, and vendors",
+            "files": [
+                "lib/models/master/master_data_models.dart",
+                "lib/models/master/master_data_models.freezed.dart",
+                "lib/models/master/master_data_models.g.dart",
+                "lib/screens/web_admin/master_data/master_organisasi_screen.dart",
+                "lib/providers/master_data_providers.dart"
+            ]
+        },
+        {
+            "name": "Transaction Management",
+            "description": "Management of procurement, maintenance, and disposal transactions",
+            "files": [
+                "lib/models/transactions/transaction_models.dart",
+                "lib/models/transactions/transaction_models.freezed.dart",
+                "lib/models/transactions/disposal_model.dart",
+                "lib/models/transactions/disposal_model.freezed.dart",
+                "lib/screens/web_admin/transactions/procurement/procurement_detail_screen.dart",
+                "lib/providers/transaction_providers.dart",
+                "lib/repositories/transaction_repositories.dart",
+                "lib/providers/riverpod/maintenance_providers.dart"
+            ]
+        },
+        {
+            "name": "Booking Management",
+            "description": "Booking system for cleaning services scheduling",
+            "files": [
+                "lib/models/booking.dart",
+                "lib/providers/riverpod/booking_providers.dart"
+            ]
+        },
+        {
+            "name": "Analytics and Reporting",
+            "description": "Comprehensive analytics with data export to PDF and Excel",
+            "files": [
+                "lib/screens/web_admin/analytics_screen.dart",
+                "lib/screens/admin/analytics_screen.dart",
+                "lib/models/analytics_data.dart",
+                "lib/models/chart_data.dart",
+                "lib/services/asset_export_service.dart",
+                "lib/services/maintenance_export_service.dart",
+                "lib/widgets/weekly_report_chart.dart",
+                "lib/widgets/web_admin/analytics_widget.dart"
+            ]
+        },
+        {
+            "name": "Notification System",
+            "description": "Push notifications and in-app notification management",
+            "files": [
+                "lib/models/notification_model.dart",
+                "lib/providers/riverpod/notification_providers.dart"
+            ]
+        },
+        {
+            "name": "Chat/Messaging",
+            "description": "Internal messaging system for communication between users",
+            "files": [
+                "lib/models/conversation.dart",
+                "lib/screens/chat/conversation_list_screen.dart"
+            ]
+        },
+        {
+            "name": "Account Verification",
+            "description": "Admin functionality to verify new user accounts",
+            "files": [
+                "lib/screens/web_admin/account_verification_screen.dart"
+            ]
+        },
+        {
+            "name": "Image Handling",
+            "description": "Image upload, compression, and comparison features",
+            "files": [
+                "lib/widgets/web_admin/verification/image_comparison_widget.dart"
+            ]
+        },
+        {
+            "name": "QR Scanner",
+            "description": "QR code scanning for asset management",
+            "files": []
+        },
+        {
+            "name": "Filter and Search",
+            "description": "Advanced filtering and search capabilities across various modules",
+            "files": [
+                "lib/widgets/web_admin/filter_chips_widget.dart",
+                "lib/widgets/web_admin/filters/horizontal_filter_chips.dart",
+                "lib/widgets/web_admin/search/search_bar_widget.dart",
+                "lib/widgets/web_admin/advanced_filter_dialog.dart"
+            ]
+        },
+        {
+            "name": "Navigation",
+            "description": "App navigation with role-based routing using Go Router",
+            "files": [
+                "lib/core/router/app_router.dart",
+                "lib/widgets/navigation/admin_more_bottom_sheet.dart",
+                "lib/widgets/web_admin/layout/admin_sidebar.dart",
+                "lib/widgets/web_admin/layout/admin_bottom_nav.dart"
+            ]
+        },
+        {
+            "name": "Theme System",
+            "description": "Centralized theming with AppTheme constants and design tokens",
+            "files": [
+                "lib/core/theme/app_theme.dart",
+                "lib/utils/app_theme.dart",
+                "lib/core/design/admin_colors.dart",
+                "lib/core/design/admin_typography.dart",
+                "lib/core/design/admin_constants.dart",
+                "lib/core/design/cleaner_colors.dart",
+                "lib/core/design/employee_colors.dart",
+                "lib/core/design/shared_design_constants.dart"
+            ]
+        },
+        {
+            "name": "Shared Widgets",
+            "description": "Reusable UI components used across the application",
+            "files": [
+                "lib/widgets/shared/empty_state_widget.dart",
+                "lib/widgets/shared/states/empty_state_widget.dart",
+                "lib/widgets/shared/cards/stat_card_base.dart",
+                "lib/widgets/modern_card.dart",
+                "lib/widgets/modern_stat_card.dart",
+                "lib/widgets/main_layout.dart",
+                "lib/widgets/dashboard_header.dart"
+            ]
+        },
+        {
+            "name": "Utilities",
+            "description": "Helper utilities for formatting, validation, and common operations",
+            "files": [
+                "lib/core/utils/date_formatter.dart"
+            ]
+        },
+        {
+            "name": "Supabase Integration",
+            "description": "Supabase backend integration with real-time subscriptions",
+            "files": [
+                "lib/providers/riverpod/supabase_service_providers.dart"
+            ]
+        }
+    ]
+}

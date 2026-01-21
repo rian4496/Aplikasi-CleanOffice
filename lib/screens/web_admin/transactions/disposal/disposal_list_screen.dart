@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../models/transactions/disposal_model.dart';
-import '../../../../providers/transactions/disposal_provider.dart';
+import '../../../../riverpod/transactions/disposal_provider.dart';
+import '../../../../riverpod/auth_providers.dart';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
 import '../../../../models/transactions/disposal_model.dart';
-import '../../../../providers/transactions/disposal_provider.dart';
+import '../../../../riverpod/transactions/disposal_provider.dart';
 
 class DisposalListScreen extends ConsumerStatefulWidget {
   const DisposalListScreen({super.key});
@@ -46,24 +47,62 @@ class _DisposalListScreenState extends ConsumerState<DisposalListScreen> {
   @override
   Widget build(BuildContext context) {
     final disposalAsync = ref.watch(disposalListProvider);
+    final isMobile = MediaQuery.of(context).size.width < 600;
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      floatingActionButton: isMobile ? Container(
+         margin: const EdgeInsets.only(bottom: 16),
+         child: InkWell(
+            onTap: () => context.push('/admin/disposal/new'),
+            borderRadius: BorderRadius.circular(50),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [Colors.red.shade700, Colors.red.shade500]),
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [BoxShadow(color: Colors.red.shade700.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   const Icon(Icons.add, color: Colors.white, size: 20),
+                   const SizedBox(width: 8),
+                   Text('Buat Usulan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+            ),
+         ),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       appBar: AppBar(
-        title: Text('Penghapusan Aset (Disposal)', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18)),
+        leading: isMobile ? IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/admin/dashboard'),
+        ) : null,
+        title: LayoutBuilder(
+          builder: (context, constraints) {
+            return Text(
+              constraints.maxWidth < 600 ? 'Penghapusan Aset' : 'Penghapusan Aset (Disposal)',
+              style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18),
+            );
+          }
+        ),
         centerTitle: false,
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          FilledButton.icon(
-            onPressed: () => context.push('/admin/disposal/new'),
-            icon: const Icon(Icons.add),
-            label: const Text('Buat Usulan'),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red[700], // Red for disposal/danger actions
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          if (!isMobile)
+            FilledButton.icon(
+              onPressed: () => context.push('/admin/disposal/new'),
+              icon: const Icon(Icons.add, size: 20),
+              label: const Text('Buat Usulan'),
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.red[700], // Red for disposal/danger actions
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
             ),
-          ),
           const SizedBox(width: 16),
         ],
       ),
@@ -101,12 +140,15 @@ class _DisposalListScreenState extends ConsumerState<DisposalListScreen> {
                       onChanged: (val) => setState(() => _searchQuery = val),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildTabItem('Usulan Baru', 0),
-                        _buildTabItem('Sedang Proses', 1),
-                        _buildTabItem('Selesai', 2),
-                      ],
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildTabItem('Usulan Baru', 0),
+                          _buildTabItem('Sedang Proses', 1),
+                          _buildTabItem('Selesai', 2),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -117,18 +159,23 @@ class _DisposalListScreenState extends ConsumerState<DisposalListScreen> {
               Expanded(
                 child: filtered.isEmpty
                   ? _buildEmptyState()
-                  : GridView.builder(
-                      padding: const EdgeInsets.all(16),
-                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                        maxCrossAxisExtent: 400,
-                        childAspectRatio: 0.9, // Taller cards to fit details
-                        crossAxisSpacing: 16,
-                        mainAxisSpacing: 16,
-                      ),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        return _buildDisposalCard(context, filtered[index]);
-                      },
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isMobile = constraints.maxWidth < 600;
+                return GridView.builder(
+                          padding: const EdgeInsets.all(16),
+                          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: isMobile ? 2 : (constraints.maxWidth / 280).floor(),
+                            childAspectRatio: isMobile ? 0.75 : 0.8, // Adjusted for balanced height
+                            crossAxisSpacing: 16,
+                            mainAxisSpacing: 16,
+                          ),
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            return _buildDisposalCard(context, filtered[index]);
+                          },
+                        );
+                      }
                     ),
               ),
             ],
@@ -172,73 +219,164 @@ class _DisposalListScreenState extends ConsumerState<DisposalListScreen> {
     );
   }
 
+  // ... (Keep existing helpers)
+
   Widget _buildDisposalCard(BuildContext context, DisposalRequest item) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 1.5,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200), // Subtle border like reference
+      ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Image Area (Mock)
-          Container(
-            height: 140,
-            width: double.infinity,
-            color: Colors.grey[200],
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                const Icon(Icons.image_not_supported, color: Colors.grey, size: 40),
-                Positioned(
-                  top: 8, right: 8,
-                  child: _buildStatusBadge(item.status),
-                ),
-              ],
+          // 1. Image Area with Badge (Expanded to fill top half)
+          Expanded(
+            flex: 4, // Adjust flex ratio to control image vs content height
+            child: Container(
+              width: double.infinity,
+              color: Colors.grey[100],
+              child: Stack(
+                children: [
+                  const Center(child: Icon(Icons.image_not_supported_outlined, color: Colors.grey, size: 48)),
+                  Positioned(
+                    top: 8, right: 8,
+                    child: _buildStatusBadge(item.status),
+                  ),
+                ],
+              ),
             ),
           ),
           
-          // 2. Details
+          // 2. Content Section
           Expanded(
+            flex: 5,
             child: Padding(
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.assetName ?? 'Unknown Asset', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  Text(item.assetCode ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                  // Title (14px Bold - Matches Reference)
+                  Text(
+                    item.assetName ?? 'Unknown Asset',
+                    style: GoogleFonts.inter(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13, // Slightly smaller to prevent overflow
+                      color: Colors.black87,
+                    ),
+                    maxLines: 2, // Allow 2 lines for title
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 4),
+                  // Code (11px Grey)
+                  Text(
+                    item.assetCode ?? '-',
+                    style: GoogleFonts.inter(
+                      color: Colors.grey[600],
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                  ),
                   const SizedBox(height: 8),
                   
-                  // Key Value
+                  // Nilai Perkiraan Row
                   Row(
                     children: [
-                       const Icon(Icons.money_off, size: 14, color: Colors.grey),
-                       const SizedBox(width: 4),
-                       Text('Nilai Perkiraan: Rp ${NumberFormat.decimalPattern('id').format(item.estimatedValue)}', style: const TextStyle(fontSize: 12)),
+                      Icon(Icons.attach_money, size: 14, color: Colors.grey[600]),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'Nilai Perkiraan: Rp ${NumberFormat.decimalPattern('id').format(item.estimatedValue)}',
+                          style: GoogleFonts.inter(fontSize: 12, color: Colors.black87),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
-                   const SizedBox(height: 4),
-                   Row(
+                  const SizedBox(height: 4),
+                  // Reason Row
+                  Row(
                     children: [
-                       const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
-                       const SizedBox(width: 4),
-                       Expanded(child: Text(item.reason, style: const TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold), maxLines: 1)),
+                      const Icon(Icons.warning_amber_rounded, size: 14, color: Colors.red),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.reason,
+                          style: GoogleFonts.inter(fontSize: 11, color: Colors.red, fontWeight: FontWeight.w600),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
-                  
+
                   const Spacer(),
-                  const Divider(),
+                  
+                  // Divider before buttons
+                  Divider(color: Colors.grey.shade200, height: 16),
+                  
+                  // Action Buttons Row
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, // Spread out detail and action
                     children: [
-                      TextButton(onPressed: (){}, child: const Text('Detail')),
+                      // Detail Button
+                      InkWell(
+                        onTap: () => context.push('/admin/disposal/detail/${item.id}'),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                          child: Text(
+                            'Detail',
+                            style: GoogleFonts.inter(fontSize: 12, color: Colors.grey[600], fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                      ),
+                      // Verifikasi Button - Role-based (Admin/Kasubbag UMPEG only)
                       if (item.status == 'proposed')
-                        FilledButton(onPressed: (){}, style: FilledButton.styleFrom(visualDensity: VisualDensity.compact), child: const Text('Verifikasi')),
+                        Builder(
+                          builder: (context) {
+                            final userRole = ref.watch(currentUserRoleProvider);
+                            final canVerify = userRole == 'admin' || userRole == 'kasubbag_umpeg';
+                            
+                            if (canVerify) {
+                              return SizedBox(
+                                height: 30,
+                                child: FilledButton(
+                                  onPressed: () => context.push('/admin/disposal/detail/${item.id}'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: Colors.blue.shade700,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  ),
+                                  child: Text(
+                                    'Verifikasi',
+                                    style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  'Menunggu',
+                                  style: TextStyle(fontSize: 10, color: Colors.orange.shade700, fontWeight: FontWeight.w600),
+                                ),
+                              );
+                            }
+                          },
+                        ),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -258,7 +396,7 @@ class _DisposalListScreenState extends ConsumerState<DisposalListScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(4),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 4)],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 4)],
       ),
       child: Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 10)),
     );

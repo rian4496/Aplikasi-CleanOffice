@@ -1,3 +1,4 @@
+﻿import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/transactions/transaction_models.dart';
 import '../models/transactions/disposal_model.dart';
@@ -10,35 +11,59 @@ class ProcurementRepository {
 
   ProcurementRepository(this._client);
 
-  /// Fetch all requests, joining relevant tables
+  /// Fetch all active requests (not archived)
   Future<List<ProcurementRequest>> fetchRequests() async {
     try {
       final response = await _client
           .from('transactions_procurement')
           .select('''
             *,
-            requester:master_pegawai(nama_lengkap),
+            requester:employees(full_name),
             items:transaction_procurement_items(*)
           ''')
+          .or('is_archived.is.null,is_archived.eq.false') // Default False or Null
           .order('request_date', ascending: false);
 
-      return (response as List).map((e) {
-        // Flatten Join for simplified Model
-        final requester = e['requester'] != null ? e['requester']['nama_lengkap'] : null;
-        
-        // Items are nested
-        final itemsList = (e['items'] as List?) ?? [];
-        
-        // Create map with requester_name for model compatibility
-        final map = Map<String, dynamic>.from(e);
-        if (requester != null) map['requester_name'] = requester;
-        map['items'] = itemsList;
-
-        return ProcurementRequest.fromJson(map);
-      }).toList();
+      return (response as List).map((e) => _mapToModel(e)).toList();
     } catch (e) {
       throw Exception('Failed to load procurement requests: $e');
     }
+  }
+
+  /// Fetch properties for mapping
+  ProcurementRequest _mapToModel(dynamic e) {
+    // Flatten Join for simplified Model
+    final requester = e['requester'] != null ? e['requester']['full_name'] : null;
+    final itemsList = (e['items'] as List?) ?? [];
+    
+    final map = Map<String, dynamic>.from(e);
+    if (requester != null) map['requester_name'] = requester;
+    map['items'] = itemsList;
+
+    return ProcurementRequest.fromJson(map);
+  }
+
+  /// Fetch Archived Requests
+  Future<List<ProcurementRequest>> fetchArchivedRequests() async {
+    try {
+      final response = await _client
+          .from('transactions_procurement')
+          .select('''
+            *,
+            requester:employees(full_name),
+            items:transaction_procurement_items(*)
+          ''')
+          .eq('is_archived', true)
+          .order('request_date', ascending: false);
+
+      return (response as List).map((e) => _mapToModel(e)).toList();
+    } catch (e) {
+      throw Exception('Failed to load archived requests: $e');
+    }
+  }
+
+  Future<void> archiveRequest(String id, bool archive) async {
+    await _client.from('transactions_procurement').update({'is_archived': archive}).eq('id', id);
   }
 
   /// Create a new Request with Items
@@ -91,6 +116,14 @@ class ProcurementRepository {
     }
   }
 
+  /// Delete request (and cascade items manually if needed)
+  Future<void> deleteRequest(String id) async {
+    // Note: If using CASCADE in SQL, just deleting header is enough.
+    // But to be safe in app logic:
+    await _client.from('transaction_procurement_items').delete().eq('procurement_id', id);
+    await _client.from('transactions_procurement').delete().eq('id', id);
+  }
+
   /// Private: Auto-deduct budget when approved
   Future<void> _processBudgetDeduction(String procurementId) async {
     try {
@@ -116,7 +149,7 @@ class ProcurementRepository {
       for (var entry in budgetDeductions.entries) {
         // Fetch current remaining
         final budgetRes = await _client
-            .from('master_anggaran')
+            .from('budgets')
             .select('remaining_amount')
             .eq('id', entry.key)
             .single();
@@ -125,12 +158,12 @@ class ProcurementRepository {
         
         // Update
         await _client
-            .from('master_anggaran')
+            .from('budgets')
             .update({'remaining_amount': currentRemaining - entry.value})
             .eq('id', entry.key);
       }
     } catch (e) {
-      print('ERP Error (Budget Deduction): $e');
+      debugPrint('ERP Error (Budget Deduction): $e');
       // Non-blocking error logging
     }
   }
@@ -156,7 +189,7 @@ class ProcurementRepository {
 
         // Register each unit individually for tracking (Standard Asset Mgmt Practice)
         for (var i = 0; i < qty; i++) {
-            await _client.from('master_assets').insert({
+            await _client.from('assets').insert({
             'name': name,
             'status': 'active',
             'condition': 'good',
@@ -171,7 +204,7 @@ class ProcurementRepository {
         }
       }
     } catch (e) {
-      print('ERP Error (Asset Registration): $e');
+      debugPrint('ERP Error (Asset Registration): $e');
     }
   }
 }
@@ -190,7 +223,7 @@ class MaintenanceRepository {
           .from('transactions_maintenance')
           .select('''
             *,
-            asset:master_assets(name)
+            asset:assets(name)
           ''')
           .order('created_at', ascending: false);
 
@@ -243,7 +276,7 @@ class DisposalRepository {
     try {
       final response = await _client
           .from('transactions_disposal')
-          .select('*, asset:master_assets(name, asset_code)')
+          .select('*, asset:assets(name, asset_code)')
           .order('created_at', ascending: false);
 
       return (response as List).map((json) {

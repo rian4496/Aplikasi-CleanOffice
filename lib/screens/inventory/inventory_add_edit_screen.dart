@@ -1,4 +1,4 @@
-// lib/screens/inventory/inventory_add_edit_screen.dart
+﻿// lib/screens/inventory/inventory_add_edit_screen.dart
 // Add/Edit Inventory Item Screen with full form validation
 
 import 'package:flutter/material.dart';
@@ -14,7 +14,7 @@ import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
 import '../../services/inventory_service.dart';
 import '../../services/storage_service.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 
 class InventoryAddEditScreen extends ConsumerStatefulWidget {
   final InventoryItem? item; // null = Add mode, non-null = Edit mode
@@ -205,25 +205,18 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
   // ==================== APP BAR ====================
   AppBar _buildAppBar() {
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.transparent, // Or Colors.white if preferred, but transparent works with scaffold color
       elevation: 0,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
+      // Removed flexibleSpace gradient
+      iconTheme: const IconThemeData(color: Colors.black), // Black back arrow
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, color: Colors.black),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
         isEditMode ? 'Edit Item Inventaris' : 'Tambah Item Inventaris',
         style: const TextStyle(
-          color: Colors.white,
+          color: Colors.black, // Black text
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -725,7 +718,7 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
                       color: Colors.white,
                     ),
                   )
-                : Icon(isEditMode ? Icons.save : Icons.add),
+                : Icon(isEditMode ? Icons.save : Icons.add, color: Colors.white),
             label: Text(_isSaving
                 ? (isEditMode ? 'Menyimpan...' : 'Menambahkan...')
                 : (isEditMode ? 'Simpan Perubahan' : 'Tambah Item')),
@@ -779,7 +772,7 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.camera_alt, color: Colors.blue),
@@ -792,7 +785,7 @@ class _InventoryAddEditScreenState extends ConsumerState<InventoryAddEditScreen>
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
+                    color: Colors.green.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.photo_library, color: Colors.green),

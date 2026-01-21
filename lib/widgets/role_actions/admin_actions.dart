@@ -9,7 +9,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/admin_providers.dart';
+import '../../riverpod/admin_providers.dart';
 
 final _logger = AppLogger('AdminActions');
 

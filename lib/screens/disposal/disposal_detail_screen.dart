@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import '../../providers/transaction_providers.dart';
+import '../../riverpod/transaction_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../models/transactions/disposal_model.dart';
 import '../../widgets/common/pdf_preview_dialog.dart';
 
@@ -58,11 +59,23 @@ class DisposalDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
                 _buildInfoCard(request),
                 const SizedBox(height: 24),
-                if (request.status == 'draft' || request.status == 'submitted') ...[
-                   _buildActionButtons(context, ref, request),
-                ] else ...[
-                   _buildExecutionInfo(context, ref, request),
-                ]
+                // Role-based verification: Only Admin and Kasubbag UMPEG can verify
+                Builder(
+                  builder: (context) {
+                    final userRole = ref.watch(currentUserRoleProvider);
+                    final canVerify = userRole == 'admin' || userRole == 'kasubbag_umpeg';
+                    
+                    if (request.status == 'draft' || request.status == 'submitted') {
+                      if (canVerify) {
+                        return _buildActionButtons(context, ref, request);
+                      } else {
+                        return _buildPendingVerificationInfo();
+                      }
+                    } else {
+                      return _buildExecutionInfo(context, ref, request);
+                    }
+                  },
+                ),
               ],
             ),
           );
@@ -95,7 +108,7 @@ class DisposalDetailScreen extends ConsumerWidget {
         const Spacer(),
         Chip(
           label: Text(req.status.toUpperCase()),
-          backgroundColor: _getStatusColor(req.status).withOpacity(0.1),
+          backgroundColor: _getStatusColor(req.status).withValues(alpha: 0.1),
           labelStyle: TextStyle(color: _getStatusColor(req.status), fontWeight: FontWeight.bold),
         )
       ],
@@ -158,6 +171,38 @@ class DisposalDetailScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPendingVerificationInfo() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.hourglass_empty, color: Colors.orange.shade800, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Menunggu Verifikasi',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Pengajuan ini sedang menunggu verifikasi dari Admin atau Kasubbag UMPEG.',
+            style: TextStyle(fontSize: 12, color: Colors.orange.shade700),
+          ),
+        ],
+      ),
     );
   }
 
@@ -246,9 +291,23 @@ class DisposalDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _updateStatus(BuildContext context, WidgetRef ref, String id, String status, {String? type, double? finalValue}) async {
-    await ref.read(disposalRepositoryProvider).updateStatus(id, status, disposalType: type, finalValue: finalValue);
-    ref.invalidate(disposalListProvider);
-    if (context.mounted) Navigator.pop(context); // Close dialog or screen depending on context (Dialog handled inside, Screen handling OK)
+    try {
+      await ref.read(disposalRepositoryProvider).updateStatus(id, status, disposalType: type, finalValue: finalValue);
+      ref.invalidate(disposalListProvider);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Status berhasil diubah ke: ${status.toUpperCase()}'), backgroundColor: Colors.green),
+        );
+        Navigator.pop(context); // Close dialog or screen
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal mengubah status: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   Color _getStatusColor(String status) {

@@ -9,9 +9,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../models/report.dart';
-import '../../providers/riverpod/employee_providers.dart';
+import '../../riverpod/employee_providers.dart';
 import '../../core/theme/app_theme.dart';
-import '../../widgets/universal_image.dart';
+import '../../widgets/shared/universal_image.dart';
 
 /// Edit Report Screen - Form to update existing report
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget

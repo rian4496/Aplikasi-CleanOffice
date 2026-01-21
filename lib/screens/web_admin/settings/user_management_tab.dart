@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/design/admin_colors.dart';
@@ -13,8 +13,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/design/admin_colors.dart';
 import '../../../core/design/admin_typography.dart';
 import '../../../models/user_profile.dart';
-import '../../../providers/riverpod/user_providers.dart';
-import '../../../providers/riverpod/supabase_service_providers.dart';
+import '../../../riverpod/user_providers.dart';
+import '../../../riverpod/supabase_service_providers.dart';
 import 'user_form_dialog.dart';
 
 class UserManagementTab extends HookConsumerWidget {
@@ -79,68 +79,87 @@ class UserManagementTab extends HookConsumerWidget {
       }
     }
 
-    return DefaultTabController(
-      length: 3,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Toolbar
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: searchCtrl,
-                  decoration: const InputDecoration(
-                    hintText: 'Cari User (Nama / NIP / Email)',
-                    prefixIcon: Icon(Icons.search),
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isMobile = constraints.maxWidth < 600;
+
+        // Content Widget
+        final content = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Toolbar
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: searchCtrl,
+                    decoration: InputDecoration(
+                      hintText: 'Cari User (Nama / NIP / Email)',
+                      prefixIcon: const Icon(Icons.search),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                      isDense: true,
+                      contentPadding: const EdgeInsets.all(12),
+                      fillColor: Colors.white,
+                      filled: true,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  await showDialog(
-                    context: context, 
-                    builder: (c) => const UserFormDialog() // Add Mode
-                  );
-                  // No refresh needed strictly as Add is manual instructions
-                },
-                icon: const Icon(Icons.person_add, color: Colors.white),
-                label: const Text('Tambah User'),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
-                  backgroundColor: AdminColors.primary,
-                  foregroundColor: Colors.white,
+                const SizedBox(width: 16),
+                // Total User Count
+                usersAsync.maybeWhen(
+                  data: (users) => Text(
+                    isMobile ? '${users.length}' : 'Total User: ${users.length}',
+                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey),
+                  ),
+                  orElse: () => const SizedBox.shrink(),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          
-          // Tabs
-          Container(
-            decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
-            ),
-            child: TabBar(
-              onTap: (index) => tabIndex.value = index,
-              labelColor: AdminColors.primary,
-              unselectedLabelColor: Colors.grey,
-              indicatorColor: AdminColors.primary,
-              tabs: const [
-                Tab(text: 'Daftar User'),
-                Tab(text: 'Perlu Approval'),
-                Tab(text: 'Dihapus'),
+                // Desktop Add Button
+                if (!isMobile) ...[
+                  const SizedBox(width: 16),
+                  ElevatedButton.icon(
+                    onPressed: () async {
+                      final success = await showDialog<bool>(
+                        context: context, 
+                        builder: (c) => const UserFormDialog() // Add Mode
+                      );
+                      if (success == true) {
+                        _refresh();
+                      }
+                    },
+                    icon: const Icon(Icons.person_add, color: Colors.white),
+                    label: const Text('Tambah User'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
+                      backgroundColor: AdminColors.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
               ],
             ),
-          ),
+            const SizedBox(height: 16),
+            
+            // Tabs
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey, width: 0.5)),
+              ),
+              child: TabBar(
+                onTap: (index) => tabIndex.value = index,
+                labelColor: AdminColors.primary,
+                unselectedLabelColor: Colors.grey,
+                indicatorColor: AdminColors.primary,
+                tabs: const [
+                  Tab(text: 'Daftar User'),
+                  Tab(text: 'Perlu Approval'),
+                  Tab(text: 'Dihapus'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
 
-          // Table Content
-          Expanded(
-            child: Container(
-              margin: const EdgeInsets.only(top: 0),
+            // Responsive Content
+            Expanded(
               child: usersAsync.when(
                 data: (users) {
                   // Filter logic
@@ -152,9 +171,9 @@ class UserManagementTab extends HookConsumerWidget {
 
                      // 2. Tab Filter
                      switch (tabIndex.value) {
-                       case 0: // Daftar User (Active/Inactive but not deleted, and verified)
+                       case 0: // Daftar User
                          return u.status != 'deleted' && u.verificationStatus != 'pending';
-                       case 1: // Perlu Approval (Pending verification)
+                       case 1: // Perlu Approval
                          return u.verificationStatus == 'pending';
                        case 2: // Deleted
                          return u.status == 'deleted';
@@ -168,38 +187,115 @@ class UserManagementTab extends HookConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(Icons.person_off, size: 48, color: Colors.grey),
+                          Icon(Icons.person_off, size: 64, color: Colors.grey[300]),
                           const SizedBox(height: 16),
-                          Text(tabIndex.value == 1 ? 'Tidak ada user perlu approval.' : 'Tidak ada user ditemukan.'),
+                          Text(tabIndex.value == 1 ? 'Tidak ada user perlu approval.' : 'Tidak ada user ditemukan.',
+                            style: TextStyle(color: Colors.grey[600])),
                         ],
                       ),
                     );
                   }
 
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: DataTable(
-                      headingRowColor: MaterialStateProperty.all(Colors.grey[100]),
-                      columns: const [
-                         DataColumn(label: Text('Nama Lengkap', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Email / NIP', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Peran', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Unit Kerja', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Status Ver.', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Status Akun', style: TextStyle(fontWeight: FontWeight.bold))),
-                         DataColumn(label: Text('Aksi', style: TextStyle(fontWeight: FontWeight.bold))),
-                      ],
-                      rows: filtered.map((user) => _buildUserRow(context, ref, user, _refresh, _handleDelete, _handleApprove)).toList(),
-                    ),
+                  if (isMobile) {
+                    return ListView.separated(
+                      padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80), // Extra bottom padding for FAB
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final user = filtered[index];
+                        return _MobileUserCard(
+                           user: user,
+                           onEdit: () async {
+                              final success = await showDialog<bool>(
+                                context: context, 
+                                builder: (c) => UserFormDialog(user: user),
+                              );
+                              if (success == true) _refresh();
+                           },
+                           onDelete: () => _handleDelete(user),
+                           onApprove: () => _handleApprove(user),
+                        );
+                      },
+                    );
+                  }
+
+                  // Desktop Table View
+                  return Column(
+                    children: [
+                      // Header Row
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: AdminColors.primary.withValues(alpha: 0.05),
+                          border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 40), // Expand icon space
+                            const SizedBox(width: 40), // Avatar space
+                            const SizedBox(width: 16),
+                            Expanded(flex: 3, child: Text('Nama Lengkap', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))),
+                            Expanded(flex: 2, child: Text('Email', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))),
+                            Expanded(flex: 2, child: Text('Peran', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))),
+                            Expanded(flex: 2, child: Text('No HP', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))),
+                            SizedBox(width: 70, child: Text('Status', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[700]))),
+                            const SizedBox(width: 80), // Actions
+                          ],
+                        ),
+                      ),
+                      
+                      // List Content
+                      Expanded(
+                        child: ListView.builder(
+                          itemCount: filtered.length,
+                          itemBuilder: (context, index) {
+                            final user = filtered[index];
+                            return _UserListTile(
+                              user: user,
+                              onEdit: () async {
+                                final success = await showDialog<bool>(
+                                  context: context, 
+                                  builder: (c) => UserFormDialog(user: user),
+                                );
+                                if (success == true) _refresh();
+                              },
+                              onDelete: () => _handleDelete(user),
+                              onApprove: () => _handleApprove(user),
+                            );
+                          },
+                        ),
+                      ),
+                    ],
                   );
                 },
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (err, stack) => Center(child: Text('Error: $err')),
               ),
             ),
+          ],
+        );
+
+        return DefaultTabController(
+          length: 3,
+          child: Scaffold(
+            backgroundColor: Colors.transparent, // Maintain existing bg
+            body: content,
+            floatingActionButton: isMobile ? FloatingActionButton(
+              onPressed: () async {
+                final success = await showDialog<bool>(
+                  context: context, 
+                  builder: (c) => const UserFormDialog() // Add Mode
+                );
+                if (success == true) {
+                  _refresh();
+                }
+              },
+              backgroundColor: AdminColors.primary,
+              child: const Icon(Icons.add, color: Colors.white),
+            ) : null,
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -217,7 +313,7 @@ class UserManagementTab extends HookConsumerWidget {
           children: [
             CircleAvatar(
               radius: 16,
-              backgroundColor: AdminColors.primary.withOpacity(0.1),
+              backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
               child: Text(user.displayName.isNotEmpty ? user.displayName[0] : '?', style: TextStyle(color: AdminColors.primary)),
             ),
             const SizedBox(width: 12),
@@ -268,34 +364,27 @@ class UserManagementTab extends HookConsumerWidget {
   }
 
   Widget _buildRoleBadge(String role) {
-    Color color;
     String label;
     switch (role) {
       case 'admin':
-        color = Colors.purple;
         label = 'Administrator';
         break;
-      case 'employee': // UserRole.employee
-        color = Colors.blue;
-        label = 'Pengurus';
+      case 'kasubbag_umpeg':
+        label = 'Kasubag Umpeg';
+        break;
+      case 'teknisi':
+        label = 'Teknisi Aset';
         break;
       case 'cleaner':
-        color = Colors.orange;
-        label = 'Teknisi';
+        label = 'Petugas Kebersihan';
+        break;
+      case 'employee':
+        label = 'Pegawai Umum';
         break;
       default:
-        color = Colors.grey;
         label = role;
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-    );
+    return Text(label);
   }
 
   Widget _buildStatusBadge(String status) {
@@ -337,5 +426,367 @@ class UserManagementTab extends HookConsumerWidget {
       default: color = Colors.grey;
     }
     return Text(status.toUpperCase(), style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 11));
+  }
+}
+
+// ==================== USER LIST TILE (Expandable Row) ====================
+class _UserListTile extends StatefulWidget {
+  final UserProfile user;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onApprove;
+
+  const _UserListTile({
+    required this.user,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onApprove,
+  });
+
+  @override
+  State<_UserListTile> createState() => _UserListTileState();
+}
+
+class _UserListTileState extends State<_UserListTile> {
+  bool _expanded = false;
+
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'admin': return 'Administrator';
+      case 'kasubbag_umpeg': return 'Kasubag Umpeg';
+      case 'teknisi': return 'Teknisi Aset';
+      case 'cleaner': return 'Petugas Kebersihan';
+      case 'employee': return 'Pegawai Umum';
+      default: return role;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = widget.user;
+    
+    return Column(
+      children: [
+        // Main Row
+        InkWell(
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: _expanded ? Colors.grey[50] : Colors.white,
+              border: Border(bottom: BorderSide(color: Colors.grey[200]!)),
+            ),
+            child: Row(
+              children: [
+                // Expand Icon
+                Icon(
+                  _expanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+                  color: Colors.grey[400],
+                ),
+                const SizedBox(width: 8),
+                // Avatar
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.grey[200],
+                  child: Text(
+                    user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                    style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                // Name
+                Expanded(
+                  flex: 3,
+                  child: Text(user.displayName, style: const TextStyle(fontWeight: FontWeight.w600)),
+                ),
+                // Email
+                Expanded(
+                  flex: 2,
+                  child: Text(user.email, style: TextStyle(fontSize: 13, color: Colors.grey[700])),
+                ),
+                // Role
+                Expanded(flex: 2, child: Text(_getRoleDisplayName(user.role))),
+                // Phone
+                Expanded(flex: 2, child: Text(user.phoneNumber ?? '-')),
+                // Status Badge
+                SizedBox(
+                  width: 70,
+                  child: _buildStatusPill(user.status),
+                ),
+                // Actions
+                SizedBox(
+                  width: 80,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (user.verificationStatus == 'pending')
+                        IconButton(
+                          icon: const Icon(Icons.check_circle, color: Colors.green),
+                          onPressed: widget.onApprove,
+                          tooltip: 'Approve',
+                          iconSize: 20,
+                        )
+                      else ...[
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue),
+                          onPressed: widget.onEdit,
+                          tooltip: 'Edit',
+                          iconSize: 20,
+                        ),
+                        if (user.status != 'deleted')
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red),
+                            onPressed: widget.onDelete,
+                            tooltip: 'Hapus',
+                            iconSize: 20,
+                          ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        // Expanded Details
+        if (_expanded)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            color: Colors.grey[50],
+            child: Wrap(
+              spacing: 48,
+              runSpacing: 16,
+              children: [
+                _buildDetailItem('Email', user.email),
+                _buildDetailItem('No. HP', user.phoneNumber ?? '-'),
+                _buildDetailItem('Role', _getRoleDisplayName(user.role)),
+                _buildDetailItem('Status Akun', user.status.toUpperCase()),
+                _buildDetailItem('Status Verifikasi', user.verificationStatus.toUpperCase()),
+                _buildDetailItem('Lokasi', user.location ?? '-'),
+                _buildDetailItem('Tanggal Bergabung', _formatDate(user.joinDate)),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatusPill(String status) {
+    Color bgColor;
+    Color textColor;
+    switch (status) {
+      case 'active':
+        bgColor = Colors.green;
+        textColor = Colors.white;
+        break;
+      case 'inactive':
+        bgColor = Colors.grey;
+        textColor = Colors.white;
+        break;
+      case 'deleted':
+        bgColor = Colors.red;
+        textColor = Colors.white;
+        break;
+      default:
+        bgColor = Colors.grey;
+        textColor = Colors.white;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        status.toUpperCase(),
+        style: TextStyle(color: textColor, fontSize: 9, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(String label, String value) {
+    return SizedBox(
+      width: 200,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    final months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+}
+
+class _MobileUserCard extends StatelessWidget {
+  final UserProfile user;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+  final VoidCallback onApprove;
+
+  const _MobileUserCard({
+    required this.user,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onApprove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AdminColors.primary.withValues(alpha: 0.1),
+                child: Text(
+                  user.displayName.isNotEmpty ? user.displayName[0].toUpperCase() : '?',
+                  style: TextStyle(color: AdminColors.primary, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Name & Email
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.displayName.isNotEmpty ? user.displayName : (user.email.split('@').first),
+                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      user.email, 
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12), 
+                      maxLines: 1, 
+                      overflow: TextOverflow.ellipsis
+                    ),
+                  ],
+                ),
+              ),
+              // Actions
+              if (user.status == 'active' || user.status == 'inactive')
+                IconButton(
+                  icon: const Icon(Icons.more_vert),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  onPressed: () {
+                     _showActionSheet(context, user);
+                  },
+                )
+              else if (user.verificationStatus == 'pending')
+                 IconButton(
+                  icon: const Icon(Icons.check_circle, color: Colors.green),
+                  onPressed: onApprove, // Use passed callback
+                  tooltip: 'Approve',
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _buildStatusPill(user.status),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  _getRoleDisplayName(user.role),
+                  style: const TextStyle(color: Colors.blue, fontSize: 9, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfo(String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(fontSize: 11, color: Colors.grey[600])),
+        const SizedBox(height: 2),
+        Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500)),
+      ],
+    );
+  }
+  
+  Widget _buildStatusPill(String status) {
+     Color color;
+     switch (status) {
+       case 'active': color = Colors.green; break;
+       case 'inactive': color = Colors.grey; break;
+       case 'deleted': color = Colors.red; break;
+       default: color = Colors.blue;
+     }
+     return Container(
+       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+       decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+       child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold)),
+     );
+  }
+
+  String _getRoleDisplayName(String role) {
+    switch (role) {
+      case 'admin': return 'Administrator';
+      case 'kasubbag_umpeg': return 'Kasubag Umpeg';
+      case 'teknisi': return 'Teknisi';
+      case 'cleaner': return 'Petugas Kebersihan';
+      default: return 'Pegawai';
+    }
+  }
+
+  void _showActionSheet(BuildContext context, UserProfile user) {
+     showModalBottomSheet(
+       context: context,
+       builder: (c) => Column(
+         mainAxisSize: MainAxisSize.min,
+         children: [
+           ListTile(
+             leading: const Icon(Icons.edit, color: Colors.blue),
+             title: const Text('Edit User'),
+             onTap: () { Navigator.pop(c); onEdit(); },
+           ),
+           if (user.status != 'deleted')
+             ListTile(
+               leading: const Icon(Icons.delete, color: Colors.red),
+               title: const Text('Hapus User'),
+               onTap: () { Navigator.pop(c); onDelete(); },
+             ),
+         ],
+       ),
+     );
   }
 }

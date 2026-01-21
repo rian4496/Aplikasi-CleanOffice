@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/lists/activity_list_item.dart
+﻿// lib/widgets/web_admin/lists/activity_list_item.dart
 // 📌 Activity List Item
 // Compact list item for recent activities
 
@@ -48,7 +48,7 @@ class ActivityListItem extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(AdminConstants.spaceSm),
                 decoration: BoxDecoration(
-                  color: iconColor.withOpacity(0.15),
+                  color: iconColor.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                 ),
                 child: Icon(

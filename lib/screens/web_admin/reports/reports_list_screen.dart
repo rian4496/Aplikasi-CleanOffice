@@ -1,4 +1,4 @@
-// lib/screens/web_admin/reports/reports_list_screen.dart
+﻿// lib/screens/web_admin/reports/reports_list_screen.dart
 // 📋 Reports List Screen
 // Mobile reports management with search, filters, and batch actions
 
@@ -14,7 +14,7 @@ import '../../../widgets/web_admin/filters/horizontal_filter_chips.dart';
 import '../../../widgets/web_admin/cards/mobile_report_card.dart';
 import '../../../widgets/web_admin/actions/batch_action_bar.dart';
 import '../../../models/report.dart';
-import '../../../providers/riverpod/report_providers.dart';
+import '../../../riverpod/report_providers.dart';
 
 class ReportsListScreen extends HookConsumerWidget {
   const ReportsListScreen({super.key});
@@ -221,7 +221,7 @@ class ReportsListScreen extends HookConsumerWidget {
             Icon(
               Icons.description_outlined,
               size: 64,
-              color: AdminColors.textSecondary.withOpacity(0.5),
+              color: AdminColors.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(
@@ -255,7 +255,7 @@ class ReportsListScreen extends HookConsumerWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: AdminColors.error.withOpacity(0.5),
+              color: AdminColors.error.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(

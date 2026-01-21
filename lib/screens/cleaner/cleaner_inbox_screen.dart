@@ -1,4 +1,4 @@
-// lib/screens/cleaner/cleaner_inbox_screen.dart
+﻿// lib/screens/cleaner/cleaner_inbox_screen.dart
 // Inbox Screen untuk Cleaner - Menampung Laporan Masuk + Permintaan Layanan pending + Keluhan (Tickets)
 
 import 'package:flutter/material.dart';
@@ -8,9 +8,9 @@ import 'package:google_fonts/google_fonts.dart'; // Added
 import 'package:intl/intl.dart'; // Added
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
-import '../../providers/riverpod/ticket_providers.dart'; // Added
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
+import '../../riverpod/ticket_providers.dart'; // Added
+import '../../riverpod/auth_providers.dart';
 import '../../models/ticket.dart'; // Added
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/cleaner/cleaner_report_card.dart';
@@ -307,7 +307,7 @@ class _CleanerInboxScreenState extends ConsumerState<CleanerInboxScreen>
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),
@@ -462,9 +462,9 @@ class _CleanerTicketCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getPriorityColor(ticket.priority).withOpacity(0.1),
+                      color: _getPriorityColor(ticket.priority).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _getPriorityColor(ticket.priority).withOpacity(0.3)),
+                      border: Border.all(color: _getPriorityColor(ticket.priority).withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       ticket.priority.displayName,
@@ -595,7 +595,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

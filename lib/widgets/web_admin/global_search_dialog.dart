@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -60,7 +60,7 @@ class GlobalSearchDialog extends HookConsumerWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
-             BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 20, offset: const Offset(0, 10)),
+             BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
           ],
         ),
         child: Column(
@@ -107,7 +107,7 @@ class GlobalSearchDialog extends HookConsumerWidget {
                         final item = results.value[index];
                         return ListTile(
                           leading: CircleAvatar(
-                            backgroundColor: item.color.withOpacity(0.1),
+                            backgroundColor: item.color.withValues(alpha: 0.1),
                             child: Icon(item.icon, color: item.color, size: 20),
                           ),
                           title: Text(item.title, style: const TextStyle(fontWeight: FontWeight.w600)),

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,25 +6,54 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
 import '../../../../../widgets/web_admin/actions/generic_export_button.dart';
+import '../../../../../widgets/shared/responsive_stats_grid.dart'; // Responsive Grid
 
 class ProcurementListScreen extends HookConsumerWidget {
   const ProcurementListScreen({super.key});
 
+  @override
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // 1. Fetch Data
     final requestsAsync = ref.watch(procurementListProvider);
     
     // 2. Local State
+// 2. Local State
     final searchController = useTextEditingController();
     final searchQuery = useState('');
+    final filterStatus = useState('all'); // Filter State
     final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final isMobile = MediaQuery.of(context).size.width < 600; // Define Check
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
+      floatingActionButton: isMobile ? Container(
+         margin: const EdgeInsets.only(bottom: 16),
+         child: InkWell(
+            onTap: () => context.go('/admin/procurement/new'),
+            borderRadius: BorderRadius.circular(50),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.9)]),
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.add_shopping_cart, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Buat Pengajuan', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+            ),
+         ),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       body: requestsAsync.when(
         data: (allRequests) {
           // --- KPI Calculation ---
@@ -36,8 +65,22 @@ class ProcurementListScreen extends HookConsumerWidget {
           // Filtered List for Table
           final filtered = allRequests.where((r) {
              final q = searchQuery.value.toLowerCase();
-             return r.code.toLowerCase().contains(q) || 
+             final matchSearch = r.code.toLowerCase().contains(q) || 
                     (r.description ?? '').toLowerCase().contains(q);
+             
+             bool matchFilter = true;
+             final s = r.status.toLowerCase();
+             if (filterStatus.value == 'pending') {
+               matchFilter = s.contains('pending') || s.contains('review') || s.contains('draft');
+             } else if (filterStatus.value == 'active') {
+               matchFilter = s.contains('approved') || s.contains('issued');
+             } else if (filterStatus.value == 'completed') {
+               matchFilter = s.contains('completed') || s.contains('received');
+             } else if (filterStatus.value == 'rejected') {
+               matchFilter = s.contains('rejected');
+             }
+             
+             return matchSearch && matchFilter;
           }).toList();
 
           return CustomScrollView(
@@ -48,36 +91,65 @@ class ProcurementListScreen extends HookConsumerWidget {
                 pinned: true,
                 backgroundColor: Colors.white,
                 elevation: 0,
+                // Back button for mobile
+                leading: isMobile ? IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+                  onPressed: () => context.canPop() ? context.pop() : context.go('/admin/dashboard'),
+                ) : null,
+                automaticallyImplyLeading: false,
                 bottom: PreferredSize(
                    preferredSize: const Size.fromHeight(1.0),
                    child: Container(color: Colors.grey[200], height: 1),
                 ),
-                title: Text('Procurement Command Center', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black87)),
+                title: LayoutBuilder(
+                   builder: (context, constraints) {
+                     return Text(
+                       constraints.maxWidth < 600 ? 'Procurement' : 'Procurement Command Center', 
+                       style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black87)
+                     );
+                   }
+                ),
                 actions: [
-                   GenericExportButton(
-                    title: 'Laporan Pengadaan',
-                    headers: const ['Kode Request', 'Tanggal', 'Pengaju', 'Deskripsi', 'Total Estimasi', 'Status'],
-                    data: filtered,
-                    rowBuilder: (item) => [
-                      item.code,
-                      DateFormat('yyyy-MM-dd').format(item.requestDate),
-                      item.requesterName ?? '-',
-                      item.description ?? '-',
-                      currencyFormat.format(item.totalEstimatedBudget),
-                      item.status,
-                    ],
-                  ),
-                  const SizedBox(width: 8),
-                  FilledButton.icon(
-                    onPressed: () => context.go('/admin/procurement/new'),
-                    icon: const Icon(Icons.add_shopping_cart, size: 18),
-                    label: const Text('Buat Pengajuan'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppTheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                   // Web/Tablet Actions
+                   if (!isMobile) ...[
+                     IconButton(
+                       icon: const Icon(Icons.folder_special_outlined, color: Colors.grey),
+                       tooltip: 'Arsip Pengadaan',
+                       onPressed: () => context.go('/admin/procurement/archive'),
+                     ),
+                     const SizedBox(width: 8),
+                     GenericExportButton(
+                      title: 'Laporan Pengadaan',
+                      headers: const ['Kode Request', 'Tanggal', 'Pengaju', 'Deskripsi', 'Total Estimasi', 'Status'],
+                      data: filtered,
+                      rowBuilder: (item) => [
+                        item.code,
+                        DateFormat('yyyy-MM-dd').format(item.requestDate),
+                        item.requesterName ?? '-',
+                        item.description ?? '-',
+                        currencyFormat.format(item.totalEstimatedBudget),
+                        item.status,
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 16),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: () => context.go('/admin/procurement/new'),
+                      icon: const Icon(Icons.add_shopping_cart, size: 18),
+                      label: const Text('Buat Pengajuan'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppTheme.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                   ] else ...[
+                     // Mobile Actions (Compact - Archive only, Create moved to FAB)
+                     IconButton(
+                       icon: const Icon(Icons.folder_special_outlined, color: Colors.grey),
+                       onPressed: () => context.go('/admin/procurement/archive'),
+                     ),
+                     const SizedBox(width: 8),
+                   ]
                 ],
               ),
 
@@ -85,16 +157,28 @@ class ProcurementListScreen extends HookConsumerWidget {
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.all(AppTheme.spacingMd),
-                  child: Row(
-                    children: [
-                      Expanded(child: _buildKpiCard('Menunggu Persetujuan', pendingCount.toString(), 'Request', Colors.orange, Icons.hourglass_top)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildKpiCard('Purchase Orders (Aktif)', approvedCount.toString(), 'Active PO', Colors.blue, Icons.shopping_bag_outlined)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildKpiCard('Total Belanja (YTD)', currencyFormat.format(totalSpend), 'Budget Used', Colors.purple, Icons.monetization_on_outlined)),
-                      const SizedBox(width: 16),
-                      Expanded(child: _buildKpiCard('Selesai / Diterima', completedCount.toString(), 'Items Received', Colors.green, Icons.check_circle_outline)),
-                    ],
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 800;
+                      // Stats List
+                      final statsChildren = [
+                        _buildKpiCard('Menunggu Persetujuan', pendingCount.toString(), 'Request', Colors.orange, Icons.hourglass_top, isMobile),
+                        _buildKpiCard('Active PO', approvedCount.toString(), 'Active PO', Colors.blue, Icons.shopping_bag_outlined, isMobile),
+                        _buildKpiCard('Total Belanja', currencyFormat.format(totalSpend), 'Budget Used', Colors.purple, Icons.monetization_on_outlined, isMobile),
+                        _buildKpiCard('Selesai', completedCount.toString(), 'Items Received', Colors.green, Icons.check_circle_outline, isMobile),
+                      ];
+
+                      if (isMobile) {
+                        return SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: statsChildren.map((w) => Padding(padding: const EdgeInsets.only(right: 12), child: SizedBox(width: 180, child: w))).toList(),
+                          ),
+                        );
+                      }
+                      
+                      return ResponsiveStatsGrid(children: statsChildren);
+                    }
                   ),
                 ),
               ),
@@ -110,7 +194,7 @@ class ProcurementListScreen extends HookConsumerWidget {
                           controller: searchController,
                           decoration: InputDecoration(
                             prefixIcon: const Icon(Icons.search),
-                            hintText: 'Cari Kode Request atau Barang...',
+                            hintText: 'Cari Request...',
                             filled: true,
                             fillColor: Colors.white,
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
@@ -120,7 +204,18 @@ class ProcurementListScreen extends HookConsumerWidget {
                         ),
                       ),
                        const SizedBox(width: 12),
-                       IconButton(onPressed: () {}, icon: const Icon(Icons.filter_list), tooltip: 'Advanced Filters'),
+                       PopupMenuButton<String>(
+                         icon: Icon(Icons.filter_list, color: filterStatus.value != 'all' ? AppTheme.primary : null),
+                         tooltip: 'Filter Status',
+                         onSelected: (val) => filterStatus.value = val,
+                         itemBuilder: (context) => [
+                            const PopupMenuItem(value: 'all', child: Text('Semua Status')),
+                            const PopupMenuItem(value: 'pending', child: Text('Draft / Menunggu')),
+                            const PopupMenuItem(value: 'active', child: Text('Active PO / Approved')),
+                            const PopupMenuItem(value: 'completed', child: Text('Selesai / Diterima')),
+                            const PopupMenuItem(value: 'rejected', child: Text('Ditolak')),
+                         ],
+                       ),
                     ],
                   ),
                 ),
@@ -129,15 +224,30 @@ class ProcurementListScreen extends HookConsumerWidget {
               // 4. Smart List Content
               SliverPadding(
                 padding: const EdgeInsets.all(AppTheme.spacingMd),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final item = filtered[index];
-                      return _buildSmartRow(context, item, currencyFormat);
-                    },
-                    childCount: filtered.length,
+                sliver: filtered.isEmpty 
+                  ? SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(48), 
+                          child: Column(
+                            children: [
+                              Icon(Icons.inbox_outlined, size: 64, color: Colors.grey[300]),
+                              const SizedBox(height: 16),
+                              Text('Tidak ada data ditemukan', style: TextStyle(color: Colors.grey[500])),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : SliverList(
+                      delegate: SliverChildBuilderDelegate(
+                        (context, index) {
+                          final item = filtered[index];
+                          return _buildSmartRow(context, item, currencyFormat);
+                        },
+                        childCount: filtered.length,
+                      ),
                   ),
-                ),
               ),
             ],
           );
@@ -148,14 +258,37 @@ class ProcurementListScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildKpiCard(String title, String value, String subtitle, Color color, IconData icon) {
+  Widget _buildTabButton(String label, bool isActive, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(6),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isActive ? AppTheme.primary.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: isActive ? AppTheme.primary.withValues(alpha: 0.5) : Colors.transparent),
+        ),
+        child: Text(
+          label, 
+          style: TextStyle(
+            color: isActive ? AppTheme.primary : Colors.grey[600],
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal
+          )
+        ),
+      ),
+    );
+  }
+
+  Widget _buildKpiCard(String title, String value, String subtitle, Color color, IconData icon, [bool isMobile = false]) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 12 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 10, offset: const Offset(0, 4)),
         ],
         border: Border.all(color: Colors.grey.shade200),
       ),
@@ -165,12 +298,18 @@ class ProcurementListScreen extends HookConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title, style: TextStyle(color: Colors.grey[600], fontSize: 13, fontWeight: FontWeight.w500)),
-              Icon(icon, color: color.withOpacity(0.8), size: 20),
+              Expanded(
+                child: Text(
+                  title, 
+                  style: TextStyle(color: Colors.grey[600], fontSize: isMobile ? 11 : 13, fontWeight: FontWeight.w500),
+                  maxLines: 1, overflow: TextOverflow.ellipsis
+                ),
+              ),
+              Icon(icon, color: color.withValues(alpha: 0.8), size: isMobile ? 16 : 20),
             ],
           ),
           const SizedBox(height: 12),
-          Text(value, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(value, style: GoogleFonts.inter(fontSize: isMobile ? 18 : 24, fontWeight: FontWeight.bold, color: Colors.black87), maxLines: 1, overflow: TextOverflow.ellipsis),
            const SizedBox(height: 4),
            Row(
              children: [
@@ -191,7 +330,7 @@ class ProcurementListScreen extends HookConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 8, offset: const Offset(0, 3))],
       ),
       child: Material(
         color: Colors.transparent,
@@ -199,75 +338,53 @@ class ProcurementListScreen extends HookConsumerWidget {
           onTap: () => context.go('/admin/procurement/detail/${item.id}'),
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Row(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. ID & basic info
-                SizedBox(
-                  width: 120,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
-                        child: Text(
-                          item.code,
-                          style: GoogleFonts.sourceCodePro(color: Colors.blue.shade800, fontWeight: FontWeight.bold, fontSize: 11),
-                        ),
+                // 1. Header Row (Code & Date)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4)),
+                      child: Text(
+                        item.code,
+                        style: GoogleFonts.sourceCodePro(color: Colors.blue.shade800, fontWeight: FontWeight.bold, fontSize: 11),
                       ),
-                      const SizedBox(height: 8),
-                      Text(DateFormat('dd MMM').format(item.requestDate), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      DateFormat('dd MMM').format(item.requestDate),
+                      style: TextStyle(color: Colors.grey[500], fontSize: 11),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
                 
-                // 2. Main Content & Stepper
-                Expanded(
-                  flex: 3,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(item.description ?? 'Pengadaan Barang', style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 16)),
-                      const SizedBox(height: 12),
-                      _buildStatusStepper(item.status),
-                    ],
-                  ),
+                // 2. Main Content Row (Title & Budget)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        item.description ?? 'Pengadaan Barang', 
+                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14, height: 1.3),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      fmt.format(item.totalEstimatedBudget), 
+                      style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.black87),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
                 
-                // 3. Amount & Actions
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(fmt.format(item.totalEstimatedBudget), style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 15)),
-                      const SizedBox(height: 8),
-                       Row(
-                         mainAxisAlignment: MainAxisAlignment.end,
-                         children: [
-                           if (item.status == 'pending') ...[
-                             OutlinedButton(
-                               onPressed: () {}, // Mock Quick Action
-                               style: OutlinedButton.styleFrom(
-                                 visualDensity: VisualDensity.compact,
-                                 side: BorderSide(color: Colors.green.shade200),
-                                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                               ),
-                               child: Text('Approve', style: TextStyle(color: Colors.green.shade700, fontSize: 12)),
-                             ),
-                           ],
-                           if (item.status == 'approved_head' || item.status == 'approved_admin')
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                decoration: BoxDecoration(color: Colors.purple.shade50, borderRadius: BorderRadius.circular(4)),
-                                child: Text('PO Ready', style: TextStyle(color: Colors.purple.shade700, fontSize: 11)),
-                              ),
-                         ],
-                       ),
-                    ],
-                  ),
-                ),
+                // 3. Status Stepper
+                _buildStatusStepper(item.status),
               ],
             ),
           ),

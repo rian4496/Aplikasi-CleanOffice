@@ -1,6 +1,7 @@
-// lib/services/inventory_service.dart
+﻿// lib/services/inventory_service.dart
 // Inventory management service - Using Supabase
 
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/inventory_item.dart';
 import '../models/stock_history.dart';
@@ -186,12 +187,12 @@ class InventoryService {
     String? performedByName,
   }) async {
     try {
-      print('🗑️ DELETE ATTEMPT - Item ID: $itemId');
-      print('👤 Performed by: $performedByName ($performedBy)');
+      debugPrint('🗑️ DELETE ATTEMPT - Item ID: $itemId');
+      debugPrint('👤 Performed by: $performedByName ($performedBy)');
       
       // Get item first to log its stock
       final item = await getItemById(itemId);
-      print('✅ Item found: ${item.name}, Stock: ${item.currentStock}');
+      debugPrint('✅ Item found: ${item.name}, Stock: ${item.currentStock}');
       
       // 1. Record deletion movement ONLY if there's stock
       if (item.currentStock > 0) {
@@ -206,34 +207,34 @@ class InventoryService {
             'performed_by_name': performedByName ?? 'System',
             'created_at': DateTime.now().toIso8601String(),
           });
-          print('📝 Movement logged successfully');
+          debugPrint('📝 Movement logged successfully');
         } catch (e) {
-          print('⚠️ Movement logging failed (non-fatal): $e');
+          debugPrint('⚠️ Movement logging failed (non-fatal): $e');
           _logger.error('Failed to log deletion movement (non-fatal)', e);
           // Continue with delete even if logging fails
         }
       }
 
       // 2. Soft delete the item
-      print('🔄 Attempting database update...');
+      debugPrint('🔄 Attempting database update...');
       final response = await _supabase.from('inventory_items').update({
         'deleted_at': DateTime.now().toIso8601String(),
         'current_stock': 0,
         'is_active': false,
       }).eq('id', itemId).select();
       
-      print('📊 Response: $response');
-      print('📊 Response length: ${(response as List).length}');
+      debugPrint('📊 Response: $response');
+      debugPrint('📊 Response length: ${(response as List).length}');
       
       // Verify the update actually happened
       if (response.isEmpty) {
         throw Exception('Failed to delete item: No rows were updated. Item ID: $itemId may not exist or RLS policy blocked the update.');
       }
       
-      print('✅ DELETE SUCCESS - Item: $itemId');
+      debugPrint('✅ DELETE SUCCESS - Item: $itemId');
       _logger.info('Soft deleted inventory item: $itemId');
     } catch (e) {
-      print('❌ DELETE FAILED: $e');
+      debugPrint('❌ DELETE FAILED: $e');
       _logger.error('Failed to delete item', e);
       rethrow;
     }
@@ -275,6 +276,28 @@ class InventoryService {
 
   Stream<List<StockRequest>> streamPendingRequests() {
     return Stream.fromFuture(getPendingRequests());
+  }
+
+  /// Get completed/rejected requests (history)
+  Future<List<StockRequest>> getCompletedRequests() async {
+    try {
+      final response = await _supabase
+          .from('stock_requests')
+          .select()
+          .inFilter('status', ['fulfilled', 'rejected'])
+          .order('created_at', ascending: false);
+      
+      return (response as List)
+          .map((data) => StockRequest.fromSupabase(data))
+          .toList();
+    } catch (e) {
+      _logger.error('Failed to get completed requests', e);
+      return [];
+    }
+  }
+
+  Stream<List<StockRequest>> streamCompletedRequests() {
+    return Stream.fromFuture(getCompletedRequests());
   }
 
   /// Get user's requests

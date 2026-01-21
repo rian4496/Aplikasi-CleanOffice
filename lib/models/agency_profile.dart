@@ -62,7 +62,7 @@ class AgencyProfile {
       id: '',
       name: 'Pemerintah Provinsi Kalimantan Selatan',
       shortName: 'PEMPROV KALSEL',
-      address: 'Jl. Dharma Praja No. 1, Banjarbaru',
+      address: 'Jl. Dharma Praja I, Komplek Perkantoran Pemerintah Provinsi Kalimantan Selatan',
       phone: '(0511) 4772033',
       email: 'info@kalselprov.go.id',
       website: 'kalselprov.go.id',
@@ -78,6 +78,7 @@ class AgencySigner {
   final String position; // Jabatan (e.g., Kepala Dinas)
   final String rank; // Pangkat/Golongan (e.g., Pembina Utama Muda / IV/c)
   final String roleLabel; // Label (e.g., Mengetahui, Diperiksa Oleh)
+  final String? signatureUrl; // URL gambar tanda tangan/paraf
 
   AgencySigner({
     required this.name,
@@ -85,6 +86,7 @@ class AgencySigner {
     required this.position,
     required this.rank,
     required this.roleLabel,
+    this.signatureUrl,
   });
 
   factory AgencySigner.fromJson(Map<String, dynamic> json) {
@@ -94,6 +96,7 @@ class AgencySigner {
       position: json['position'] as String,
       rank: json['rank'] as String,
       roleLabel: json['role_label'] as String,
+      signatureUrl: json['signature_url'] as String?,
     );
   }
 
@@ -104,6 +107,7 @@ class AgencySigner {
       'position': position,
       'rank': rank,
       'role_label': roleLabel,
+      'signature_url': signatureUrl,
     };
   }
 }

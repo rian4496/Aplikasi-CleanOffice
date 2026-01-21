@@ -17,9 +17,18 @@ class Ticket {
   final String? inventoryItemId;
   final int? requestedQuantity;
   
+  // Display names for related entities (populated via joins)
+  final String? createdByName;
+  final String? assignedToName;
+  final String? assetName;
+  final String? locationName;
+  final String? inventoryItemName;
+  
   // Attachments
   final String? imageUrl;
-  
+  final String? resolutionImage;
+  final String? resolutionNote;
+
   // Timestamps
   final DateTime? claimedAt;
   final DateTime? approvedAt;
@@ -42,7 +51,14 @@ class Ticket {
     this.assetId,
     this.inventoryItemId,
     this.requestedQuantity,
+    this.createdByName,
+    this.assignedToName,
+    this.assetName,
+    this.locationName,
+    this.inventoryItemName,
     this.imageUrl,
+    this.resolutionImage,
+    this.resolutionNote,
     this.claimedAt,
     this.approvedAt,
     this.completedAt,
@@ -51,6 +67,32 @@ class Ticket {
   });
 
   factory Ticket.fromJson(Map<String, dynamic> json) {
+    // Extract nested display names from joined tables
+    String? createdByName;
+    if (json['creator'] != null && json['creator'] is Map) {
+      createdByName = json['creator']['display_name'] as String?;
+    }
+    
+    String? assetName;
+    if (json['asset'] != null && json['asset'] is Map) {
+      assetName = json['asset']['name'] as String?;
+    }
+    
+    String? locationName;
+    if (json['location'] != null && json['location'] is Map) {
+      locationName = json['location']['name'] as String?;
+    }
+    
+    String? inventoryItemName;
+    if (json['inventory_item'] != null && json['inventory_item'] is Map) {
+      inventoryItemName = json['inventory_item']['name'] as String?;
+    }
+
+    String? assignedToName;
+    if (json['assignee'] != null && json['assignee'] is Map) {
+      assignedToName = json['assignee']['display_name'] as String?;
+    }
+
     return Ticket(
       id: json['id'] as String,
       ticketNumber: json['ticket_number'] as String,
@@ -66,7 +108,14 @@ class Ticket {
       assetId: json['asset_id'] as String?,
       inventoryItemId: json['inventory_item_id'] as String?,
       requestedQuantity: json['requested_quantity'] as int?,
+      createdByName: createdByName,
+      assignedToName: assignedToName,
+      assetName: assetName,
+      locationName: locationName,
+      inventoryItemName: inventoryItemName,
       imageUrl: json['image_url'] as String?,
+      resolutionImage: json['resolution_image'] as String?,
+      resolutionNote: json['resolution_note'] as String?,
       claimedAt: json['claimed_at'] != null ? DateTime.parse(json['claimed_at'] as String) : null,
       approvedAt: json['approved_at'] != null ? DateTime.parse(json['approved_at'] as String) : null,
       completedAt: json['completed_at'] != null ? DateTime.parse(json['completed_at'] as String) : null,
@@ -92,6 +141,8 @@ class Ticket {
       'inventory_item_id': inventoryItemId,
       'requested_quantity': requestedQuantity,
       'image_url': imageUrl,
+      'resolution_image': resolutionImage,
+      'resolution_note': resolutionNote,
       'claimed_at': claimedAt?.toIso8601String(),
       'approved_at': approvedAt?.toIso8601String(),
       'completed_at': completedAt?.toIso8601String(),

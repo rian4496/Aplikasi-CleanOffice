@@ -3,7 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:aplikasi_cleanoffice/models/master/budget.dart';
-import 'package:aplikasi_cleanoffice/providers/riverpod/master_providers.dart';
+import 'package:aplikasi_cleanoffice/riverpod/master_crud_controllers.dart';
 
 class BudgetFormDialog extends HookConsumerWidget {
   final Budget? initialData;
@@ -47,6 +47,9 @@ class BudgetFormDialog extends HookConsumerWidget {
            // For edit, carefully handle amounts if logic required, but simplified CRUD:
            await ref.read(budgetControllerProvider.notifier).updateBudget(newBudget);
         }
+
+        // Auto-refresh list
+        ref.invalidate(budgetsProvider);
 
         if (context.mounted) Navigator.pop(context, true);
       } catch (e) {

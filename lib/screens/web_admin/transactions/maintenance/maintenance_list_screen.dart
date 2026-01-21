@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
 import '../../../../../models/ticket.dart'; // For TicketType popup
 
@@ -17,7 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
 import 'maintenance_components.dart';
 
@@ -194,7 +194,7 @@ class MaintenanceListScreen extends HookConsumerWidget {
                                   child: Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: filterMode.value == 'all' ? Colors.white : AppTheme.primary.withOpacity(0.1),
+                                      color: filterMode.value == 'all' ? Colors.white : AppTheme.primary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                       border: Border.all(color: Colors.grey.shade300),
                                     ),

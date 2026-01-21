@@ -10,7 +10,7 @@ import 'dart:io';
 import '../../models/export_config.dart';
 import '../../models/report.dart';
 import '../../services/export_service.dart';
-import '../../providers/riverpod/admin_providers.dart';
+import '../../riverpod/admin_providers.dart';
 
 class ExportDialog extends ConsumerStatefulWidget {
   const ExportDialog({super.key});

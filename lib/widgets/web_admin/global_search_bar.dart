@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/riverpod/report_providers.dart';
+import '../../riverpod/report_providers.dart';
 
 class GlobalSearchBar extends ConsumerStatefulWidget {
   final String hintText;

@@ -2,14 +2,13 @@ import 'package:aplikasi_cleanoffice/screens/auth/sign_up_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:aplikasi_cleanoffice/screens/welcome_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/auth/login_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/web_admin/admin_dashboard_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/web_admin/dashboard/admin_dashboard.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_report_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/create_request_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/edit_profile_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/shared/change_password_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/mock_employee_home_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/mock_cleaner_home_screen.dart';
+
 
 /// Development Menu untuk test UI tanpa Firebase Authentication
 /// HANYA UNTUK DEVELOPMENT - JANGAN DIPAKAI DI PRODUCTION!
@@ -129,18 +128,22 @@ class DevMenuScreen extends StatelessWidget {
             _buildScreenCard(
               context,
               title: 'Employee Home',
-              subtitle: 'Beranda karyawan (Mock)',
+              subtitle: 'Beranda karyawan (use real screen)',
               icon: Icons.person,
               color: Colors.green,
-              screen: const MockEmployeeHomeScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Use /employee/dashboard route')),
+              ),
             ),
             _buildScreenCard(
               context,
               title: 'Cleaner Home',
-              subtitle: 'Beranda petugas kebersihan (Mock)',
+              subtitle: 'Beranda petugas kebersihan (use real screen)',
               icon: Icons.cleaning_services,
               color: Colors.blue,
-              screen: const MockCleanerHomeScreen(),
+              screen: const Scaffold(
+                body: Center(child: Text('Use /cleaner/dashboard route')),
+              ),
             ),
 
             const SizedBox(height: 24),

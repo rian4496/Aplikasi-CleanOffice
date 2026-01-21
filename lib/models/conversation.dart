@@ -155,12 +155,16 @@ class Conversation {
       type: participantIds.length == 2 ? ConversationType.direct : ConversationType.group,
       name: null, // No name column in chats table
       participantIds: participantIds,
-      participantNames: [], // Not stored in chats table
+      participantNames: data['participant_names'] != null
+          ? List<String>.from(data['participant_names'])
+          : [], // Will be enriched by ChatService
       participantRoles: [], // Not stored in chats table
       createdBy: participantIds.isNotEmpty ? participantIds.first : '',
-      lastMessageText: null,
-      lastMessageAt: null,
-      lastMessageBy: null,
+      lastMessageText: data['last_message_text'],
+      lastMessageAt: data['last_message_time'] != null 
+          ? DateTime.tryParse(data['last_message_time']) 
+          : null,
+      lastMessageBy: data['last_message_sender_id'],
       groupAvatarUrl: null,
       isArchived: false,
       contextType: contextType,
@@ -273,7 +277,7 @@ class Conversation {
       return otherName;
     }
 
-    return 'Unknown';
+    return 'User';
   }
 
   /// Get last message preview
@@ -295,7 +299,9 @@ class Conversation {
     if (lastMessageAt == null) return '';
 
     final now = DateTime.now();
-    final difference = now.difference(lastMessageAt!);
+    // Convert UTC to local time for display
+    final localTime = lastMessageAt!.toLocal();
+    final difference = now.difference(localTime);
 
     if (difference.inMinutes < 1) {
       return 'Baru saja';
@@ -303,15 +309,15 @@ class Conversation {
       return '${difference.inMinutes} menit lalu';
     } else if (difference.inDays == 0) {
       // Today - show time
-      return DateFormat('HH:mm').format(lastMessageAt!);
+      return DateFormat('HH:mm').format(localTime);
     } else if (difference.inDays == 1) {
       return 'Kemarin';
     } else if (difference.inDays < 7) {
       // This week - show day name
-      return DateFormat('EEEE').format(lastMessageAt!);
+      return DateFormat('EEEE').format(localTime);
     } else {
       // Older - show date
-      return DateFormat('dd/MM/yy').format(lastMessageAt!);
+      return DateFormat('dd/MM/yy').format(localTime);
     }
   }
 
@@ -341,6 +347,12 @@ class Conversation {
 
     return null;
   }
+
+  /// Alias for participantIds to match usage in some screens
+  List<String> get participants => participantIds;
+
+  /// Alias for getUnreadCount to match usage in some screens
+  int unreadCount(String userId) => getUnreadCount(userId);
 
   @override
   String toString() {

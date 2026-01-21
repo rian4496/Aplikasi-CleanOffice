@@ -7,7 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/employee_providers.dart';
+import '../../riverpod/employee_providers.dart';
 import 'report_detail_employee_screen.dart';
 
 class ReportHistoryScreen extends ConsumerStatefulWidget {

@@ -9,7 +9,7 @@ import 'package:fl_chart/fl_chart.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
-import '../../providers/riverpod/inventory_providers.dart';
+import '../../riverpod/inventory_providers.dart';
 
 /// Inventory Analytics Screen - Charts and visualizations for inventory data
 /// ✅ MIGRATED: ConsumerWidget → HookConsumerWidget

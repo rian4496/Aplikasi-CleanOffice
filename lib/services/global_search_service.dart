@@ -1,3 +1,4 @@
+﻿import 'package:flutter/foundation.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/utils/global_search_result.dart';
@@ -41,7 +42,7 @@ class GlobalSearchService {
         route: '/admin/assets/detail/${e['id']}',
       )).toList();
     } catch (e) {
-      print('Global Search Asset Error: $e');
+      debugPrint('Global Search Asset Error: $e');
       return [];
     }
   }
@@ -59,10 +60,10 @@ class GlobalSearchService {
         title: e['source_name'],
         subtitle: 'Anggaran • ${e['fiscal_year']}',
         type: SearchResultType.budget,
-        route: '/admin/budget', // Ideally detail, but list for now
+        route: '/admin/master/anggaran', // Ideally detail, but list for now
       )).toList();
     } catch (e) {
-       print('Global Search Budget Error: $e');
+       debugPrint('Global Search Budget Error: $e');
       return [];
     }
   }

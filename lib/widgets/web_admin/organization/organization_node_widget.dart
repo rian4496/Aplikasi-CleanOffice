@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/organization/organization_node_widget.dart
+﻿// lib/widgets/web_admin/organization/organization_node_widget.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/master/organization.dart';
-import '../../../providers/riverpod/organization_stats_provider.dart';
+import '../../../riverpod/organization_stats_provider.dart';
 import 'organization_tree_builder.dart';
 
 class OrganizationNodeWidget extends ConsumerStatefulWidget {
@@ -66,7 +66,7 @@ class _OrganizationNodeWidgetState extends ConsumerState<OrganizationNodeWidget>
                   borderRadius: BorderRadius.circular(8),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: widget.isSelected ? AppTheme.primary.withOpacity(0.05) : Colors.white,
+                      color: widget.isSelected ? AppTheme.primary.withValues(alpha: 0.05) : Colors.white,
                       border: Border.all(
                         color: widget.isSelected ? AppTheme.primary : Colors.grey[200]!,
                         width: widget.isSelected ? 1.5 : 1,
@@ -75,7 +75,7 @@ class _OrganizationNodeWidgetState extends ConsumerState<OrganizationNodeWidget>
                       // Left border accent based on type
                       boxShadow: [
                          if (widget.isSelected)
-                           BoxShadow(color: AppTheme.primary.withOpacity(0.1), blurRadius: 4, offset: const Offset(0, 2)),
+                           BoxShadow(color: AppTheme.primary.withValues(alpha: 0.1), blurRadius: 4, offset: const Offset(0, 2)),
                       ],
                     ),
                     child: IntrinsicHeight(
@@ -220,7 +220,9 @@ class _OrganizationNodeWidgetState extends ConsumerState<OrganizationNodeWidget>
   Color _getTypeColor(String type) {
     switch (type.toLowerCase()) {
       case 'dinas': return AppTheme.primary;
+      case 'sekretariat': return Colors.purple[600]!;
       case 'bidang': return Colors.blue[600]!;
+      case 'sub_bagian': return Colors.teal[600]!;
       case 'seksi': return Colors.green[600]!;
       case 'upt': return Colors.orange[700]!;
       default: return Colors.grey;
@@ -230,7 +232,9 @@ class _OrganizationNodeWidgetState extends ConsumerState<OrganizationNodeWidget>
   IconData _getTypeIcon(String type) {
     switch (type.toLowerCase()) {
       case 'dinas': return Icons.account_balance;
+      case 'sekretariat': return Icons.admin_panel_settings;
       case 'bidang': return Icons.business;
+      case 'sub_bagian': return Icons.folder_shared;
       case 'seksi': return Icons.groups;
       case 'upt': return Icons.store;
       default: return Icons.domain;

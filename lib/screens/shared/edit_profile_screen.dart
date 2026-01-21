@@ -7,8 +7,9 @@ import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/user_profile.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/profile_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/profile_providers.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 final _logger = AppLogger('EditProfileScreen');
 
@@ -252,11 +253,28 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     final isSaving = profileState.isLoading;
 
     if (_isLoading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(backgroundColor: Colors.white, body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Edit Profil'), elevation: 0),
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        title: Text(
+          'Edit Profil',
+          style: GoogleFonts.inter(
+            color: const Color(0xFF1E293B),
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
         child: Form(
@@ -270,139 +288,145 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.2),
-                            spreadRadius: 2,
-                            blurRadius: 5,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+                        border: Border.all(color: Colors.grey[200]!, width: 1), // Simple border instead of shadow
                       ),
+                      padding: const EdgeInsets.all(2),
                       child: CircleAvatar(
-                        radius: 64,
-                        backgroundColor: Colors.grey[200],
+                        radius: 60,
+                        backgroundColor: Colors.grey[100],
                         child: ClipOval(
                           child: SizedBox(
-                            width: 128,
-                            height: 128,
+                            width: 120,
+                            height: 120,
                             child: _imageFile != null
                                 ? Image.file(_imageFile!, fit: BoxFit.cover)
                                 : _currentPhotoUrl != null
-                                ? CachedNetworkImage(
-                                    imageUrl: _currentPhotoUrl!,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, url) => const Center(
-                                      child: CircularProgressIndicator(),
-                                    ),
-                                    errorWidget: (context, url, error) => Icon(
-                                      Icons.person,
-                                      size: 64,
-                                      color: Colors.grey[400],
-                                    ),
-                                  )
-                                : Icon(
-                                    Icons.person,
-                                    size: 64,
-                                    color: Colors.grey[400],
-                                  ),
+                                    ? CachedNetworkImage(
+                                        imageUrl: _currentPhotoUrl!,
+                                        fit: BoxFit.cover,
+                                        placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
+                                        errorWidget: (context, url, error) => Icon(Icons.person, size: 60, color: Colors.grey[400]),
+                                      )
+                                    : Icon(Icons.person, size: 60, color: Colors.grey[400]),
                           ),
                         ),
                       ),
                     ),
                     Positioned(
                       bottom: 0,
-                      right: 0,
-                      child: CircleAvatar(
-                        backgroundColor: AppConstants.primaryColor,
-                        child: IconButton(
-                          icon: const Icon(
-                            Icons.camera_alt,
-                            color: Colors.white,
-                            size: 20,
+                      right: 4,
+                      child: Material(
+                        color: const Color(0xFF3B82F6), // Blue-500
+                        shape: const CircleBorder(),
+                        child: InkWell(
+                          onTap: isSaving ? null : _showImageSourceDialog,
+                          customBorder: const CircleBorder(),
+                          child: const Padding(
+                            padding: EdgeInsets.all(8.0),
+                            child: Icon(Icons.camera_alt, color: Colors.white, size: 20),
                           ),
-                          onPressed: isSaving ? null : _showImageSourceDialog,
                         ),
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: AppConstants.largePadding),
+              const SizedBox(height: 32),
 
               // Name Field
-              TextFormField(
+              _buildTextField(
                 controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Lengkap',
-                  prefixIcon: Icon(Icons.person),
-                ),
-                validator: (value) {
-                  if (value == null || value.trim().isEmpty) {
-                    return AppConstants.requiredFieldMessage;
-                  }
-                  return null;
-                },
+                label: 'Nama Lengkap',
                 enabled: !isSaving,
               ),
-              const SizedBox(height: AppConstants.defaultPadding),
+              const SizedBox(height: 24),
 
               // Phone Field
-              TextFormField(
+              _buildTextField(
                 controller: _phoneController,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor Telepon',
-                  prefixIcon: Icon(Icons.phone),
-                  hintText: 'Opsional',
-                ),
-                keyboardType: TextInputType.phone,
+                label: 'Nomor Telepon',
                 enabled: !isSaving,
+                keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: AppConstants.defaultPadding),
+              const SizedBox(height: 24),
 
               // Location Field
-              TextFormField(
+              _buildTextField(
                 controller: _locationController,
-                decoration: const InputDecoration(
-                  labelText: 'Lokasi Kerja',
-                  prefixIcon: Icon(Icons.location_on),
-                  hintText: 'Opsional',
-                ),
+                label: 'Lokasi Kerja',
                 enabled: !isSaving,
               ),
-              const SizedBox(height: AppConstants.largePadding),
+              const SizedBox(height: 48),
 
               // Save Button
               ElevatedButton(
                 onPressed: isSaving ? null : _updateProfile,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppConstants.primaryColor,
+                  backgroundColor: const Color(0xFF3B82F6), // Blue-500
                   foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 54),
+                  minimumSize: const Size(double.infinity, 50),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), // Radius 12
                 ),
                 child: isSaving
-                    ? const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white,
-                          ),
-                        ),
-                      )
-                    : const Text(
+                    ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(Colors.white), strokeWidth: 2))
+                    : Text(
                         'Simpan Perubahan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
                       ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    bool enabled = true,
+    TextInputType? keyboardType,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: const Color(0xFF1E293B), // Slate-900
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          enabled: enabled,
+          keyboardType: keyboardType,
+          style: GoogleFonts.inter(color: const Color(0xFF0F172A)),
+          decoration: InputDecoration(
+            hintText: 'Masukkan $label',
+            hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8)), // Slate-400
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)), // Slate-200
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFFE2E8F0)), // Slate-200
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5), // Blue-500
+            ),
+            filled: true,
+            fillColor: enabled ? Colors.white : const Color(0xFFF8FAFC), // Slate-50 disabled
+          ),
+          validator: (value) => value == null || value.trim().isEmpty ? AppConstants.requiredFieldMessage : null,
+        ),
+      ],
     );
   }
 }

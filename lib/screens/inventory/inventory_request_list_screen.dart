@@ -1,11 +1,11 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/stock_request.dart';
-import '../../providers/riverpod/inventory_providers.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/inventory_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../core/utils/responsive_helper.dart';
 
 class InventoryRequestListScreen extends ConsumerStatefulWidget {
@@ -15,11 +15,24 @@ class InventoryRequestListScreen extends ConsumerStatefulWidget {
   ConsumerState<InventoryRequestListScreen> createState() => _InventoryRequestListScreenState();
 }
 
-class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestListScreen> {
+class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestListScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    final requestsAsync = ref.watch(pendingStockRequestsProvider);
-
     return Scaffold(
       backgroundColor: AppTheme.modernBg,
       appBar: AppBar(
@@ -37,43 +50,72 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
         iconTheme: const IconThemeData(color: Colors.black87),
         actions: [
           IconButton(
-            onPressed: () => ref.invalidate(pendingStockRequestsProvider),
+            onPressed: () {
+              ref.invalidate(pendingStockRequestsProvider);
+              ref.invalidate(completedStockRequestsProvider);
+            },
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
           ),
           const SizedBox(width: 8),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: AppTheme.primary,
+          labelColor: AppTheme.primary,
+          unselectedLabelColor: Colors.grey,
+          tabs: const [
+            Tab(text: 'Pending', icon: Icon(Icons.pending_actions, size: 18)),
+            Tab(text: 'Riwayat', icon: Icon(Icons.history, size: 18)),
+          ],
+        ),
       ),
-      body: requestsAsync.when(
-        data: (requests) {
-          if (requests.isEmpty) {
-            return _buildEmptyState();
-          }
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _PendingTab(),
+          _HistoryTab(),
+        ],
+      ),
+    );
+  }
+}
 
-          return Column(
-            children: [
-              _buildKPIHeader(requests),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: requests.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final request = requests[index];
-                    return _RequestCard(
-                      request: request,
-                      onApprove: () => _approveRequest(context, request),
-                      onReject: () => _showRejectDialog(context, request),
-                    );
-                  },
-                ),
+// ==================== PENDING TAB ====================
+class _PendingTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsAsync = ref.watch(pendingStockRequestsProvider);
+
+    return requestsAsync.when(
+      data: (requests) {
+        if (requests.isEmpty) {
+          return _buildEmptyState();
+        }
+
+        return Column(
+          children: [
+            _buildKPIHeader(requests),
+            Expanded(
+              child: ListView.separated(
+                padding: const EdgeInsets.all(16),
+                itemCount: requests.length,
+                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final request = requests[index];
+                  return _RequestCard(
+                    request: request,
+                    onApprove: () => _approveRequest(context, ref, request),
+                    onReject: () => _showRejectDialog(context, ref, request),
+                  );
+                },
               ),
-            ],
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-      ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Error: $err')),
     );
   }
 
@@ -115,7 +157,6 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
   }
 
   Widget _buildKPIHeader(List<StockRequest> requests) {
-    // Determine prioritized requests (e.g. older than 2 days)
     final urgentCount = requests.where((r) => 
       DateTime.now().difference(r.createdAt).inDays > 2
     ).length;
@@ -153,7 +194,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: isUrgent ? Border.all(color: Colors.red.withOpacity(0.5)) : null,
+        border: isUrgent ? Border.all(color: Colors.red.withValues(alpha: 0.5)) : null,
         boxShadow: AppTheme.shadowSm,
       ),
       child: Row(
@@ -161,7 +202,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -192,7 +233,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
     );
   }
 
-  void _approveRequest(BuildContext context, StockRequest request) async {
+  void _approveRequest(BuildContext context, WidgetRef ref, StockRequest request) async {
     try {
       final user = ref.read(currentUserProvider).value;
       if (user == null) return;
@@ -211,6 +252,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
           ),
         );
         ref.invalidate(pendingStockRequestsProvider);
+        ref.invalidate(completedStockRequestsProvider);
         ref.invalidate(allInventoryItemsProvider); 
       }
     } catch (e) {
@@ -222,7 +264,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
     }
   }
 
-  void _showRejectDialog(BuildContext context, StockRequest request) {
+  void _showRejectDialog(BuildContext context, WidgetRef ref, StockRequest request) {
     final noteController = TextEditingController();
     showDialog(
       context: context,
@@ -263,6 +305,7 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
                      const SnackBar(content: Text('Permintaan ditolak'), backgroundColor: Colors.orange),
                   );
                   ref.invalidate(pendingStockRequestsProvider);
+                  ref.invalidate(completedStockRequestsProvider);
                 }
               } catch (e) {
                 // handle error
@@ -271,6 +314,131 @@ class _InventoryRequestListScreenState extends ConsumerState<InventoryRequestLis
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
             child: const Text('Tolak Permintaan'),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== HISTORY TAB ====================
+class _HistoryTab extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final requestsAsync = ref.watch(completedStockRequestsProvider);
+
+    return requestsAsync.when(
+      data: (requests) {
+        if (requests.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.history, size: 64, color: Colors.grey.shade300),
+                const SizedBox(height: 16),
+                Text(
+                  'Belum ada riwayat permintaan',
+                  style: TextStyle(color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: requests.length,
+          separatorBuilder: (context, index) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            final request = requests[index];
+            return _HistoryCard(request: request);
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, _) => Center(child: Text('Error: $err')),
+    );
+  }
+}
+
+class _HistoryCard extends StatelessWidget {
+  final StockRequest request;
+
+  const _HistoryCard({required this.request});
+
+  @override
+  Widget build(BuildContext context) {
+    Color statusColor = AppTheme.getStatusColor(request.status);
+    String statusLabel = request.status.toUpperCase();
+    if (request.status == 'fulfilled') statusLabel = 'SELESAI';
+    if (request.status == 'rejected') statusLabel = 'DITOLAK';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: AppTheme.shadowSm,
+        border: Border(left: BorderSide(color: statusColor, width: 4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                request.itemName ?? 'Unknown Item',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Text(
+                'Qty: ${request.requestedQuantity}',
+                style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              Text(
+                DateFormat('dd MMM yyyy, HH:mm').format(request.createdAt),
+                style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+              ),
+            ],
+          ),
+          if (request.rejectionReason != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'Alasan penolakan: ${request.rejectionReason}',
+                style: TextStyle(color: Colors.red.shade700, fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -308,7 +476,7 @@ class _RequestCardState extends State<_RequestCard> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: _isHovered 
-              ? Border.all(color: AppTheme.primary.withOpacity(0.5), width: 1.5)
+              ? Border.all(color: AppTheme.primary.withValues(alpha: 0.5), width: 1.5)
               : Border.all(color: Colors.transparent, width: 1.5),
           boxShadow: _isHovered ? AppTheme.shadowMd : AppTheme.shadowSm,
         ),
@@ -321,7 +489,7 @@ class _RequestCardState extends State<_RequestCard> {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.blue.withOpacity(0.1),
+                  color: Colors.blue.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.inventory_2, color: AppTheme.primary),
@@ -347,7 +515,7 @@ class _RequestCardState extends State<_RequestCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: Colors.orange.withOpacity(0.1),
+                            color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -397,7 +565,7 @@ class _RequestCardState extends State<_RequestCard> {
                         icon: const Icon(Icons.close, color: Colors.red),
                         tooltip: 'Tolak',
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.red.withOpacity(0.1),
+                          backgroundColor: Colors.red.withValues(alpha: 0.1),
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -406,7 +574,7 @@ class _RequestCardState extends State<_RequestCard> {
                         icon: const Icon(Icons.check, color: Colors.green),
                         tooltip: 'Setujui',
                         style: IconButton.styleFrom(
-                          backgroundColor: Colors.green.withOpacity(0.1),
+                          backgroundColor: Colors.green.withValues(alpha: 0.1),
                         ),
                       ),
                   ],

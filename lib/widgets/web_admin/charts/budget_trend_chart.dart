@@ -1,4 +1,4 @@
-import 'package:fl_chart/fl_chart.dart';
+﻿import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -21,17 +21,17 @@ class BudgetTrendChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AdminColors.divider.withOpacity(0.8), width: 1.2), // Added border
+        border: Border.all(color: AdminColors.divider.withValues(alpha: 0.8), width: 1.2), // Added border
         boxShadow: [
           // Tighter shadow
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
           // Softer shadow
           BoxShadow(
-            color: Colors.black.withOpacity(0.08), // Increased opacity
+            color: Colors.black.withValues(alpha: 0.08), // Increased opacity
             blurRadius: 16,
             offset: const Offset(0, 4),
           ),
@@ -143,7 +143,7 @@ class BudgetTrendChart extends StatelessWidget {
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: Colors.purpleAccent.withOpacity(0.1),
+                      color: Colors.purpleAccent.withValues(alpha: 0.1),
                     ),
                   ),
                 ],

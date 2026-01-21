@@ -12,8 +12,8 @@ import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/user_profile.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/profile_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/profile_providers.dart';
 
 /// Edit Profile Screen with photo upload
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget

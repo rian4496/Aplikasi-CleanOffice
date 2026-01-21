@@ -3,7 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:aplikasi_cleanoffice/core/theme/app_theme.dart';
 import 'package:aplikasi_cleanoffice/models/master/asset_category.dart';
-import 'package:aplikasi_cleanoffice/providers/riverpod/master_providers.dart';
+import 'package:aplikasi_cleanoffice/riverpod/master_crud_controllers.dart';
 
 class AssetCategoryFormDialog extends HookConsumerWidget {
   final AssetCategory? initialData;

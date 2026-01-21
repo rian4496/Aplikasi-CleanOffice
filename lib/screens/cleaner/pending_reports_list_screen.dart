@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/cleaner/cleaner_report_card.dart'; // <-- Gunakan widget baru
 import '../cleaner/report_detail_cleaner_screen.dart';

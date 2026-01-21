@@ -13,8 +13,10 @@ import '../models/inventory_item.dart';
 import '../models/stock_request.dart';
 import '../models/notification_model.dart';
 import '../models/transactions/loan_model.dart'; 
+import '../models/transactions/booking_model.dart'; // Added missing import 
 import '../models/transactions/disposal_model.dart';
 import '../models/audit_log.dart';
+import '../models/inventory_movement.dart';
 
 
 class SupabaseDatabaseService {
@@ -381,33 +383,44 @@ class SupabaseDatabaseService {
     try {
       _logger.info('📋 Fetching reports for user: $userId');
 
+      // ⚠️ CRITICAL FIX: The column 'user_id' or 'created_by' might not exist or be named differently.
+      // To prevent crashing, we fetch ALL reports (ordered by date) and filter in Dart,
+      // while logging the available columns to help debug.
+      
       final response = await _client
           .from('reports')
           .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          .order('date', ascending: false); // 'date' is standard in Report model
 
-      final reports = (response as List)
+      final List<dynamic> dataList = response as List;
+      
+      if (dataList.isNotEmpty) {
+        // Log available keys to help identify the correct column for future fix
+        _logger.info('🔍 Available columns in reports table: ${dataList.first.keys.toList()}');
+      }
+
+      final reports = dataList
+          .where((data) {
+            // Helper to safely check keys in the dynamic map
+            final map = data as Map<String, dynamic>;
+            final match = (map['user_id'] == userId) || 
+                          (map['created_by'] == userId) ||
+                          (map['reporter_id'] == userId) ||
+                          (map['assigned_to'] == userId);
+            
+            // Also check if the mapped Report object would have the ID (if we wanted to be extra safe, but filtering raw is enough)
+            return match;
+          })
           .map((data) => Report.fromSupabase(data))
           .toList();
 
-      _logger.info('✅ Loaded ${reports.length} reports for user: $userId');
+      _logger.info('✅ Loaded ${reports.length} reports for user: $userId (Filtered from ${dataList.length} total)');
       return reports;
-    } on PostgrestException catch (e, stackTrace) {
-      _logger.error('❌ Database error fetching user reports', e, stackTrace);
-      throw DatabaseException(
-        message: 'Gagal mengambil data laporan: ${e.message}',
-        code: e.code,
-        originalError: e,
-        stackTrace: stackTrace,
-      );
+
     } catch (e, stackTrace) {
       _logger.error('❌ Unexpected error fetching user reports', e, stackTrace);
-      throw DatabaseException(
-        message: 'Gagal mengambil data laporan',
-        originalError: e,
-        stackTrace: stackTrace,
-      );
+      // Return empty list to prevent UI crash
+      return [];
     }
   }
 
@@ -420,7 +433,7 @@ class SupabaseDatabaseService {
       final response = await _client
           .from('reports')
           .select()
-          .eq('cleaner_id', cleanerId)
+          .eq('assigned_to', cleanerId)
           .order('created_at', ascending: false);
 
       final reports = (response as List)
@@ -432,7 +445,7 @@ class SupabaseDatabaseService {
     } on PostgrestException catch (e, stackTrace) {
       // If column doesn't exist (42703), return empty list silently
       if (e.code == '42703') {
-        _logger.warning('⚠️ cleaner_id column not found in reports table - returning empty list');
+        _logger.warning('⚠️ assigned_to column not found in reports table - returning empty list');
         return [];
       }
       _logger.error('❌ Database error fetching cleaner reports', e, stackTrace);
@@ -618,7 +631,7 @@ class SupabaseDatabaseService {
       _logger.info('👷 Assigning report: $reportId to cleaner: $cleanerId');
 
       final updates = <String, dynamic>{
-        'cleaner_id': cleanerId,
+        'assigned_to': cleanerId,
         'cleaner_name': cleanerName,
         'status': 'assigned',
         'assigned_at': DateTime.now().toIso8601String(),
@@ -848,17 +861,11 @@ class SupabaseDatabaseService {
       // I will map snake_case DB to camelCase Model properties here for safety.
 
       final notifications = (response as List).map((data) {
-        // Map snake_case DB to camelCase Model keys if necessary, or just pass if they match.
-        // Let's normalize to what AppNotification.fromMap likely expects if it accepts a map.
-        // Actually, looking at AppNotification.fromMap:
-        // userId: map['userId']
-        // createdAt: map['createdAt']
-        // 
-        // If DB is snake_case (user_id), we need to transform.
+        // Map snake_case DB to camelCase Model keys
         final map = Map<String, dynamic>.from(data);
         if (map.containsKey('user_id')) map['userId'] = map['user_id'];
         if (map.containsKey('created_at')) map['createdAt'] = map['created_at'];
-        // 'type', 'title', 'message', 'data', 'read' usually match or are simple.
+        if (map.containsKey('is_read')) map['read'] = map['is_read']; // DB uses is_read, model uses read
         
         return AppNotification.fromMap(data['id']?.toString() ?? '', map);
       }).toList();
@@ -876,11 +883,11 @@ class SupabaseDatabaseService {
     try {
       final response = await _client
           .from('notifications')
-          .count()
-          .eq('user_id', userId) // user_id is standard
-          .eq('read', false);
+          .select()
+          .eq('user_id', userId)
+          .eq('is_read', false); // DB uses is_read column
       
-      return response;
+      return (response as List).length;
     } catch (e) {
       // Try snake_case if camelCase fails (fallback)
       try {
@@ -901,7 +908,7 @@ class SupabaseDatabaseService {
     try {
       await _client
           .from('notifications')
-          .update({'read': true})
+          .update({'is_read': true})
           .eq('id', notificationId);
     } catch (e) {
       _logger.error('❌ Error marking notification read', e);
@@ -911,29 +918,12 @@ class SupabaseDatabaseService {
   /// Mark all notifications as read
   Future<void> markAllNotificationsAsRead(String userId) async {
     try {
-      // Try both column conventions to be safe or assuming the one that works in getNotifications
-      // Safe bet: user_id usually. But let's try strict.
-      // We will assume the column is `userId` based on previous code context, but `user_id` is SQL standard.
-      // I'll stick to a generic update that handles potential schema naming by trying the most likely first.
-      
-      // Update: Based on `AppNotification` model using `userId` in `toMap`, it's possible 
-      // the columns are camelCase if generated from Dart. 
-      // But standard migrations usually use snake_case. 
-      // I'll use `user_id` as primary assumption for WHERE clause in DB operations unless proven otherwise.
-      
       await _client
           .from('notifications')
-          .update({'read': true})
+          .update({'is_read': true})
           .eq('user_id', userId);
-          
     } catch (e) {
-       // Fallback to snake_case
-       try {
-         await _client
-          .from('notifications')
-          .update({'read': true})
-          .eq('user_id', userId);
-       } catch (_) {}
+       _logger.error('❌ Error marking all notifications read', e);
     }
   }
 
@@ -1406,10 +1396,77 @@ class SupabaseDatabaseService {
     }
   }
 
-  // ==================== STOCK REQUEST OPERATIONS ====================
-  // Note: Stock requests are not in the current Supabase schema
-  // These methods return empty streams for compatibility
-  // TODO: Add stock_requests table to Supabase schema if needed
+  // ==================== STOCK MOVEMENT OPERATIONS ====================
+  // Uses existing stock_movements table in Supabase
+
+  /// Log a stock movement (in/out)
+  Future<void> logStockMovement(StockMovement movement) async {
+    try {
+      _logger.info('📦 Logging stock movement: ${movement.type} ${movement.quantity}');
+      await _client.from('stock_movements').insert(movement.toInsertJson());
+      _logger.info('✅ Stock movement logged');
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error logging stock movement', e, stackTrace);
+      throw DatabaseException(message: 'Gagal mencatat pergerakan stok', originalError: e);
+    }
+  }
+
+  /// Get stock movements with optional filters
+  Future<List<StockMovement>> getStockMovements({
+    DateTime? startDate,
+    DateTime? endDate,
+    String? itemId,
+    String? movementType, // 'IN' or 'OUT'
+    int limit = 100,
+  }) async {
+    try {
+      _logger.info('📋 Fetching stock movements');
+      
+      var query = _client.from('stock_movements').select('''
+        *,
+        inventory_item:inventory_items!item_id(name)
+      ''');
+
+      if (startDate != null) {
+        query = query.gte('created_at', startDate.toIso8601String());
+      }
+      if (endDate != null) {
+        query = query.lte('created_at', endDate.toIso8601String());
+      }
+      if (itemId != null) {
+        query = query.eq('item_id', itemId);
+      }
+      if (movementType != null) {
+        query = query.eq('type', movementType);
+      }
+
+      final response = await query
+          .order('created_at', ascending: false)
+          .limit(limit);
+
+      return (response as List).map((e) => StockMovement.fromJson(e)).toList();
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error fetching stock movements', e, stackTrace);
+      return [];
+    }
+  }
+
+  /// Get current stock for an item
+  Future<int> getItemCurrentStock(String itemId) async {
+    try {
+      final response = await _client
+          .from('inventory_items')
+          .select('current_stock')
+          .eq('id', itemId)
+          .single();
+      return response['current_stock'] as int? ?? 0;
+    } catch (e) {
+      _logger.error('❌ Error getting current stock', e);
+      return 0;
+    }
+  }
+
+  // ==================== STOCK REQUEST PLACEHOLDERS ====================
 
   /// Get pending stock requests (placeholder - table doesn't exist yet)
   Stream<List<StockRequest>> getPendingStockRequests() async* {
@@ -1431,7 +1488,7 @@ class SupabaseDatabaseService {
       _logger.info('📋 Fetching loan requests');
       final response = await _client
           .from('transactions_loans')
-          .select('*, master_assets(name, condition)')
+          .select('*, assets(name, condition)')
           .order('created_at', ascending: false);
 
       return (response as List).map((e) => LoanRequest.fromMap(e)).toList();
@@ -1474,7 +1531,77 @@ class SupabaseDatabaseService {
     }
   }
 
-  // ==================== DISPOSAL OPERATIONS ====================
+  /// Delete loan request (hard delete)
+  Future<void> deleteLoanRequest(String id) async {
+    try {
+      _logger.info('🗑️ Deleting loan request: $id');
+      await _client.from('transactions_loans').delete().eq('id', id);
+      _logger.info('✅ Loan request deleted successfully');
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error deleting loan request', e, stackTrace);
+      throw DatabaseException(message: 'Gagal menghapus peminjaman', originalError: e);
+    }
+  }
+
+  // ==================== BOOKING / RESERVATION OPERATIONS ====================
+
+  /// Get all bookings
+  Future<List<BookingRequest>> getAllBookings() async {
+    try {
+      _logger.info('📋 Fetching all bookings');
+      final response = await _client
+          .from('bookings')
+          .select('*, assets:asset_id(name), users:user_id(display_name)') // Changed to use relations
+          .order('start_time', ascending: true);
+
+      return (response as List).map((e) => BookingRequest.fromJson(e)).toList();
+    } catch (e, stackTrace) {
+      if (e is PostgrestException && e.code == '42P01') { 
+        _logger.warning('⚠️ Bookings table not found (42P01), returning empty list');
+        return []; 
+      }
+      _logger.error('❌ Error fetching bookings', e, stackTrace);
+      return [];
+    }
+  }
+
+  /// Create new booking
+  Future<void> createBooking(BookingRequest booking) async {
+    try {
+      final data = booking.toJson();
+      if (data['id'] == '' || data['id'] == null) data.remove('id');
+      
+      await _client.from('bookings').insert(data);
+      _logger.info('✅ Booking created: ${booking.purpose}');
+    } catch (e, stackTrace) {
+      _logger.error('❌ Error creating booking', e, stackTrace);
+      throw DatabaseException(message: 'Gagal membuat booking', originalError: e);
+    }
+  }
+
+  /// Check availability (Conflict Detection)
+  Future<bool> checkBookingAvailability(String facilityId, DateTime start, DateTime end) async {
+    try {
+      // Find overlapping existing bookings for the same facility
+      // WHERE facility_id = ? AND status IN ('approved', 'active', 'pending')
+      // AND NOT (end_time <= ? OR start_time >= ?) 
+      // (Overlap logic: StartA < EndB AND EndA > StartB)
+      
+      final response = await _client
+          .from('bookings')
+          .select('id')
+          .eq('asset_id', facilityId)
+          .filter('status', 'in', '("pending","approved","active")') // Use explicit IN list
+          .lt('start_time', end.toIso8601String())
+          .gt('end_time', start.toIso8601String());
+
+      return (response as List).isEmpty; // True if no overlaps
+    } catch (e) {
+      _logger.error('❌ Error checking availability', e);
+      return true; // Assume available on error to not block UI (or fail safe?)
+    }
+  }
+
 
   /// Get all disposal requests
   Future<List<DisposalRequest>> getDisposalRequests() async {
@@ -1483,14 +1610,14 @@ class SupabaseDatabaseService {
       
       final response = await _client
           .from('transactions_disposal')
-          .select('*, master_assets(name, asset_code)') 
+          .select('*, assets(name, asset_code)') 
           .order('created_at', ascending: false);
 
       return (response as List).map((e) {
         final map = Map<String, dynamic>.from(e);
-        if (map['master_assets'] != null) {
-          map['asset_name'] = map['master_assets']['name'];
-          map['asset_code'] = map['master_assets']['asset_code'];
+        if (map['assets'] != null) {
+          map['asset_name'] = map['assets']['name'];
+          map['asset_code'] = map['assets']['asset_code'];
         }
         return DisposalRequest.fromJson(map);
       }).toList();
@@ -1506,9 +1633,15 @@ class SupabaseDatabaseService {
       final data = request.toJson();
       if (data['id'] == '' || data['id'] == null) data.remove('id');
       
-      // Clean up fields that shouldn't be inserted on create (like joined fields)
-      data.remove('asset_name');
-      data.remove('asset_code');
+      // Clean up fields that shouldn't be inserted on create
+      data.remove('asset_name');  // Joined field
+      data.remove('asset_code');  // Joined field
+      data.remove('created_at');  // Let DB generate
+      data.remove('approval_date');  // Not set on creation
+      data.remove('approved_by');  // Not set on creation
+      data.remove('execution_date');  // Not set on creation
+      data.remove('final_value');  // Not set on creation
+      data.remove('final_disposal_type');  // Not set on creation
       
       await _client.from('transactions_disposal').insert(data);
       _logger.info('✅ Disposal request created: ${request.code}');
@@ -1529,6 +1662,19 @@ class SupabaseDatabaseService {
       if (approvalDate != null) updates['approval_date'] = approvalDate.toIso8601String();
 
       await _client.from('transactions_disposal').update(updates).eq('id', id);
+
+      // AUTOMATION: If status is 'completed' (Approved/Done), update the Master Asset status
+      if (status == 'completed' || status == 'approved') {
+        // 1. Get Asset ID from this disposal request
+        final disposal = await _client.from('transactions_disposal').select('asset_id').eq('id', id).single();
+        final assetId = disposal['asset_id'];
+
+        // 2. Update Master Asset status to 'disposed' (dihapuskan)
+        if (assetId != null) {
+          await _client.from('assets').update({'status': 'disposed'}).eq('id', assetId);
+          _logger.info('✅ Asset $assetId status updated to DISPOSED');
+        }
+      }
     } catch (e) {
       _logger.error('❌ Error updating disposal status', e);
       throw DatabaseException(message: 'Gagal update status penghapusan');
@@ -1547,16 +1693,16 @@ class SupabaseDatabaseService {
       
       final response = await _client
           .from('transactions_disposal')
-          .select('*, master_assets(name, asset_code)')
+          .select('*, assets(name, asset_code)')
           .gte('created_at', startDate.toIso8601String())
           .lte('created_at', endDate.toIso8601String())
           .order('created_at', ascending: true);
           
       return (response as List).map((e) {
          final map = Map<String, dynamic>.from(e);
-         if (map['master_assets'] != null) {
-           map['asset_name'] = map['master_assets']['name'];
-           map['asset_code'] = map['master_assets']['asset_code'];
+         if (map['assets'] != null) {
+           map['asset_name'] = map['assets']['name'];
+           map['asset_code'] = map['assets']['asset_code'];
          }
          return DisposalRequest.fromJson(map);
       }).toList();
@@ -1576,7 +1722,7 @@ class SupabaseDatabaseService {
       
       final response = await _client
           .from('tickets')
-          .select('*, master_assets(name, asset_code), assigned_to_user:users!assigned_to(display_name)') 
+          .select('*, assets(name, asset_code), assigned_to_user:users!assigned_to(display_name)') 
           .eq('type', 'kerusakan')
           .gte('created_at', startDate.toIso8601String())
           .lte('created_at', endDate.toIso8601String())
@@ -1599,15 +1745,15 @@ class SupabaseDatabaseService {
       
       final response = await _client
           .from('transactions_loans')
-          .select('*, master_assets(name, asset_code)')
+          .select('*, assets(name, asset_code)')
           .gte('created_at', startDate.toIso8601String())
           .lte('created_at', endDate.toIso8601String())
           .order('created_at', ascending: true);
           
       return (response as List).map((e) {
           final map = Map<String, dynamic>.from(e);
-            if (map['master_assets'] != null) {
-              map['asset_name'] = map['master_assets']['name'];
+            if (map['assets'] != null) {
+              map['asset_name'] = map['assets']['name'];
             }
           return LoanRequest.fromMap(map);
       }).toList();

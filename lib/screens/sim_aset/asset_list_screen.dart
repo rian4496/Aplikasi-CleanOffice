@@ -1,16 +1,20 @@
-// lib/screens/sim_aset/asset_list_screen.dart
+﻿// lib/screens/sim_aset/asset_list_screen.dart
 // SIM-ASET: Asset List Screen with DataTable
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:aplikasi_cleanoffice/widgets/sim_aset/mobile_asset_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/asset.dart';
-import '../../providers/riverpod/asset_providers.dart';
-import '../../providers/riverpod/master_data_providers.dart';
+import '../../riverpod/asset_providers.dart';
+import '../../riverpod/dropdown_providers.dart' hide locationsProvider;
+import '../../riverpod/agency_providers.dart';
 import '../../services/asset_export_service.dart';
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../widgets/sim_aset/asset_export_options_dialog.dart';
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 import 'asset_form_screen.dart';
 import 'asset_detail_screen.dart';
 
@@ -59,6 +63,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     final categoriesAsync = ref.watch(assetCategoriesProvider);
     final conditionsAsync = ref.watch(assetConditionsProvider);
     final typesAsync = ref.watch(assetTypesProvider);
+    final locationsAsync = ref.watch(locationsProvider);
     final isWideScreen = MediaQuery.of(context).size.width > 900;
 
     // ShellRoute handles the Scaffold and Sidebar for Desktop.
@@ -73,7 +78,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     final content = Column(
       children: [
         // Header
-        _buildHeader(context),
+        _buildHeader(context, isWideScreen),
         
         // Toolbar
         _buildToolbar(context, categoriesAsync, conditionsAsync),
@@ -82,7 +87,11 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
         Expanded(
           child: assetsAsync.when(
             data: (assets) => categoriesAsync.when(
-              data: (categories) => _buildDataTable(context, _filterAssets(assets, categories)),
+              data: (categories) => locationsAsync.when(
+                data: (locations) => _buildDataTable(context, _filterAssets(assets, categories), categories, locations),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error loading locations: $e')),
+              ),
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error loading categories: $e')),
             ),
@@ -101,18 +110,67 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     // On Mobile, we treat it as a full screen with Back button (handled in _buildHeader).
     
     // To ensure background color consistency
-    return Container(
-      color: AppTheme.modernBg,
-      child: content,
+    return Scaffold(
+      backgroundColor: AppTheme.modernBg,
+      body: content,
+      floatingActionButton: !isWideScreen ? Container(
+         margin: const EdgeInsets.only(bottom: 16),
+         child: InkWell(
+            onTap: () {
+               if (widget.assetType != null) {
+                 _navigateToForm(context, null);
+               } else {
+                 // Show selection for generic
+                 showModalBottomSheet(
+                   context: context, 
+                   builder: (c) => Container(
+                     padding: const EdgeInsets.all(16),
+                     child: Column(
+                       mainAxisSize: MainAxisSize.min,
+                       children: [
+                         const Text('Pilih Jenis Aset', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                         const SizedBox(height: 16),
+                         ListTile(leading: const Icon(Icons.commute), title: const Text('Aset Bergerak'), onTap: () { Navigator.pop(c); _navigateToFormWithType(context, 'movable'); }),
+                         ListTile(leading: const Icon(Icons.domain), title: const Text('Aset Tidak Bergerak'), onTap: () { Navigator.pop(c); _navigateToFormWithType(context, 'immovable'); }),
+                       ],
+                     ),
+                   )
+                 );
+               }
+            },
+            borderRadius: BorderRadius.circular(50),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.9)]),
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   const Icon(Icons.add, color: Colors.white, size: 20),
+                   const SizedBox(width: 8),
+                   Text('Tambah Aset', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+            ),
+         ),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, bool isWideScreen) {
     // Determine if we came from folder navigation (has assetType)
     final hasAssetTypeFilter = widget.assetType != null;
     
+    // Check if Mobile
+    final isMobile = !isWideScreen;
+    final topPadding = isMobile ? MediaQuery.of(context).padding.top : 0.0;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16, 16 + topPadding, 16, 16),
       decoration: BoxDecoration(
         color: Colors.white,
         boxShadow: [
@@ -137,31 +195,35 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           
           const Icon(Icons.inventory_2, color: AppTheme.primary, size: 28),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-                  Text(
-                    _pageTitle,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
-                    ),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pageTitle,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textPrimary,
                   ),
-              Text(
-                widget.assetType == 'movable' 
-                    ? 'Kendaraan, Peralatan, Elektronik, dll'
-                    : widget.assetType == 'immovable'
-                        ? 'Gedung, Tanah, Infrastruktur, dll'
-                        : 'Kelola data aset BRIDA',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-            ],
+                Text(
+                  widget.assetType == 'movable' 
+                      ? 'Kendaraan, Peralatan, Elektronik, dll'
+                      : widget.assetType == 'immovable'
+                          ? 'Gedung, Tanah, Infrastruktur, dll'
+                          : 'Kelola data aset BRIDA',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
+          // const Spacer(), // Removed Spacer as Expanded handles the space
           
           // Export dropdown
           PopupMenuButton<String>(
@@ -198,6 +260,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             ],
           ),
           const SizedBox(width: 8),
+          if (!isMobile) ...[
           // Add Button (Popup if type unknown, Direct if type known)
           if (widget.assetType != null)
             ElevatedButton.icon(
@@ -255,16 +318,98 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 ),
               ),
             ),
+          ]
         ],
       ),
     );
   }
+
+
 
   Widget _buildToolbar(
     BuildContext context,
     AsyncValue categoriesAsync,
     AsyncValue conditionsAsync,
   ) {
+    // Responsive Check
+    final isMobile = MediaQuery.of(context).size.width < 600;
+
+    if (isMobile) {
+      // Mobile Toolbar (Stacked)
+      return Container(
+        padding: const EdgeInsets.all(12),
+        color: Colors.grey[50],
+        child: Column(
+          children: [
+            // Search
+            TextField(
+              decoration: InputDecoration(
+                hintText: 'Cari aset...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              onChanged: (value) => setState(() => _searchQuery = value),
+            ),
+            const SizedBox(height: 12),
+            
+            // Filters Row
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCategoryDropdown(categoriesAsync),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: conditionsAsync.when(
+                    data: (conditions) => DropdownButtonFormField<String>(
+                      value: _selectedCondition,
+                      decoration: InputDecoration(
+                        labelText: 'Kondisi',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                      items: <DropdownMenuItem<String>>[
+                        const DropdownMenuItem<String>(value: null, child: Text('Semua')),
+                        ...conditions.map((c) => DropdownMenuItem<String>(
+                          value: c.id,
+                          child: Text(c.name, overflow: TextOverflow.ellipsis),
+                        )),
+                      ],
+                      onChanged: (value) => setState(() => _selectedCondition = value),
+                    ),
+                    loading: () => const LinearProgressIndicator(),
+                    error: (_, __) => const Text('Error'),
+                  ),
+                ),
+              ],
+            ),
+             const SizedBox(height: 8),
+             // Reset Button Full Width
+             SizedBox(
+               width: double.infinity,
+               child: OutlinedButton.icon(
+                  onPressed: () => setState(() {
+                    _searchQuery = '';
+                    _selectedCategory = null;
+                    _selectedCondition = null;
+                  }),
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: const Text('Reset Filter'),
+               ),
+             ),
+          ],
+        ),
+      );
+    }
+
+    // Desktop Toolbar
     return Container(
       padding: const EdgeInsets.all(16),
       color: Colors.grey[50],
@@ -289,49 +434,9 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ),
           const SizedBox(width: 12),
           
-          // Category filter - filtered by asset type
+          // Category filter
           Expanded(
-            child: categoriesAsync.when(
-              data: (categories) {
-                // Filter categories based on asset type
-                List<dynamic> filteredCategories;
-                if (widget.assetType == 'movable') {
-                  // Aset Bergerak: Alat Kantor, Furniture, Elektronik, Kendaraan, dll
-                  filteredCategories = categories.where((c) => 
-                    ['kendaraan', 'komputer', 'lab', 'elektronik', 'furniture', 'alat_kantor'].contains(c.code)
-                  ).toList();
-                } else if (widget.assetType == 'immovable') {
-                  // Aset Tidak Bergerak: Tanah, Gedung, Infrastruktur
-                  filteredCategories = categories.where((c) => 
-                    ['gedung', 'tanah', 'infrastruktur', 'instalasi'].contains(c.code)
-                  ).toList();
-                } else {
-                  // All categories
-                  filteredCategories = categories;
-                }
-                
-                return DropdownButtonFormField<String>(
-                  value: _selectedCategory,
-                  decoration: InputDecoration(
-                    labelText: 'Kategori',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  items: <DropdownMenuItem<String>>[
-                    const DropdownMenuItem<String>(value: null, child: Text('Semua Kategori')),
-                    ...filteredCategories.map((c) => DropdownMenuItem<String>(
-                      value: c.id,
-                      child: Text(c.name),
-                    )),
-                  ],
-                  onChanged: (value) => setState(() => _selectedCategory = value),
-                );
-              },
-              loading: () => const LinearProgressIndicator(),
-              error: (_, __) => const Text('Error'),
-            ),
+            child: _buildCategoryDropdown(categoriesAsync),
           ),
           const SizedBox(width: 12),
           
@@ -384,7 +489,52 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     );
   }
 
-  Widget _buildDataTable(BuildContext context, List<Asset> assets) {
+  Widget _buildCategoryDropdown(AsyncValue categoriesAsync) {
+    return categoriesAsync.when(
+      data: (categories) {
+        // Filter categories based on asset type
+        List<dynamic> filteredCategories;
+        if (widget.assetType == 'movable') {
+          filteredCategories = categories.where((c) => 
+            ['kendaraan', 'komputer', 'lab', 'elektronik', 'furniture', 'alat_kantor'].contains(c.code)
+          ).toList();
+        } else if (widget.assetType == 'immovable') {
+          filteredCategories = categories.where((c) => 
+            ['gedung', 'tanah', 'infrastruktur', 'instalasi'].contains(c.code)
+          ).toList();
+        } else {
+          filteredCategories = categories;
+        }
+        
+        return DropdownButtonFormField<String>(
+          value: _selectedCategory,
+          decoration: InputDecoration(
+            labelText: 'Kategori',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          ),
+          isExpanded: true,
+          items: <DropdownMenuItem<String>>[
+            const DropdownMenuItem<String>(value: null, child: Text('Semua', overflow: TextOverflow.ellipsis)),
+            ...filteredCategories.map((c) => DropdownMenuItem<String>(
+              value: c.id,
+              child: Text(c.name, overflow: TextOverflow.ellipsis),
+            )),
+          ],
+          onChanged: (value) => setState(() => _selectedCategory = value),
+        );
+      },
+      loading: () => const LinearProgressIndicator(),
+      error: (_, __) => const Text('Error'),
+    );
+  }
+
+  Widget _buildDataTable(BuildContext context, List<Asset> assets, List<dynamic> categories, List<dynamic> locations) {
+    // Responsive Check
+    final isMobile = MediaQuery.of(context).size.width < 900;
+
     if (assets.isEmpty) {
       return Center(
         child: Column(
@@ -408,6 +558,10 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           ],
         ),
       );
+    }
+
+    if (isMobile) {
+      return _buildMobileList(context, assets, locations);
     }
 
     return SingleChildScrollView(
@@ -441,7 +595,7 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                 child: const Row(
                   children: [
                     SizedBox(width: 40), // Expand button
-                    Expanded(flex: 1, child: Text('QR', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(flex: 1, child: Text('Kode', style: TextStyle(fontWeight: FontWeight.bold))),
                     Expanded(flex: 3, child: Text('Nama Aset', style: TextStyle(fontWeight: FontWeight.bold))),
                     Expanded(flex: 2, child: Text('Kategori', style: TextStyle(fontWeight: FontWeight.bold))),
                     Expanded(flex: 2, child: Text('Lokasi', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -509,19 +663,34 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
                               // Category
                               Expanded(
                                 flex: 2,
-                                child: Text(asset.category),
+                                child: Builder(
+                                  builder: (context) {
+                                    final matches = categories.where((c) => c.id == asset.categoryId);
+                                    final cat = matches.isNotEmpty ? matches.first : null;
+                                    return Text(cat?.name ?? asset.categoryDisplayName);
+                                  }
+                                ),
                               ),
                               
                               // Location
                               Expanded(
                                 flex: 2,
-                                child: Text(asset.locationName ?? '-'),
+                                child: Builder(
+                                  builder: (context) {
+                                    final locMatches = locations.where((l) => l.id == asset.locationId);
+                                    final loc = locMatches.isNotEmpty ? locMatches.first : null;
+                                    return Text(loc?.name ?? asset.locationName ?? '-');
+                                  }
+                                ),
                               ),
                               
                               // Condition
                               Expanded(
                                 flex: 1,
-                                child: _buildConditionBadge(asset.condition),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: _buildConditionBadge(asset.condition),
+                                ),
                               ),
                               
                               // Actions
@@ -577,6 +746,30 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     );
   }
 
+  // Mobile List View
+  Widget _buildMobileList(BuildContext context, List<Asset> assets, List<dynamic> locations) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(16),
+      itemCount: assets.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 12),
+      itemBuilder: (context, index) {
+        final asset = assets[index];
+        
+        // Resolve location name
+        final locMatches = locations.where((l) => l.id == asset.locationId);
+        final locName = locMatches.isNotEmpty ? locMatches.first.name : null;
+
+        return MobileAssetCard(
+          asset: asset,
+          locationName: locName,
+          onTap: () => _navigateToDetail(context, asset),
+          onEdit: () => _navigateToForm(context, asset),
+          onDelete: () => _confirmDelete(context, asset),
+        );
+      },
+    );
+  }
+
   Widget _buildConditionBadge(AssetCondition condition) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -603,6 +796,8 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
   }
 
   Widget _buildExpandedDetail(Asset asset) {
+    final isImmovable = widget.assetType == 'immovable';
+    
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -633,34 +828,38 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
             children: [
               _detailRow('Deskripsi', asset.description ?? '-'),
               _detailRow('Status', asset.status.displayName),
-              _detailRow('Tanggal Pembelian', asset.purchaseDateFormatted ?? '-'),
-              _detailRow('Harga Pembelian', asset.purchasePriceFormatted ?? '-'),
-              _detailRow('Garansi Sampai', asset.warrantyUntilFormatted ?? '-'),
+              // Hide purchase info for immovable assets
+              if (!isImmovable) ...[
+                _detailRow('Tanggal Pembelian', asset.purchaseDateFormatted ?? '-'),
+                _detailRow('Harga Pembelian', asset.purchasePriceFormatted ?? '-'),
+                _detailRow('Garansi Sampai', asset.warrantyUntilFormatted ?? '-'),
+              ],
             ],
           ),
         ),
         
-        // QR Code
-        Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
+        // QR Code - hide for immovable assets
+        if (!isImmovable)
+          Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.qr_code_2, size: 60),
               ),
-              child: const Icon(Icons.qr_code_2, size: 60),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              asset.qrCode,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 10,
+              const SizedBox(height: 4),
+              Text(
+                asset.qrCode,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  fontSize: 10,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
       ],
     );
   }
@@ -713,9 +912,9 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
           }
         }
       } else if (widget.assetType != null && asset.categoryId == null) {
-        // If no category_id set, exclude from filtered view
-        return false;
-      }
+      // If no category_id set, INCLUDE in all views (since assets lacks this column)
+      // Previously: return false; - This was causing all assets to be hidden!
+    }
       
       // Search filter
       if (_searchQuery.isNotEmpty) {
@@ -807,19 +1006,44 @@ class _AssetListScreenState extends ConsumerState<AssetListScreen> {
     }
   }
 
-  void _exportToPdf() {
+  Future<void> _exportToPdf() async {
+    // Show options dialog first
+    final options = await showAssetExportOptionsDialog(context);
+    if (options == null) return; // User cancelled
+
     final assetsAsync = ref.read(allAssetsProvider);
     final categoriesAsync = ref.read(assetCategoriesProvider);
+    final locationsAsync = ref.read(locationsProvider);
+    final agencyAsync = ref.read(agencyProfileProvider);
+    
     assetsAsync.whenData((assets) {
       categoriesAsync.whenData((categories) {
-        final filtered = _filterAssets(assets, categories);
-        if (filtered.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tidak ada data untuk di-export')),
+        locationsAsync.whenData((locations) {
+          final filtered = _filterAssets(assets, categories);
+          if (filtered.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Tidak ada data untuk di-export')),
+            );
+            return;
+          }
+          
+          // Get signer from agency profile (use first signer if available)
+          final signer = agencyAsync.value?.signers.isNotEmpty == true 
+              ? agencyAsync.value!.signers.first 
+              : null;
+          final city = agencyAsync.value?.city ?? 'Banjarbaru';
+          
+          AssetExportService.exportToPdf(
+            context, 
+            filtered,
+            categories: categories,
+            locations: locations,
+            isLandscape: options.orientation == PdfOrientation.landscape,
+            includePhoto: options.includePhoto,
+            signer: signer,
+            city: city,
           );
-          return;
-        }
-        AssetExportService.exportToPdf(context, filtered);
+        });
       });
     });
   }

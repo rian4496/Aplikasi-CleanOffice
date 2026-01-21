@@ -8,9 +8,9 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/user_profile.dart';
-import '../../providers/riverpod/request_providers.dart';
-import '../../providers/riverpod/notification_providers.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/request_providers.dart';
+import '../../riverpod/notification_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 // import '../../widgets/web_admin/admin_sidebar.dart'; // Removed Sidebar

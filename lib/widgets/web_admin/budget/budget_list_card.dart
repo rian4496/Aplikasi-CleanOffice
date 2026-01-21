@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/budget/budget_list_card.dart
+﻿// lib/widgets/web_admin/budget/budget_list_card.dart
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -38,7 +38,7 @@ class BudgetListCard extends StatelessWidget {
     // Remaining warning
     final remainingPercent = 1.0 - percent;
     Color cardBorderColor = isSelected ? AppTheme.primary : Colors.grey[200]!;
-    if (remainingPercent < 0.1) cardBorderColor = Colors.red.withOpacity(0.5); // Warning border
+    if (remainingPercent < 0.1) cardBorderColor = Colors.red.withValues(alpha: 0.5); // Warning border
 
     return Card(
       elevation: isSelected ? 4 : 0,
@@ -52,7 +52,7 @@ class BudgetListCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         hoverColor: Colors.grey[50],
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12), // Reduced from 16
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -60,31 +60,38 @@ class BudgetListCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[50],
-                          borderRadius: BorderRadius.circular(6),
+                  Expanded( // Use Expanded to prevent overflow
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.blue[50],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${budget.fiscalYear}',
+                            style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 10), // Reduced
+                          ),
                         ),
-                        child: Text(
-                          '${budget.fiscalYear}',
-                          style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue, fontSize: 12),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            budget.sourceName,
+                            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13), // Reduced from 15
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        budget.sourceName,
-                        style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 15),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   _buildStatusChip(budget.status),
                 ],
               ),
               
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
               
               // Stats Grid
               Row(
@@ -93,8 +100,9 @@ class BudgetListCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Pagu Anggaran', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
-                        Text(currencyFormat.format(budget.totalAmount), style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text('Pagu', style: TextStyle(color: Colors.grey[600], fontSize: 10)), // Reduced
+                        const SizedBox(height: 2),
+                        Text(currencyFormat.format(budget.totalAmount), style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
                       ],
                     ),
                   ),
@@ -102,10 +110,11 @@ class BudgetListCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Realisasi', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                        Text('Realisasi', style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+                        const SizedBox(height: 2),
                         Text(
                           currencyFormat.format(budget.totalAmount - budget.remainingAmount), 
-                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue[700]),
+                          style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue[700], fontSize: 12),
                         ),
                       ],
                     ),
@@ -114,11 +123,13 @@ class BudgetListCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Sisa', style: TextStyle(color: Colors.grey[600], fontSize: 11)),
+                        Text('Sisa', style: TextStyle(color: Colors.grey[600], fontSize: 10)),
+                        const SizedBox(height: 2),
                         Text(
                           currencyFormat.format(budget.remainingAmount), 
                           style: TextStyle(
                             fontWeight: FontWeight.w600, 
+                            fontSize: 12,
                             color: budget.remainingAmount < (budget.totalAmount * 0.1) ? Colors.red : Colors.green[700]
                           ),
                         ),
@@ -135,36 +146,33 @@ class BudgetListCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(4),
                 child: LinearProgressIndicator(
                   value: percent,
-                  minHeight: 6,
+                  minHeight: 4, // Reduced from 6
                   backgroundColor: Colors.grey[100],
                   color: progressColor,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 8),
+              
+              // Footer: Percent & Actions
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Penyerapan: ${(percent * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 11, color: Colors.grey[600])),
-                  if (isSelected) 
-                     Row(
-                       children: [
-                         IconButton(
-                           icon: const Icon(Icons.edit, size: 16, color: Colors.grey),
-                           onPressed: () => onEdit(budget),
-                           tooltip: 'Edit',
-                           padding: EdgeInsets.zero,
-                           constraints: const BoxConstraints(),
-                         ),
-                         const SizedBox(width: 12),
-                         IconButton(
-                           icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                           onPressed: () => onDelete(budget),
-                           tooltip: 'Hapus',
-                           padding: EdgeInsets.zero,
-                           constraints: const BoxConstraints(),
-                         ),
-                       ],
-                     ),
+                  Text('Penyerapan: ${(percent * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 10, color: Colors.grey[600])),
+                  
+                  // Always show small actions on hover/select or just minimal actions
+                  Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => onEdit(budget),
+                        child: Icon(Icons.edit, size: 14, color: Colors.grey[400]),
+                      ),
+                      const SizedBox(width: 16),
+                       GestureDetector(
+                        onTap: () => onDelete(budget),
+                        child: Icon(Icons.delete, size: 14, color: Colors.red[300]),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ],
@@ -181,15 +189,15 @@ class BudgetListCard extends StatelessWidget {
     if (status == 'closed') color = Colors.black45;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: color),
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color), // Reduced
       ),
     );
   }

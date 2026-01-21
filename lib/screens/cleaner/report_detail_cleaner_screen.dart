@@ -12,11 +12,11 @@ import '../../core/logging/app_logger.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/error/exceptions.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
 import '../../services/storage_service.dart'; // ← IMPORT STORAGE
 import '../../core/config/supabase_config.dart';
-import '../../widgets/completion_photo_dialog.dart';
+import '../../widgets/shared/completion_photo_dialog.dart';
 
 final _logger = AppLogger('CleanerReportDetailScreen');
 

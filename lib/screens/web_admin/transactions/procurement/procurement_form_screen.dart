@@ -7,9 +7,9 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
-import '../../../../../providers/riverpod/budget_view_providers.dart';
+import '../../../../../riverpod/budget_view_providers.dart';
 import '../../../../../models/master/budget.dart';
 
 class ProcurementFormScreen extends HookConsumerWidget {
@@ -21,7 +21,7 @@ class ProcurementFormScreen extends HookConsumerWidget {
     final isLoading = useState(false);
     
     // Form Controllers
-    final codeController = useTextEditingController(text: 'REQ-${DateFormat('yyyyMMdd').format(DateTime.now())}-${const Uuid().v4().substring(0, 4).toUpperCase()}');
+    final codeController = useTextEditingController(text: 'REQ-${DateFormat('yyyyMMdd').format(DateTime.now())}-${const Uuid().v4().substring(0, 6).toUpperCase()}');
     final descController = useTextEditingController();
     
     // Items State (Using a simplified list of maps for the form)
@@ -80,58 +80,126 @@ class ProcurementFormScreen extends HookConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: TextFormField(
-                          initialValue: item['name'],
-                          decoration: const InputDecoration(labelText: 'Nama Barang', isDense: true),
-                          onChanged: (val) {
-                             items.value[index]['name'] = val;
-                             // Force rebuild? value change inside map might not trigger.
-                             // We need to clone the list to trigger useState update
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 1,
-                        child: TextFormField(
-                          initialValue: item['qty'].toString(),
-                          decoration: const InputDecoration(labelText: 'Qty', isDense: true),
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) {
-                             items.value[index]['qty'] = int.tryParse(val) ?? 1;
-                             items.value = List.from(items.value); // Trigger rebuild
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          initialValue: item['price'].toString(),
-                          decoration: const InputDecoration(labelText: 'Est. Harga', prefixText: 'Rp ', isDense: true),
-                          keyboardType: TextInputType.number,
-                          onChanged: (val) {
-                             items.value[index]['price'] = double.tryParse(val) ?? 0;
-                             items.value = List.from(items.value); // Trigger rebuild
-                          },
-                        ),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          if (items.value.length > 1) {
-                            final newList = List<Map<String, dynamic>>.from(items.value);
-                            newList.removeAt(index);
-                            items.value = newList;
+                      LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isMobile = constraints.maxWidth < 600;
+                          
+                          if (isMobile) {
+                            // Mobile Layout
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextFormField(
+                                        initialValue: item['name'],
+                                        decoration: const InputDecoration(labelText: 'Nama Barang', isDense: true),
+                                        onChanged: (val) {
+                                           items.value[index]['name'] = val;
+                                        },
+                                      ),
+                                    ),
+                                    IconButton(
+                                      onPressed: () {
+                                        if (items.value.length > 1) {
+                                          final newList = List<Map<String, dynamic>>.from(items.value);
+                                          newList.removeAt(index);
+                                          items.value = newList;
+                                        }
+                                      },
+                                      icon: const Icon(Icons.delete, color: Colors.red),
+                                      tooltip: 'Hapus Item',
+                                    )
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      flex: 1,
+                                      child: TextFormField(
+                                        initialValue: item['qty'].toString(),
+                                        decoration: const InputDecoration(labelText: 'Qty', isDense: true),
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (val) {
+                                           items.value[index]['qty'] = int.tryParse(val) ?? 1;
+                                           items.value = List.from(items.value);
+                                        },
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      flex: 2,
+                                      child: TextFormField(
+                                        initialValue: item['price'].toString(),
+                                        decoration: const InputDecoration(labelText: 'Est. Harga', prefixText: 'Rp ', isDense: true),
+                                        keyboardType: TextInputType.number,
+                                        onChanged: (val) {
+                                           items.value[index]['price'] = double.tryParse(val) ?? 0;
+                                           items.value = List.from(items.value);
+                                        },
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
                           }
+                          
+                          // Desktop Layout
+                          return Row(
+                            children: [
+                              Expanded(
+                                flex: 3,
+                                child: TextFormField(
+                                  initialValue: item['name'],
+                                  decoration: const InputDecoration(labelText: 'Nama Barang', isDense: true),
+                                  onChanged: (val) {
+                                     items.value[index]['name'] = val;
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 1,
+                                child: TextFormField(
+                                  initialValue: item['qty'].toString(),
+                                  decoration: const InputDecoration(labelText: 'Qty', isDense: true),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (val) {
+                                     items.value[index]['qty'] = int.tryParse(val) ?? 1;
+                                     items.value = List.from(items.value);
+                                  },
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: TextFormField(
+                                  initialValue: item['price'].toString(),
+                                  decoration: const InputDecoration(labelText: 'Est. Harga', prefixText: 'Rp ', isDense: true),
+                                  keyboardType: TextInputType.number,
+                                  onChanged: (val) {
+                                     items.value[index]['price'] = double.tryParse(val) ?? 0;
+                                     items.value = List.from(items.value);
+                                  },
+                                ),
+                              ),
+                              IconButton(
+                                onPressed: () {
+                                  if (items.value.length > 1) {
+                                    final newList = List<Map<String, dynamic>>.from(items.value);
+                                    newList.removeAt(index);
+                                    items.value = newList;
+                                  }
+                                },
+                                icon: const Icon(Icons.delete, color: Colors.red),
+                              )
+                            ],
+                          );
                         },
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                      )
-                    ],
-                  ),
+                      ),
                   
                   const SizedBox(height: 12),
                   

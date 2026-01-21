@@ -281,7 +281,7 @@ class MessageBubble extends StatelessWidget {
     return Icon(
       isRead ? Icons.done_all : Icons.done,
       size: 12,
-      color: isRead ? AdminColors.info : (isOwnMessage ? Colors.white60 : Colors.grey[600]),
+      color: isRead ? AdminColors.info : Colors.grey[600], // Grey checkmark for visibility
     );
   }
 

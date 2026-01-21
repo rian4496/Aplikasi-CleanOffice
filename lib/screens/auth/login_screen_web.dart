@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:ui' as ui; // For ImageFilter
 import 'package:flutter_animate/flutter_animate.dart';
@@ -7,7 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 
 // Assuming Auth Providers exist
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 
 class LoginScreenWeb extends HookConsumerWidget {
   const LoginScreenWeb({super.key});
@@ -97,7 +97,7 @@ class LoginScreenWeb extends HookConsumerWidget {
                   borderRadius: BorderRadius.circular(20), // Slightly smaller radius
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
+                      color: Colors.black.withValues(alpha: 0.08),
                       blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
@@ -119,7 +119,7 @@ class LoginScreenWeb extends HookConsumerWidget {
                       const SizedBox(height: 16), // Reduced
                       
                       Text(
-                        'SIM-ASET',
+                        'SIM-ASET BRIDA',
                         style: GoogleFonts.inter(
                           fontSize: 24, // Slightly smaller (28 -> 24)
                           fontWeight: FontWeight.bold,
@@ -130,7 +130,7 @@ class LoginScreenWeb extends HookConsumerWidget {
                       
                       const SizedBox(height: 4),
                       Text(
-                        'Sistem Manajemen Aset Daerah\nProvinsi Kalimantan Selatan',
+                        'Sistem Manajemen Aset\nBadan Riset dan Inovasi Daerah',
                         textAlign: TextAlign.center,
                         style: GoogleFonts.inter(
                           color: Colors.blueGrey[600],
@@ -366,7 +366,7 @@ class _BackgroundPainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     // 1. Light Blue Shape (Top Right)
-    paint.color = const Color(0xFF81D4FA).withOpacity(0.5); // Light Blue
+    paint.color = const Color(0xFF81D4FA).withValues(alpha: 0.5); // Light Blue
     var path1 = Path();
     path1.moveTo(size.width * 0.6, 0); // Start top-center-right
     path1.quadraticBezierTo(
@@ -390,7 +390,7 @@ class _BackgroundPainter extends CustomPainter {
     canvas.drawPath(path2, paint);
     
     // 3. Bottom Corner Bubble
-    paint.color = const Color(0xFF4FC3F7).withOpacity(0.8);
+    paint.color = const Color(0xFF4FC3F7).withValues(alpha: 0.8);
     canvas.drawCircle(Offset(size.width * 0.9, size.height), 150, paint);
   }
 

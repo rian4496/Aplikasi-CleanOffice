@@ -135,9 +135,12 @@ class DrawerMenuWidget extends StatelessWidget {
 
   /// Show logout confirmation dialog
   void _showLogoutConfirmation(BuildContext context) {
+    // Store the navigator for drawer closing
+    final scaffoldNavigator = Navigator.of(context);
+    
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text(
           'Konfirmasi Logout',
           style: TextStyle(
@@ -152,7 +155,7 @@ class DrawerMenuWidget extends StatelessWidget {
         actions: [
           // BATAL button (Blue)
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text(
               'Batal',
               style: TextStyle(
@@ -164,7 +167,8 @@ class DrawerMenuWidget extends StatelessWidget {
           // KELUAR button (Red)
           TextButton(
             onPressed: () {
-              Navigator.pop(context); // Close dialog
+              Navigator.of(dialogContext).pop(); // Close dialog first
+              scaffoldNavigator.pop(); // Close drawer
               onLogout(); // Call logout callback
             },
             child: const Text(

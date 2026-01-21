@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/cards/greeting_card.dart
+﻿// lib/widgets/web_admin/cards/greeting_card.dart
 // 👋 Greeting Card
 // Displays greeting message with user name and date
 
@@ -97,7 +97,7 @@ class GreetingCard extends StatelessWidget {
             const SizedBox(width: AdminConstants.spaceMd),
             CircleAvatar(
               radius: compact ? 24 : 32,
-              backgroundColor: AdminColors.primaryLight.withOpacity(0.2),
+              backgroundColor: AdminColors.primaryLight.withValues(alpha: 0.2),
               child: Icon(
                 Icons.person,
                 color: AdminColors.primary,

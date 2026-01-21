@@ -5,9 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
-import '../../providers/riverpod/supabase_service_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
+import '../../riverpod/supabase_service_providers.dart';
+import '../../riverpod/dropdown_providers.dart';
 import '../../core/config/supabase_config.dart';
 
 final _logger = AppLogger('CreateCleaningReportScreen');
@@ -25,6 +26,7 @@ class _CreateCleaningReportScreenState
   final _formKey = GlobalKey<FormState>();
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
+  String? _selectedLocationId;
   Uint8List? _imageBytes;
   bool _isSubmitting = false;
 
@@ -116,13 +118,16 @@ class _CreateCleaningReportScreenState
         imageUrl = await _uploadImage();
       }
 
-      // Create report
+      // Create ticket (will appear in Helpdesk)
       final actions = ref.read(cleanerActionsProvider.notifier);
       await actions.createCleaningReport(
-        title: 'Laporan Kebersihan',
+        title: _descriptionController.text.trim().length > 50 
+            ? _descriptionController.text.trim().substring(0, 50) 
+            : _descriptionController.text.trim(),
         location: _locationController.text.trim(),
         description: _descriptionController.text.trim(),
         imageUrl: imageUrl,
+        locationId: _selectedLocationId,
       );
 
       if (!mounted) return;
@@ -220,40 +225,38 @@ class _CreateCleaningReportScreenState
                   _buildImageSection(),
                   const SizedBox(height: AppConstants.largePadding),
 
-                  // Location Field with Autocomplete
-                  Autocomplete<String>(
-                    fieldViewBuilder:
-                        (context, controller, focusNode, onSubmit) {
-                          _locationController.text = controller.text;
-                          return TextFormField(
-                            controller: controller,
-                            focusNode: focusNode,
-                            decoration: const InputDecoration(
-                              labelText: 'Lokasi',
-                              hintText: 'Ketik atau pilih lokasi',
-                              prefixIcon: Icon(Icons.location_on),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return AppConstants.requiredFieldMessage;
-                              }
-                              return null;
-                            },
-                            enabled: !_isSubmitting,
-                          );
-                        },
-                    optionsBuilder: (textEditingValue) {
-                      if (textEditingValue.text.isEmpty) {
-                        return const Iterable<String>.empty();
-                      }
-                      return AppConstants.predefinedLocations.where((location) {
-                        return location.toLowerCase().contains(
-                          textEditingValue.text.toLowerCase(),
-                        );
-                      });
-                    },
-                    onSelected: (selection) {
-                      _locationController.text = selection;
+                  // Location Dropdown (linked to locations table)
+                  Consumer(
+                    builder: (context, ref, child) {
+                      final locationsAsync = ref.watch(locationsProvider);
+                      return locationsAsync.when(
+                        data: (locations) => DropdownButtonFormField<String>(
+                          value: _selectedLocationId,
+                          decoration: const InputDecoration(
+                            labelText: 'Lokasi',
+                            hintText: 'Pilih lokasi',
+                            prefixIcon: Icon(Icons.location_on),
+                          ),
+                          items: locations.map((loc) => DropdownMenuItem(
+                            value: loc.id,
+                            child: Text(loc.name),
+                          )).toList(),
+                          onChanged: _isSubmitting ? null : (value) {
+                            setState(() {
+                              _selectedLocationId = value;
+                              _locationController.text = locations.firstWhere((l) => l.id == value).name;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Pilih lokasi';
+                            }
+                            return null;
+                          },
+                        ),
+                        loading: () => const LinearProgressIndicator(),
+                        error: (e, _) => Text('Error: $e'),
+                      );
                     },
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),

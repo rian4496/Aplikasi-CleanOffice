@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/lists/activities_section.dart
+﻿// lib/widgets/web_admin/lists/activities_section.dart
 // 📋 Activities Section
 // Recent activities list with header
 
@@ -139,7 +139,7 @@ class ActivitiesSection extends StatelessWidget {
             Icon(
               Icons.history,
               size: 48,
-              color: AdminColors.textSecondary.withOpacity(0.5),
+              color: AdminColors.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             Text(

@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/request.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/request_card_widget.dart';
 import '../shared/request_detail/request_detail_screen.dart';

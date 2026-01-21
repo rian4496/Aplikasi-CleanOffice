@@ -1,6 +1,7 @@
 {
   "projects": {
-    "default": "cleanoffice-app"
+    "default": "cleanoffice-app",
+    "prod": "sim-aset-brida"
   },
   "targets": {},
   "etags": {}

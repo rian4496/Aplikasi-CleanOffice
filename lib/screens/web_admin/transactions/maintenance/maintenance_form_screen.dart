@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
-import '../../../../../providers/master_data_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
+import '../../../../../riverpod/dropdown_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
 import '../../../../../models/master/master_data_models.dart';
 
@@ -26,6 +26,7 @@ class MaintenanceRequestForm extends HookConsumerWidget {
     final assetsAsync = ref.watch(assetListProvider);
 
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent keyboard blank space issue
       appBar: AppBar(
         title: Text(id == null ? 'Buat Laporan Kerusakan' : 'Edit Laporan', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
       ),

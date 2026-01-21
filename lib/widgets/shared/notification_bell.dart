@@ -4,17 +4,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../providers/riverpod/notification_providers.dart';
+import '../../riverpod/notification_providers.dart';
 import 'notification_panel.dart';
 
 class NotificationBell extends ConsumerWidget {
   final Color? iconColor;
   final double? iconSize;
+  final VoidCallback? onTap;
 
   const NotificationBell({
     super.key,
     this.iconColor,
     this.iconSize,
+    this.onTap,
   });
 
   @override
@@ -39,7 +41,13 @@ class NotificationBell extends ConsumerWidget {
             size: iconSize,
           ),
           tooltip: 'Notifikasi',
-          onPressed: () => _showNotificationPanel(context),
+          onPressed: () {
+            if (onTap != null) {
+              onTap!();
+            } else {
+              _showNotificationPanel(context);
+            }
+          },
         ),
         if (unreadCount > 0)
           Positioned(

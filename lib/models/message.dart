@@ -222,20 +222,22 @@ class Message {
   /// Format timestamp
   String getFormattedTime() {
     final now = DateTime.now();
-    final difference = now.difference(createdAt);
+    // Convert UTC to local time for display
+    final localTime = createdAt.toLocal();
+    final difference = now.difference(localTime);
 
     if (difference.inDays == 0) {
       // Today - show time only
-      return DateFormat('HH:mm').format(createdAt);
+      return DateFormat('HH:mm').format(localTime);
     } else if (difference.inDays == 1) {
       // Yesterday
       return 'Kemarin';
     } else if (difference.inDays < 7) {
       // This week - show day name
-      return DateFormat('EEEE').format(createdAt);
+      return DateFormat('EEEE').format(localTime);
     } else {
       // Older - show date
-      return DateFormat('dd/MM/yyyy').format(createdAt);
+      return DateFormat('dd/MM/yyyy').format(localTime);
     }
   }
 

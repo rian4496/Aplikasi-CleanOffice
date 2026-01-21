@@ -64,6 +64,7 @@ class AdminLayoutWrapper extends StatelessWidget {
     return Scaffold(
       // NOTE: Removed MobileAdminAppBar to prevent duplicate header
       // When inside AdminShellLayout, header is already provided
+      resizeToAvoidBottomInset: false, // Prevent keyboard from pushing layout up and leaving blank space
       body: child,
       bottomNavigationBar: AdminBottomNav(
         currentIndex: currentNavIndex,

@@ -1,4 +1,4 @@
-// lib/widgets/navigation/admin_more_bottom_sheet.dart
+﻿// lib/widgets/navigation/admin_more_bottom_sheet.dart
 // Admin More Menu Bottom Sheet - Slide up from bottom
 
 import 'package:flutter/material.dart';
@@ -275,7 +275,7 @@ class AdminMoreBottomSheet extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 22),

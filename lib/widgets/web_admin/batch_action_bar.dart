@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/riverpod/selection_providers.dart';
+import '../../riverpod/selection_providers.dart';
 import '../../core/theme/app_theme.dart';
 
 class BatchActionBar extends ConsumerWidget {
@@ -28,7 +28,7 @@ class BatchActionBar extends ConsumerWidget {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -2),
           ),
@@ -104,7 +104,7 @@ class _ActionButton extends StatelessWidget {
           style: TextStyle(color: color),
         ),
         style: TextButton.styleFrom(
-          backgroundColor: color.withOpacity(0.1),
+          backgroundColor: color.withValues(alpha: 0.1),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         ),
       ),

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="id"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SIM-ASET Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#2563eb", // Blue-600
+                        secondary: "#f59e0b", // Amber-500
+                        "background-light": "#f3f4f6", // Gray-100
+                        "background-dark": "#111827", // Gray-900
+                        "card-light": "#ffffff",
+                        "card-dark": "#1f2937", // Gray-800
+                    },
+                    fontFamily: {
+                        display: ["Inter", "sans-serif"],
+                        body: ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {
+                        DEFAULT: "1rem", // 16px
+                        "xl": "1rem",
+                        "2xl": "1.5rem",
+                    },
+                },
+            },
+        };
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }.no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-gray-800 dark:text-gray-100 transition-colors duration-300 font-body antialiased">
+<div class="max-w-md mx-auto min-h-screen pb-24 relative overflow-hidden bg-background-light dark:bg-background-dark shadow-2xl">
+<header class="sticky top-0 z-30 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-md px-5 py-4 flex justify-between items-center border-b border-gray-200 dark:border-gray-800">
+<div class="flex items-center gap-3">
+<button class="p-2 -ml-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
+<span class="material-icons-round text-2xl">menu</span>
+</button>
+<div>
+<h1 class="text-lg font-bold text-primary tracking-tight leading-none">SIM-ASET</h1>
+<p class="text-[10px] text-gray-500 dark:text-gray-400 font-medium tracking-wide">BRIDA Kalsel</p>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="relative p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 transition text-gray-600 dark:text-gray-300">
+<span class="material-icons-round text-xl">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white dark:border-gray-900"></span>
+</button>
+<div class="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-2 border-white dark:border-gray-700 shadow-sm">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHcQWIsEeBvEVav_m74r4PMqtSH_aWr9LyQMFKXkjKtvRrJ8YZAqaCe3eXdwj2pQ2fAVvVc130MYYmR7yUIDj4-YTAJeiKNqLDdiBGGbpEiHBA4ooAGavdhtLVgZ0gO1EoIs9ojnP_cqaHhDna6dblu5-bAC-nwArYYRXRifLqCiMIDHFxirjM4Ao9F_g5jEJE2Fa1N3fOWVD0LhcAqiz4wK9FQGlWvu_ntQb2W78JsLSS51WOCXvukf289bkp2iFhkfkiCnT8rKk"/>
+</div>
+</div>
+</header>
+<main class="px-5 pt-6 space-y-6">
+<div class="relative">
+<span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+<span class="material-icons-round text-xl">search</span>
+</span>
+<input class="w-full py-3 pl-10 pr-4 bg-white dark:bg-card-dark rounded-xl border-none shadow-sm text-sm focus:ring-2 focus:ring-primary/50 text-gray-700 dark:text-gray-200 placeholder-gray-400 transition-all" placeholder="Cari aset, anggaran, pegawai..." type="text"/>
+</div>
+<div class="relative bg-gradient-to-br from-blue-800 to-blue-600 rounded-2xl p-6 text-white shadow-lg overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10"></div>
+<div class="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full blur-xl transform -translate-x-5 translate-y-5"></div>
+<div class="relative z-10 flex justify-between items-center">
+<div>
+<p class="text-blue-100 text-sm font-medium mb-1">Selamat Sore,</p>
+<h2 class="text-2xl font-bold mb-4 tracking-tight">Admin</h2>
+<div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
+<span class="material-icons-round text-sm">calendar_today</span>
+<span class="text-xs font-medium">Jumat, 26 Des 2025</span>
+</div>
+</div>
+<div class="w-24 h-24 relative">
+<img alt="Admin Greeting" class="object-contain drop-shadow-md transform scale-125 translate-y-2" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBfIyxk6iyttLtjSLz2BekwVjp6czn7BN0Am_nlVBWJbltUi3EsXu4lFkzMHXQ3yIjD-IuYVlcOB2mkRA-4PjaY4J5XU298dE3Um6U_F4I4-Et9JmpKffrlPQ7j8XN5BdTUClnkKYeNSA0NKRzK2nWgCIjA0sLKC4L5hnw8iDSeXtCJhRPiE2cqzsWUWsdXJqg_G9o9DU3Wkq27tPFz0usw3Xgtlnpin9d-8pwy8QFdeaN28OTZ-W1PK-kDKDyeV279K2wXdnRDDfE"/>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between mb-3">
+<div class="p-2 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
+<span class="material-icons-round text-xl">assignment</span>
+</div>
+<span class="text-xs text-gray-400 dark:text-gray-500 font-medium">Hari Ini</span>
+</div>
+<div class="flex flex-col">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-white">0</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400">Tiket Masuk</p>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between mb-3">
+<div class="p-2 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
+<span class="material-icons-round text-xl">date_range</span>
+</div>
+<span class="text-xs text-gray-400 dark:text-gray-500 font-medium">Minggu Ini</span>
+</div>
+<div class="flex flex-col">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-white">2</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400">Total Tiket</p>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow">
+<div class="flex items-start justify-between mb-3">
+<div class="p-2 bg-purple-50 dark:bg-purple-900/30 rounded-lg text-purple-600 dark:text-purple-400">
+<span class="material-icons-round text-xl">calendar_view_month</span>
+</div>
+<span class="text-xs text-gray-400 dark:text-gray-500 font-medium">Bulan Ini</span>
+</div>
+<div class="flex flex-col">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-white">2</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400">Akumulasi</p>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 hover:shadow-md transition-shadow relative overflow-hidden">
+<div class="absolute top-0 right-0 w-16 h-16 bg-red-500/5 rounded-bl-full -mr-4 -mt-4"></div>
+<div class="flex items-start justify-between mb-2">
+<div class="p-2 bg-red-50 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
+<span class="material-icons-round text-xl">priority_high</span>
+</div>
+<span class="text-[10px] bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-300 px-2 py-0.5 rounded-full font-bold">Action</span>
+</div>
+<div class="flex flex-col">
+<h3 class="text-2xl font-bold text-gray-900 dark:text-white">2</h3>
+<p class="text-xs text-gray-500 dark:text-gray-400">Tiket Open</p>
+</div>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-5 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
+<div class="flex justify-between items-center mb-6">
+<h3 class="font-bold text-gray-900 dark:text-white">Tren Tiket Minggu Ini</h3>
+<div class="flex gap-2">
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-red-500"></span>
+<span class="text-[10px] text-gray-500 dark:text-gray-400">Rusak</span>
+</div>
+<div class="flex items-center gap-1">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-[10px] text-gray-500 dark:text-gray-400">Bersih</span>
+</div>
+</div>
+</div>
+<div class="relative h-40 w-full">
+<div class="absolute inset-0 flex flex-col justify-between text-xs text-gray-300 dark:text-gray-700">
+<div class="border-b border-dashed border-gray-200 dark:border-gray-800 w-full h-0"></div>
+<div class="border-b border-dashed border-gray-200 dark:border-gray-800 w-full h-0"></div>
+<div class="border-b border-dashed border-gray-200 dark:border-gray-800 w-full h-0"></div>
+<div class="border-b border-gray-200 dark:border-gray-700 w-full h-0"></div>
+</div>
+<svg class="absolute inset-0 h-full w-full overflow-visible" preserveAspectRatio="none">
+<path d="M0 120 C 50 120, 100 80, 150 90 S 250 50, 350 40" fill="none" stroke="#ef4444" stroke-linecap="round" stroke-width="2.5"></path>
+<path d="M0 140 C 50 130, 100 110, 150 115 S 250 90, 350 80" fill="none" stroke="#22c55e" stroke-linecap="round" stroke-width="2.5"></path>
+</svg>
+<div class="absolute top-[40px] right-[20px] w-3 h-3 bg-red-500 rounded-full border-2 border-white dark:border-gray-800 shadow-sm z-10"></div>
+</div>
+<div class="flex justify-between text-[10px] text-gray-400 mt-2 px-1">
+<span>Sen</span>
+<span>Sel</span>
+<span>Rab</span>
+<span>Kam</span>
+<span>Jum</span>
+<span>Sab</span>
+<span>Min</span>
+</div>
+</div>
+<div class="pb-6">
+<div class="flex justify-between items-center mb-4">
+<h3 class="font-bold text-gray-900 dark:text-white text-lg">Aktivitas Terbaru</h3>
+<a class="text-xs text-primary font-medium hover:underline" href="#">Lihat Semua</a>
+</div>
+<div class="space-y-3">
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center flex-shrink-0 text-green-600 dark:text-green-400">
+<span class="material-icons-round text-xl">cleaning_services</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-semibold text-sm text-gray-800 dark:text-gray-100">Laporan Kebersihan</h4>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400">Pending</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">#TKT-20251224-0002</p>
+<div class="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span> Kebersihan
+                                </span>
+<span>•</span>
+<span>Kloset kotor</span>
+</div>
+<p class="text-[10px] text-gray-400 mt-1">24/12/2025</p>
+</div>
+</div>
+<div class="bg-card-light dark:bg-card-dark p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 flex items-start gap-4">
+<div class="w-10 h-10 rounded-full bg-red-100 dark:bg-red-900/30 flex items-center justify-center flex-shrink-0 text-red-600 dark:text-red-400">
+<span class="material-icons-round text-xl">build</span>
+</div>
+<div class="flex-1">
+<div class="flex justify-between items-start">
+<h4 class="font-semibold text-sm text-gray-800 dark:text-gray-100">Laporan Kerusakan</h4>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-400">Pending</span>
+</div>
+<p class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">#TKT-20251223-0015</p>
+<div class="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+<span class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span> Kerusakan
+                                </span>
+<span>•</span>
+<span>AC Mati</span>
+</div>
+<p class="text-[10px] text-gray-400 mt-1">23/12/2025</p>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 max-w-md w-full bg-card-light dark:bg-card-dark border-t border-gray-200 dark:border-gray-800 px-6 py-3 flex justify-between items-center z-50 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+<a class="flex flex-col items-center gap-1 text-primary" href="#">
+<span class="material-icons-round text-2xl">dashboard</span>
+<span class="text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-icons-round text-2xl">inventory_2</span>
+<span class="text-[10px] font-medium">Aset</span>
+</a>
+<div class="relative -top-6">
+<button class="w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:bg-blue-700 transition transform active:scale-95 border-4 border-background-light dark:border-background-dark">
+<span class="material-icons-round text-2xl">add</span>
+</button>
+</div>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-icons-round text-2xl">confirmation_number</span>
+<span class="text-[10px] font-medium">Tiket</span>
+</a>
+<a class="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors" href="#">
+<span class="material-icons-round text-2xl">person</span>
+<span class="text-[10px] font-medium">Profil</span>
+</a>
+</nav>
+</div>
+<script>
+        // Simple dark mode toggle for demo purposes (optional)
+        // Check system preference on load
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
+
+</body></html>

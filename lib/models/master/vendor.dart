@@ -15,6 +15,7 @@ abstract class Vendor with _$Vendor {
     @JsonKey(name: 'tax_id') String? taxId, // NPWP
     @JsonKey(name: 'bank_account') String? bankAccount,
     @JsonKey(name: 'bank_name') String? bankName,
+    @JsonKey(name: 'image_url') String? imageUrl, // Foto lokasi/vendor
     @Default('active') String status,
     @Default('Umum') String category, // ATK, IT, Konstruksi, Catering, Umum
   }) = _Vendor;

@@ -1,22 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
+import 'dart:typed_data';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../riverpod/auth_providers.dart';
 
 // Screens
 import '../../screens/auth/login_screen.dart';
 import '../../screens/web_admin/dashboard/admin_dashboard.dart';
+import '../../screens/web_admin/settings/admin_settings_screen.dart';
+import '../../screens/web_admin/settings/profile_screen.dart';
+import '../../screens/web_admin/settings/admin_user_management_screen.dart';
+import '../../screens/web_admin/notifications/notification_center_screen.dart';
 import '../../screens/web_admin/dashboard/activity_log_screen.dart';
-// import '../../screens/web_admin/admin_dashboard_screen.dart';
 import '../../screens/cleaner/cleaner_home_screen.dart';
 import '../../screens/employee/employee_home_screen_enhanced.dart';
+import '../../screens/console/cleaner/web_cleaner_dashboard.dart';
+import '../../screens/console/teknisi/web_teknisi_dashboard.dart';
+import '../../screens/onboarding/welcome_screen.dart';
+import '../../screens/cleaner/cleaner_schedule_screen.dart';
+import '../../screens/cleaner/cleaner_task_screen.dart';
+import '../../screens/cleaner/cleaner_task_detail_screen.dart';
+import '../../screens/cleaner/cleaner_pending_screen.dart';
+import '../../platforms/mobile/cleaner/my_tasks_screen.dart';
+import '../../screens/cleaner/cleaner_login_screen.dart';
+import '../../screens/teknisi/teknisi_home_screen.dart';
+import '../../screens/teknisi/teknisi_inbox_screen.dart';
+import '../../screens/teknisi/teknisi_task_detail_screen.dart';
+import '../../screens/teknisi/teknisi_schedule_screen.dart';
+import '../../screens/teknisi/teknisi_task_screen.dart';
+import '../../screens/employee/web_employee_dashboard.dart';
+import '../../screens/web_admin/analytics/ticket_analytics_screen.dart';
 
 // Master Data Screens
 import '../../screens/web_admin/master_data/master_pegawai_screen.dart';
+
 import '../../screens/web_admin/master_data/master_organisasi_screen.dart';
 import '../../screens/web_admin/master_data/master_anggaran_screen.dart';
 import '../../screens/web_admin/master_data/master_aset_screen.dart';
 import '../../screens/web_admin/master_data/master_vendor_screen.dart';
+import '../../platforms/mobile/admin/quick_menu_screen.dart'; // Mobile Quick Menu (Unified)
 
 // SIM-ASET Screens
 import '../../screens/sim_aset/asset_list_screen.dart';
@@ -31,6 +56,7 @@ import '../../models/ticket.dart'; // Import for TicketType
 import '../../screens/web_admin/transactions/procurement/procurement_list_screen.dart';
 import '../../screens/web_admin/transactions/procurement/procurement_form_screen.dart';
 import '../../screens/web_admin/transactions/procurement/procurement_detail_screen.dart';
+import '../../screens/web_admin/transactions/procurement/procurement_archive_screen.dart';
 
 import '../../screens/web_admin/transactions/helpdesk/helpdesk_screen.dart';
 import '../../screens/web_admin/transactions/maintenance/maintenance_detail_screen.dart';
@@ -52,10 +78,15 @@ import '../../screens/sim_aset/booking_form_screen.dart';
 import '../../screens/web_admin/transactions/disposal/disposal_list_screen.dart';
 import '../../screens/web_admin/transactions/disposal/disposal_form_screen.dart';
 import '../../screens/web_admin/transactions/disposal/disposal_detail_screen.dart';
+import '../../screens/web_admin/transactions/mutation/mutation_list_screen.dart';
+import '../../screens/web_admin/transactions/mutation/mutation_form_screen.dart';
+import '../../screens/web_admin/transactions/mutation/mutation_detail_screen.dart';
 
 import '../../screens/web_admin/cleaner_management_screen.dart';
 import '../../screens/web_admin/settings/admin_settings_screen.dart';
 import '../../screens/web_admin/reports/report_center_screen.dart';
+import '../../screens/web_admin/reports/stock_movement_report_screen.dart';
+import '../../screens/web_admin/reports/report_preview_screen.dart';
 import '../../screens/web_admin/notifications/notification_center_screen.dart';
 // import '../../screens/web_admin/user_management_screen.dart'; // Deprecated
 
@@ -69,28 +100,246 @@ import '../../screens/kasubbag/kasubbag_approval_dashboard.dart';
 
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
-final _adminShellNavigatorKey = GlobalKey<NavigatorState>();
+// final _adminShellNavigatorKey removed to prevent Duplicate Key errors
+
+/// Converts a Stream to a Listenable for GoRouter refreshListenable
+class GoRouterRefreshStream extends ChangeNotifier {
+  late final StreamSubscription<dynamic> _subscription;
+
+  GoRouterRefreshStream(Stream<dynamic> stream) {
+    notifyListeners();
+    _subscription = stream.asBroadcastStream().listen((_) => notifyListeners());
+  }
+
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
+// ==================== ROLE-BASED ROUTE PROTECTION ====================
+
+/// Get home route for each role
+/// Uses kIsWeb to determine if user should go to Web Console or Mobile App routes
+String _getHomeRouteForRole(String? role) {
+  // Web users all get Console routes (Admin Shell Layout)
+  if (kIsWeb) {
+    switch (role) {
+      case 'admin':
+        return '/admin/dashboard';
+      case 'kasubbag_umpeg':
+        return '/admin/dashboard'; // Same as Admin (Full Access)
+      case 'teknisi':
+      case 'teknisi_aset':
+        return '/console/teknisi/dashboard'; // Web Teknisi Dashboard (Mobile Layout)
+      case 'cleaner':
+        return '/console/cleaner/dashboard'; // Web Cleaner Dashboard
+      case 'employee':
+        return '/admin/dashboard'; // Web Employee now uses Admin Console
+      default:
+        return '/login';
+    }
+  }
+  
+  // Mobile App users get dedicated mobile routes
+  switch (role) {
+    case 'admin':
+      return '/admin/dashboard'; // Admin still uses web-like layout
+    case 'kasubbag_umpeg':
+      return '/admin/dashboard';
+    case 'teknisi':
+      return '/teknisi/dashboard'; // Mobile Teknisi View
+    case 'cleaner':
+      return '/cleaner/dashboard'; // Mobile Cleaner (existing)
+    case 'employee':
+      return '/employee/dashboard'; // Mobile Employee (existing)
+    default:
+      return '/login';
+  }
+}
+
+/// Check if role can access a given route
+bool _canRoleAccessRoute(String? role, String path) {
+  if (role == null) return false;
+  
+  // Admin can access everything
+  if (role == 'admin') return true;
+  
+  // Define route access per role
+  final routeAccess = <String, List<String>>{
+    'kasubbag_umpeg': [
+      '/admin/dashboard',
+      '/admin/quick-menu', // Allow Quick Menu access
+      '/admin/activities',
+      '/admin/assets',
+      '/admin/procurement',
+      '/admin/helpdesk',
+      '/admin/inventory',
+      '/admin/cleaners',
+      '/admin/disposal',
+      '/admin/analytics',
+      '/admin/loans',
+      '/admin/bookings',
+      '/admin/maintenance',
+      '/admin/reports',
+      '/admin/notifications',
+      '/admin/ticket',
+      '/admin/inbox',
+      '/admin/master', // Full access to Master Data
+      '/admin/settings', // Full access to Settings
+      '/admin/profile', // Profile access
+      '/admin/users', // User Management
+      '/kasubbag',
+    ],
+    'teknisi': [
+      '/admin/dashboard',
+      '/admin/helpdesk',
+      '/admin/maintenance',
+      '/admin/ticket',
+      '/admin/inbox',
+      '/admin/profile',
+      '/teknisi', // Mobile teknisi routes
+      '/teknisi/schedule',
+      '/teknisi/my-tasks',
+      '/teknisi/task',
+    ],
+    'cleaner': [
+      '/cleaner',
+      '/console/cleaner', // Web Console access
+      '/admin/ticket',
+      '/admin/inbox',
+      '/admin/helpdesk', // Can see helpdesk for their tasks
+      '/admin/profile', // Profile access
+      '/admin/notifications', // Notification Center
+      '/cleaner/schedule', // Mobile Schedule Screen
+      '/cleaner/my-tasks', // Mobile My Tasks Screen
+      '/cleaner/task', // Task detail (prefix match)
+    ],
+    'employee': [
+      '/admin/dashboard',
+      '/admin/quick-menu', // Added for Quick Menu access
+      '/admin/activities',
+      '/admin/assets',
+      '/admin/procurement',
+      '/admin/helpdesk',
+      '/admin/inventory',
+      '/admin/disposal',
+      '/admin/analytics',
+      '/admin/loans',
+      '/admin/bookings',
+      '/admin/maintenance',
+      '/admin/reports',
+      '/admin/notifications',
+      '/admin/ticket',
+      '/admin/inbox',
+      '/admin/master', // Full Master Data Access
+      '/admin/settings',
+      '/admin/profile', // Profile access
+      '/console/employee',
+      '/employee',
+    ],
+  };
+  
+  final allowedRoutes = routeAccess[role] ?? [];
+  
+  // Check if path starts with any of the allowed routes
+  for (final route in allowedRoutes) {
+    if (path.startsWith(route)) return true;
+  }
+  
+  return false;
+}
 
 final goRouterProvider = Provider<GoRouter>((ref) {
+  // Watch auth state for reactivity
+  final authState = ref.watch(authStateProvider);
+  final userRole = ref.watch(currentUserRoleProvider);
+  
+  // Create refresh listenable from auth stream
+  final refreshListenable = GoRouterRefreshStream(
+    Supabase.instance.client.auth.onAuthStateChange.map((event) => event.session).distinct(),
+  );
+  
   return GoRouter(
     navigatorKey: _rootNavigatorKey,
     initialLocation: '/',
+    refreshListenable: refreshListenable,
+    redirect: (context, state) {
+      final path = state.uri.path;
+      final isLoggedIn = authState.value != null;
+      final isLoginRoute = path == '/' || path == '/login';
+      
+      // Not logged in and trying to access protected route
+      if (!isLoggedIn && !isLoginRoute) {
+        return '/login';
+      }
+      
+      // Logged in and on login page - redirect to home
+      if (isLoggedIn && isLoginRoute) {
+        return _getHomeRouteForRole(userRole);
+      }
+      
+      // Check role-based access for admin routes
+      if (isLoggedIn && path.startsWith('/admin')) {
+        if (!_canRoleAccessRoute(userRole, path)) {
+          // Redirect to role's home page
+          return _getHomeRouteForRole(userRole);
+        }
+      }
+      
+      // Check role-specific routes
+      if (isLoggedIn && path.startsWith('/cleaner') && userRole != 'cleaner' && userRole != 'admin') {
+        return _getHomeRouteForRole(userRole);
+      }
+      if (isLoggedIn && path.startsWith('/employee') && userRole != 'employee' && userRole != 'admin') {
+        return _getHomeRouteForRole(userRole);
+      }
+      if (isLoggedIn && path.startsWith('/kasubbag') && userRole != 'kasubbag_umpeg' && userRole != 'admin') {
+        return _getHomeRouteForRole(userRole);
+      }
+      
+      return null; // No redirect needed
+    },
     routes: [
-      // Splash
+      // Splash / Welcome (Mobile: WelcomeScreen, Web: LoginScreen)
+      // Splash / Welcome (Mobile: WelcomeScreen, Web: LoginScreen)
       GoRoute(
         path: '/',
-        builder: (context, state) => const LoginScreen(), 
+        builder: (context, state) {
+           return LayoutBuilder(
+             builder: (context, constraints) {
+               // Mobile Web (< 900px) or Native App -> WelcomeScreen
+               // Desktop Web (>= 900px) -> LoginScreen
+               if (constraints.maxWidth < 900) {
+                 return const WelcomeScreen();
+               }
+               return const LoginScreen();
+             },
+           );
+        }, 
       ),
       
-      // Auth
+      // Auth (Mobile: CleanerLoginScreen, Web: LoginScreen)
       GoRoute(
         path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        builder: (context, state) {
+           return LayoutBuilder(
+             builder: (context, constraints) {
+               // Mobile Web (< 900px) -> CleanerLoginScreen
+               // Desktop Web (>= 900px) -> LoginScreen
+               if (constraints.maxWidth < 900) {
+                 return const CleanerLoginScreen();
+               }
+               return const LoginScreen();
+             },
+           );
+        },
       ),
 
       // Admin Shell Route
       ShellRoute(
-        navigatorKey: _adminShellNavigatorKey,
+        // navigatorKey: _adminShellNavigatorKey, // Removed to fix key collision
         builder: (context, state, child) {
           return AdminShellLayout(child: child);
         },
@@ -105,6 +354,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             path: '/admin/activities',
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ActivityLogScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/admin/quick-menu',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: QuickMenuScreen(),
             ),
           ),
           
@@ -186,6 +441,24 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                    return AssetDetailScreen(asset: asset, assetType: assetType);
                 },
               ),
+              // Mutation Routes
+              GoRoute(
+                path: 'mutation',
+                builder: (context, state) => const MutationListScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'create',
+                    builder: (context, state) => const MutationFormScreen(),
+                  ),
+                  GoRoute(
+                    path: ':id',
+                    builder: (context, state) {
+                      final id = state.pathParameters['id']!;
+                      return MutationDetailScreen(mutationId: id);
+                    },
+                  ),
+                ],
+              ),
             ],
           ),
           
@@ -199,6 +472,12 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: 'new',
                 builder: (context, state) => const ProcurementFormScreen(),
+              ),
+              GoRoute(
+                path: 'archive',
+                pageBuilder: (context, state) => const NoTransitionPage(
+                  child: ProcurementArchiveScreen(),
+                ),
               ),
               GoRoute(
                  path: 'detail/:id',
@@ -227,6 +506,27 @@ final goRouterProvider = Provider<GoRouter>((ref) {
                 builder: (context, state) {
                   final id = state.pathParameters['id'] ?? '';
                   return DisposalDetailScreen(id: id);
+                },
+              ),
+            ],
+          ),
+
+          // Loans (Peminjaman)
+          GoRoute(
+            path: '/admin/loans',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: LoanListScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'new',
+                builder: (context, state) => const LoanFormScreen(),
+              ),
+              GoRoute(
+                path: 'detail/:id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id'] ?? '';
+                  return LoanDetailScreen(id: id);
                 },
               ),
             ],
@@ -419,12 +719,41 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+
+          // Mutation (Mutasi Aset)
+          GoRoute(
+            path: '/admin/transactions/mutation',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: MutationListScreen(),
+            ),
+            routes: [
+              GoRoute(
+                path: 'create',
+                builder: (context, state) => const MutationFormScreen(),
+              ),
+              GoRoute(
+                path: ':id',
+                builder: (context, state) {
+                  final id = state.pathParameters['id']!;
+                  return MutationDetailScreen(mutationId: id);
+                },
+              ),
+            ],
+          ),
           
-          // Settings
+          // Settings (General Only)
           GoRoute(
             path: '/admin/settings',
             pageBuilder: (context, state) => const NoTransitionPage(
-              child: AdminSettingsScreen(),
+               child: AdminSettingsScreen(),
+            ),
+          ),
+          
+          // Profile (Dedicated)
+          GoRoute(
+            path: '/admin/profile',
+            pageBuilder: (context, state) => const NoTransitionPage(
+               child: ProfileScreen(),
             ),
           ),
 
@@ -442,14 +771,117 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => const NoTransitionPage(
               child: ReportCenterScreen(),
             ),
+            routes: [
+              GoRoute(
+                path: 'preview',
+                parentNavigatorKey: _rootNavigatorKey, // Hide Shell/Menu
+                builder: (context, state) {
+                  final extra = state.extra as Map<String, dynamic>?;
+                   return ReportPreviewScreen(
+                      title: extra?['title'] as String? ?? 'Preview',
+                      pdfBytes: extra?['pdfBytes'] as Uint8List? ?? Uint8List(0),
+                   );
+                },
+              ),
+            ],
+          ),
+          GoRoute(
+            path: '/admin/reports/stock-movement',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: StockMovementReportScreen(),
+            ),
           ),
           
-          // Legacy User Management (Redirect to Settings)
+          // Ticket Analytics
+          GoRoute(
+            path: '/admin/analytics/tickets',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: TicketAnalyticsScreen(),
+            ),
+          ),
+          
+          // User Management (Dedicated Screen)
           GoRoute(
             path: '/admin/users',
-             redirect: (_, __) => '/admin/settings', // Users are now in Settings
              pageBuilder: (context, state) => const NoTransitionPage(
+              child: AdminUserManagementScreen(),
+            ),
+          ),
+          
+
+
+          // ==================== CONSOLE ROUTES (WEB PORTAL FOR ALL ROLES) ====================
+          // These routes are INSIDE the ShellRoute, so they get the Admin Sidebar + Header
+
+          // Console: Cleaner Dashboard (Web View)
+          GoRoute(
+            path: '/console/cleaner/dashboard',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: WebCleanerDashboard(), // Desktop-optimized Cleaner Dashboard
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/schedule',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CleanerScheduleScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/profile',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: ProfileScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/settings',
+            pageBuilder: (context, state) => const NoTransitionPage(
               child: AdminSettingsScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/pending',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CleanerPendingScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/my-tasks',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: CleanerTaskScreen(),
+            ),
+          ),
+           GoRoute(
+            path: '/console/cleaner/create_request',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: InventoryRequestFormScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/console/cleaner/notifications',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: NotificationCenterScreen(fallbackRoute: '/console/cleaner/dashboard'),
+            ),
+          ),
+
+          // Console: Teknisi Dashboard (Web View)
+          GoRoute(
+            path: '/console/teknisi/dashboard',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: WebTeknisiDashboard(), 
+            ),
+          ),
+          GoRoute(
+            path: '/console/teknisi/notifications',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: NotificationCenterScreen(fallbackRoute: '/console/teknisi/dashboard'),
+            ),
+          ),
+
+          // Console: Employee Dashboard (Web View)
+          GoRoute(
+            path: '/console/employee/dashboard',
+            pageBuilder: (context, state) => const NoTransitionPage(
+              child: WebEmployeeDashboard(), 
             ),
           ),
         ],
@@ -460,11 +892,30 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         path: '/cleaner/dashboard', // Changed from home to dashboard to match context
         builder: (context, state) => const CleanerHomeScreen(),
       ),
+      GoRoute(
+        path: '/cleaner/schedule',
+        builder: (context, state) => const CleanerScheduleScreen(),
+      ),
+      GoRoute(
+        path: '/cleaner/my-tasks',
+        builder: (context, state) => const CleanerTaskScreen(),
+      ),
+      GoRoute(
+        path: '/cleaner/task/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return CleanerTaskDetailScreen(ticketId: id);
+        },
+      ),
 
       // Employee Routes (Outside Admin Shell)
       GoRoute(
         path: '/employee/dashboard',
         builder: (context, state) => const EmployeeHomeScreenEnhanced(),
+      ),
+      GoRoute(
+        path: '/employee/quick-menu',
+        builder: (context, state) => const QuickMenuScreen(), // Unified, role-aware
       ),
       GoRoute(
         path: '/create_request',
@@ -484,7 +935,26 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       // Teknisi Routes (Outside Admin Shell)
       GoRoute(
         path: '/teknisi/dashboard',
-        builder: (context, state) => const InboxScreen(role: 'teknisi'),
+        builder: (context, state) => const TeknisiHomeScreen(),
+      ),
+      GoRoute(
+        path: '/teknisi/inbox',
+        builder: (context, state) => const TeknisiInboxScreen(),
+      ),
+      GoRoute(
+        path: '/teknisi/schedule',
+        builder: (context, state) => const TeknisiScheduleScreen(),
+      ),
+      GoRoute(
+        path: '/teknisi/task/:id',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return TeknisiTaskDetailScreen(ticketId: id);
+        },
+      ),
+      GoRoute(
+        path: '/teknisi/my-tasks',
+        builder: (context, state) => const TeknisiTaskScreen(),
       ),
 
       // Ticket Form (Universal)
@@ -495,44 +965,5 @@ final goRouterProvider = Provider<GoRouter>((ref) {
         ),
       ),
     ],
-    // Role-based redirect logic
-    redirect: (context, state) async {
-      final session = Supabase.instance.client.auth.currentSession;
-      final isLoggedIn = session != null;
-      final isLoginRoute = state.matchedLocation == '/login' || state.matchedLocation == '/';
-
-      // Not logged in -> go to login
-      if (!isLoggedIn && !isLoginRoute) {
-        return '/login';
-      }
-
-      // Logged in and on login page -> redirect based on role
-      if (isLoggedIn && isLoginRoute) {
-        try {
-          final userId = session.user.id;
-          final response = await Supabase.instance.client
-              .from('user_roles')
-              .select('role')
-              .eq('user_id', userId)
-              .maybeSingle();
-
-          final role = response?['role'] as String? ?? 'employee';
-
-          switch (role) {
-            case 'admin': return '/admin/dashboard';
-            case 'kasubbag': return '/kasubbag/dashboard';
-            case 'teknisi': return '/teknisi/dashboard';
-            case 'cleaner': return '/cleaner/dashboard';
-            case 'employee': return '/employee/dashboard';
-            default: return '/employee/dashboard';
-          }
-        } catch (e) {
-          // Fallback to admin if role check fails (for existing admins)
-          return '/admin/dashboard';
-        }
-      }
-
-      return null; // No redirect
-    },
   );
 });

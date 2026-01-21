@@ -7,8 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:typed_data';
 
 import '../../../models/request.dart';
-import '../../../providers/riverpod/request_providers.dart';
-import '../../../providers/riverpod/auth_providers.dart';
+import '../../../riverpod/request_providers.dart';
+import '../../../riverpod/auth_providers.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/date_formatter.dart';
 

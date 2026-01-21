@@ -1,16 +1,18 @@
-// lib/screens/shared/settings_screen.dart
+﻿// lib/screens/shared/settings_screen.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../providers/riverpod/settings_provider.dart';
+import '../../riverpod/settings_provider.dart';
 import '../../models/app_settings.dart';
 import '../../core/theme/app_theme.dart';
 
 /// Settings Screen dengan multi-bahasa (ID/EN)
 class SettingsScreen extends ConsumerStatefulWidget {
-  const SettingsScreen({super.key});
+  final int initialTab;
+
+  const SettingsScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
@@ -144,111 +146,156 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final lang = settings.language;
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: const Color(0xFFF2F4F7), // Light Gray Background
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF101828)),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           _t('title', lang),
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
+          style: const TextStyle(
+            color: Color(0xFF101828), 
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
           ),
         ),
+        centerTitle: false,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          // Profile placeholder from screenshot
+          Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: CircleAvatar(
+              backgroundColor: const Color(0xFFE4D3B5), // Beige color from screenshot
+              radius: 16,
+            ),
+          )
+        ],
       ),
       body: ListView(
+        padding: const EdgeInsets.all(20),
         children: [
-          const SizedBox(height: 8),
-
           // ==================== NOTIFICATIONS SECTION ====================
-          _buildSectionHeader(_t('notifications', lang)),
+          _buildSectionHeader(_t('notifications', lang).toUpperCase()),
           
-          _buildSwitchTile(
-            icon: Icons.notifications_outlined,
-            title: _t('notifications', lang),
-            subtitle: _t('notifications_desc', lang),
-            value: settings.notificationsEnabled,
-            onChanged: (value) {
-              ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
-            },
-          ),
-          
-          _buildSwitchTile(
-            icon: Icons.volume_up_outlined,
-            title: _t('sound', lang),
-            subtitle: _t('sound_desc', lang),
-            value: settings.soundEnabled,
-            onChanged: (value) {
-              ref.read(settingsProvider.notifier).setSoundEnabled(value);
-            },
-            enabled: settings.notificationsEnabled,
-          ),
+          _buildSettingsGroup([
+             _buildSettingsTile(
+              icon: Icons.notifications_rounded,
+              iconColor: const Color(0xFF2E90FA),
+              iconBgColor: const Color(0xFFEFF8FF),
+              title: _t('notifications', lang),
+              subtitle: _t('notifications_desc', lang),
+              trailing: Switch(
+                value: settings.notificationsEnabled,
+                activeColor: const Color(0xFF2E90FA),
+                onChanged: (value) {
+                  ref.read(settingsProvider.notifier).setNotificationsEnabled(value);
+                },
+              ),
+            ),
+            _buildDivider(),
+            _buildSettingsTile(
+              icon: Icons.volume_up_rounded,
+               iconColor: const Color(0xFF7F56D9), // Purple
+              iconBgColor: const Color(0xFFF9F5FF),
+              title: _t('sound', lang),
+              subtitle: _t('sound_desc', lang),
+              trailing: Switch(
+                value: settings.soundEnabled,
+                activeColor: const Color(0xFF2E90FA),
+                onChanged: settings.notificationsEnabled ? (value) {
+                  ref.read(settingsProvider.notifier).setSoundEnabled(value);
+                } : null,
+              ),
+            ),
+          ]),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // ==================== LANGUAGE SECTION ====================
-          _buildSectionHeader(_t('language', lang)),
+          // ==================== PREFERENCES SECTION ====================
+          // "PREFERENSI" is roughly "PREFERENCES" or "BAHASA" in screenshot context calls it "PREFERENSI"
+          _buildSectionHeader('PREFERENSI'), 
           
-          _buildLanguageTile(
-            currentLang: lang,
-            onLanguageChanged: (newLang) {
-              ref.read(settingsProvider.notifier).setLanguage(newLang);
-            },
-          ),
+          _buildSettingsGroup([
+            _buildSettingsTile(
+              icon: Icons.language_rounded,
+              iconColor: const Color(0xFF039855), // Green
+              iconBgColor: const Color(0xFFECFDF3),
+              title: _t('language', lang),
+              subtitle: _t('language_desc', lang),
+              onTap: () {
+                 // Toggle Language
+                 final newLang = lang == 'id' ? 'en' : 'id';
+                 ref.read(settingsProvider.notifier).setLanguage(newLang);
+              },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   Text(
+                     lang == 'id' ? 'Indonesia' : 'English',
+                     style: TextStyle(
+                       color: Colors.grey.shade600,
+                       fontWeight: FontWeight.w500,
+                     ),
+                   ),
+                   const SizedBox(width: 8),
+                   const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                ],
+              ),
+            ),
+          ]),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 24),
 
-          // ==================== DATA & PRIVACY SECTION ====================
-          _buildSectionHeader(_t('data_privacy', lang)),
+          // ==================== OTHERS SECTION ====================
+          _buildSectionHeader('LAINNYA'),
           
-          _buildActionTile(
-            icon: Icons.delete_outline,
-            title: _t('clear_cache', lang),
-            subtitle: _t('clear_cache_desc', lang),
-            onTap: () => _showClearCacheDialog(lang),
-          ),
+          _buildSettingsGroup([
+             _buildSettingsTile(
+              icon: Icons.cleaning_services_rounded,
+              iconColor: const Color(0xFFDC6803), // Orange
+              iconBgColor: const Color(0xFFFFFAEB),
+              title: _t('clear_cache', lang),
+              subtitle: _t('clear_cache_desc', lang),
+              onTap: () => _showClearCacheDialog(lang),
+              trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+            ),
+            _buildDivider(),
+            _buildSettingsTile(
+              icon: Icons.info_outline_rounded,
+              iconColor: const Color(0xFF667085), // Gray
+              iconBgColor: const Color(0xFFF2F4F7),
+              title: _t('app_version', lang),
+              subtitle: 'Build 2023.10.24', // Static from screenshot or use package info
+              trailing: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  _appVersion ?? '1.0.0',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF344054),
+                  ),
+                ),
+              ),
+            ),
+          ]),
 
-          const SizedBox(height: 16),
-
-          // ==================== ABOUT SECTION ====================
-          _buildSectionHeader(_t('about', lang)),
-          
-          _buildInfoTile(
-            icon: Icons.info_outline,
-            title: _t('app_version', lang),
-            subtitle: _appVersion ?? '1.0.0',
+           // Footer
+          const SizedBox(height: 48),
+          Center(
+            child: Text(
+              '© 2025 Asset Management App',
+              style: TextStyle(color: Colors.grey.shade400, fontSize: 12),
+            ),
           ),
-          
-          _buildActionTile(
-            icon: Icons.description_outlined,
-            title: _t('terms', lang),
-            onTap: () => _openURL('https://yourwebsite.com/terms'),
-          ),
-          
-          _buildActionTile(
-            icon: Icons.privacy_tip_outlined,
-            title: _t('privacy_policy', lang),
-            onTap: () => _openURL('https://yourwebsite.com/privacy'),
-          ),
-          
-          _buildActionTile(
-            icon: Icons.email_outlined,
-            title: _t('contact_dev', lang),
-            onTap: () => _openURL('mailto:support@cleanoffice.com'),
-          ),
-
-          const SizedBox(height: 32),
+          const SizedBox(height: 24),
         ],
       ),
     );
@@ -258,113 +305,103 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Widget _buildSectionHeader(String title) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Text(
-        title,
+        title.toUpperCase(),
         style: const TextStyle(
-          fontSize: 14,
+          fontSize: 12,
           fontWeight: FontWeight.bold,
-          color: AppTheme.textSecondary,
+          color: Color(0xFF667085), 
+          letterSpacing: 1.0,
         ),
       ),
     );
   }
 
-  Widget _buildSwitchTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required bool value,
-    required ValueChanged<bool> onChanged,
-    bool enabled = true,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: SwitchListTile(
-        secondary: Icon(icon, color: enabled ? Colors.grey[700] : Colors.grey),
-        title: Text(
-          title,
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: enabled ? AppTheme.textPrimary : Colors.grey,
+  Widget _buildSettingsGroup(List<Widget> children) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
           ),
-        ),
-        subtitle: Text(subtitle),
-        value: value,
-        onChanged: enabled ? onChanged : null,
+        ],
       ),
+      child: Column(children: children),
     );
   }
 
-  Widget _buildLanguageTile({
-    required String currentLang,
-    required ValueChanged<String> onLanguageChanged,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(Icons.language, color: Colors.grey[700]),
-        title: Text(
-          _t('language', currentLang),
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: Text(_t('language_desc', currentLang)),
-        trailing: DropdownButton<String>(
-          value: currentLang,
-          underline: const SizedBox(),
-          items: [
-            DropdownMenuItem(
-              value: 'id',
-              child: Text(_t('indonesian', currentLang)),
-            ),
-            DropdownMenuItem(
-              value: 'en',
-              child: Text(_t('english', currentLang)),
-            ),
-          ],
-          onChanged: (value) {
-            if (value != null) onLanguageChanged(value);
-          },
-        ),
-      ),
+  Widget _buildDivider() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Divider(height: 1, color: Colors.grey.shade100),
     );
   }
 
-  Widget _buildActionTile({
+  Widget _buildSettingsTile({
     required IconData icon,
-    required String title,
-    String? subtitle,
-    required VoidCallback onTap,
-  }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.grey[700]),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-        subtitle: subtitle != null ? Text(subtitle) : null,
-        trailing: const Icon(Icons.chevron_right),
-        onTap: onTap,
-      ),
-    );
-  }
-
-  Widget _buildInfoTile({
-    required IconData icon,
+    required Color iconColor,
+    required Color iconBgColor,
     required String title,
     required String subtitle,
+    Widget? trailing,
+    VoidCallback? onTap,
   }) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      child: ListTile(
-        leading: Icon(icon, color: Colors.grey[700]),
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Colorful Icon Container
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: iconBgColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            
+            // Text Content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF101828),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: Colors.grey.shade500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+
+            if (trailing != null) ...[
+               const SizedBox(width: 8),
+               trailing,
+            ]
+          ],
         ),
-        subtitle: Text(subtitle),
       ),
     );
   }

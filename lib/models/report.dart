@@ -220,7 +220,7 @@ class Report {
       userId: data['user_id'] as String? ?? '',
       userName: data['user_name'] as String? ?? '',
       userEmail: data['user_email'] as String?,
-      cleanerId: data['cleaner_id'] as String?,
+      cleanerId: data['assigned_to'] as String?,
       cleanerName: data['cleaner_name'] as String?,
       verifiedBy: data['verified_by'] as String?,
       verifiedByName: data['verified_by_name'] as String?,
@@ -279,7 +279,7 @@ class Report {
       'user_id': userId,
       'user_name': userName,
       'user_email': userEmail,
-      'cleaner_id': cleanerId,
+      'assigned_to': cleanerId,
       'cleaner_name': cleanerName,
       'verified_by': verifiedBy,
       'verified_by_name': verifiedByName,
@@ -388,6 +388,33 @@ class Report {
       return assignedAt!.difference(date);
     }
     return null;
+  }
+
+  /// Extract report category from title (e.g., "Laporan Kebersihan..." -> "Kebersihan")
+  String get reportCategory {
+    final titleLower = title.toLowerCase();
+    if (titleLower.contains('kerusakan')) {
+      return 'Kerusakan';
+    } else if (titleLower.contains('kebersihan')) {
+      return 'Kebersihan';
+    } else if (titleLower.contains('permintaan') || titleLower.contains('request')) {
+      return 'Permintaan';
+    }
+    return 'Lainnya';
+  }
+
+  /// Get category color
+  Color get categoryColor {
+    switch (reportCategory) {
+      case 'Kebersihan':
+        return const Color(0xFF10B981); // Green
+      case 'Kerusakan':
+        return const Color(0xFFEF4444); // Red
+      case 'Permintaan':
+        return const Color(0xFF3B82F6); // Blue
+      default:
+        return const Color(0xFF6B7280); // Gray
+    }
   }
 }
 

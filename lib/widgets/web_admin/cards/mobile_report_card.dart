@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/cards/mobile_report_card.dart
+﻿// lib/widgets/web_admin/cards/mobile_report_card.dart
 // 📋 Mobile Report Card
 // Compact report card for list view with selection support
 
@@ -70,7 +70,7 @@ class MobileReportCard extends StatelessWidget {
           padding: const EdgeInsets.all(AdminConstants.spaceMd),
           decoration: BoxDecoration(
             color: selected
-                ? AdminColors.primaryLight.withOpacity(0.1)
+                ? AdminColors.primaryLight.withValues(alpha: 0.1)
                 : AdminColors.surface,
             borderRadius: AdminConstants.borderRadiusCard,
             border: selected
@@ -122,7 +122,7 @@ class MobileReportCard extends StatelessWidget {
                             vertical: 4,
                           ),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(report.status.name).withOpacity(0.15),
+                            color: _getStatusColor(report.status.name).withValues(alpha: 0.15),
                             borderRadius:
                                 BorderRadius.circular(AdminConstants.radiusSm),
                           ),
@@ -219,7 +219,7 @@ class MobileReportCard extends StatelessWidget {
       width: 56,
       height: 56,
       decoration: BoxDecoration(
-        color: AdminColors.primary.withOpacity(0.1),
+        color: AdminColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
       ),
       child: Icon(

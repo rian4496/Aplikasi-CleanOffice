@@ -1,9 +1,10 @@
-// lib/screens/chat/chat_room_screen.dart
+﻿// lib/screens/chat/chat_room_screen.dart
 // Screen untuk chat room (conversation detail)
 
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/design/admin_colors.dart';
 import '../../core/design/admin_typography.dart';
@@ -11,8 +12,8 @@ import '../../core/theme/app_theme.dart';
 import '../../core/logging/app_logger.dart';
 import '../../models/conversation.dart';
 import '../../models/message.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/chat_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/chat_providers.dart';
 import '../../widgets/chat/message_bubble.dart';
 import '../../widgets/chat/chat_input_bar.dart';
 import '../../widgets/chat/typing_indicator.dart';
@@ -71,33 +72,28 @@ class ChatRoomScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AdminColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: const BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                AppTheme.headerGradientStart,
-                AppTheme.headerGradientEnd,
-              ],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
-        ),
+        backgroundColor: Colors.white,
+        elevation: 1, // Subtle shadow for white header
+        shadowColor: Colors.black.withValues(alpha: 0.05),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF1E293B)), // Slate-800
           onPressed: () => Navigator.pop(context),
         ),
         title: conversationAsync.when(
           data: (conversation) {
             if (conversation == null) {
-              return const Text('Chat', style: TextStyle(color: Colors.white));
+              return Text(
+                'Chat', 
+                style: GoogleFonts.inter(
+                  color: const Color(0xFF1E293B),
+                  fontWeight: FontWeight.bold,
+                ),
+              );
             }
 
             return currentUser.when(
               data: (user) {
-                if (user == null) return const Text('Chat', style: TextStyle(color: Colors.white));
+                if (user == null) return Text('Chat', style: GoogleFonts.inter(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold));
 
                 // Get other user ID for direct conversations
                 final otherUserId = conversation.type == ConversationType.direct
@@ -117,8 +113,8 @@ class ChatRoomScreen extends HookConsumerWidget {
                     // Avatar
                     CircleAvatar(
                       radius: 18,
-                      backgroundColor: Colors.white,
-                      child: Icon(Icons.person, color: AppTheme.primary, size: 20),
+                      backgroundColor: const Color(0xFFEFF6FF), // Blue-50
+                      child: const Icon(Icons.person, color: Color(0xFF3B82F6), size: 20), // Blue-500
                     ),
                     const SizedBox(width: 12),
                     // Name + Status
@@ -129,8 +125,8 @@ class ChatRoomScreen extends HookConsumerWidget {
                           Text(
                             // Use passed otherUserName if available, otherwise try from conversation
                             otherUserName ?? conversation.getDisplayName(user.uid),
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF1E293B), // Slate-800
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
                             ),
@@ -140,13 +136,42 @@ class ChatRoomScreen extends HookConsumerWidget {
                           // Online status
                           if (conversation.type == ConversationType.direct)
                             onlineStatusAsync.when(
-                              data: (isOnline) => Text(
-                                isOnline ? 'online' : 'offline',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                ),
-                              ),
+                              data: (isOnline) {
+                                if (isOnline) {
+                                  return Text(
+                                    'Online',
+                                    style: GoogleFonts.inter(
+                                      color: const Color(0xFF22C55E), // Green-500
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  );
+                                }
+                                // Show last seen when offline
+                                final chatService = ref.read(chatServiceProvider);
+                                return FutureBuilder<DateTime?>(
+                                  future: chatService.getLastSeen(otherUserId ?? ''),
+                                  builder: (context, lastSeenSnapshot) {
+                                    if (!lastSeenSnapshot.hasData || lastSeenSnapshot.data == null) {
+                                      return Text(
+                                        'Offline',
+                                        style: GoogleFonts.inter(
+                                          color: const Color(0xFF64748B),
+                                          fontSize: 12,
+                                        ),
+                                      );
+                                    }
+                                    return Text(
+                                      chatService.formatLastSeen(lastSeenSnapshot.data!),
+                                      style: GoogleFonts.inter(
+                                        color: const Color(0xFF64748B), // Slate-500
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w400,
+                                      ),
+                                    );
+                                  },
+                                );
+                              },
                               loading: () => const SizedBox.shrink(),
                               error: (error, _) => const SizedBox.shrink(),
                             ),
@@ -156,17 +181,17 @@ class ChatRoomScreen extends HookConsumerWidget {
                   ],
                 );
               },
-              loading: () => const Text('Chat', style: TextStyle(color: Colors.white)),
-              error: (error, _) => const Text('Chat', style: TextStyle(color: Colors.white)),
+              loading: () => Text('Chat', style: GoogleFonts.inter(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
+              error: (error, _) => Text('Chat', style: GoogleFonts.inter(color: const Color(0xFF1E293B), fontWeight: FontWeight.bold)),
             );
           },
-          loading: () => const Text('Loading...', style: TextStyle(color: Colors.white)),
-          error: (_, __) => const Text('Error', style: TextStyle(color: Colors.white)),
+          loading: () => Text('Loading...', style: GoogleFonts.inter(color: const Color(0xFF1E293B))),
+          error: (_, __) => Text('Error', style: GoogleFonts.inter(color: const Color(0xFF1E293B))),
         ),
         actions: [
           // Video call button
           IconButton(
-            icon: const Icon(Icons.videocam_outlined, color: Colors.white),
+            icon: const Icon(Icons.videocam_outlined, color: Color(0xFF64748B)), // Slate-500
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -178,7 +203,7 @@ class ChatRoomScreen extends HookConsumerWidget {
           ),
           // Voice call button
           IconButton(
-            icon: const Icon(Icons.call_outlined, color: Colors.white),
+            icon: const Icon(Icons.call_outlined, color: Color(0xFF64748B)),
             onPressed: () {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -190,7 +215,7 @@ class ChatRoomScreen extends HookConsumerWidget {
           ),
           // More actions menu
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
+            icon: const Icon(Icons.more_vert, color: Color(0xFF64748B)),
             onSelected: (value) {
               switch (value) {
                 case 'info':
@@ -204,13 +229,13 @@ class ChatRoomScreen extends HookConsumerWidget {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'info',
-                child: Text('Info Percakapan'),
+                child: Text('Info Percakapan', style: GoogleFonts.inter()),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'archive',
-                child: Text('Arsipkan'),
+                child: Text('Arsipkan', style: GoogleFonts.inter()),
               ),
             ],
           ),
@@ -232,29 +257,24 @@ class ChatRoomScreen extends HookConsumerWidget {
                   data: (messages) {
                     if (messages.isEmpty) {
                       return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.chat_bubble_outline,
-                              size: 80,
-                              color: Colors.grey[300],
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFF5C4), // Yellow bubble
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 2,
+                                )
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Belum ada pesan',
-                              style: AdminTypography.body1.copyWith(
-                                color: Colors.grey[600],
-                              ),
+                            child: const Text(
+                              'Belum ada pesan. Mulai percakapan!',
+                              style: TextStyle(fontSize: 12),
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Kirim pesan pertama Anda!',
-                              style: AdminTypography.body2.copyWith(
-                                color: Colors.grey[500],
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
                       );
                     }
@@ -356,7 +376,7 @@ class ChatRoomScreen extends HookConsumerWidget {
               // Chat input bar
               ChatInputBar(
                 controller: messageController,
-                onSend: () => _handleSendTextMessage(ref, user, messageController),
+                onSend: () => _handleSendTextMessage(context, ref, user, messageController),
                 onImageSelected: (imagePath) => _handleSendImage(ref, user, imagePath),
                 onFileSelected: (filePath, fileName) => _handleSendFile(ref, user, filePath, fileName),
                 onTypingChanged: (isTyping) => _handleTypingChanged(ref, user, isTyping),
@@ -518,6 +538,7 @@ class ChatRoomScreen extends HookConsumerWidget {
 
   /// Handle send text message
   void _handleSendTextMessage(
+    BuildContext context,
     WidgetRef ref,
     dynamic user,
     TextEditingController controller,
@@ -538,8 +559,29 @@ class ChatRoomScreen extends HookConsumerWidget {
     if (message != null) {
       controller.clear();
       _logger.info('Text message sent successfully');
-      // Invalidate to refresh messages (fallback if realtime not enabled)
-      ref.invalidate(messagesStreamProvider(conversationId));
+      
+      // If this was a new conversation, navigate to the actual conversation
+      if (conversationId.startsWith('new_')) {
+        // Get the actual chat_id from the sent message
+        final actualConversationId = message.conversationId;
+        _logger.info('Redirecting to actual conversation: $actualConversationId');
+        
+        // Replace current screen with the new conversation
+        if (context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ChatRoomScreen(
+                conversationId: actualConversationId,
+                otherUserName: otherUserName,
+              ),
+            ),
+          );
+        }
+      } else {
+        // Regular refresh for existing conversations
+        ref.invalidate(messagesStreamProvider(conversationId));
+      }
     } else {
       _logger.error('Failed to send text message');
     }

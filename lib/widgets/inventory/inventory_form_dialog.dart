@@ -1,9 +1,10 @@
-
+﻿
 import 'package:flutter/foundation.dart'; // for kIsWeb
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
+import '../../riverpod/inventory_providers.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/inventory_item.dart';
@@ -157,39 +158,43 @@ class _InventoryFormDialogState extends ConsumerState<InventoryFormDialog> {
   Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-      decoration: BoxDecoration(
-        color: AppTheme.primary,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: const BoxDecoration(
+        color: Colors.white, 
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: AppTheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               isEditMode ? Icons.edit_note : Icons.add_circle_outline,
-              color: Colors.white,
+              color: AppTheme.primary,
               size: 20,
             ),
           ),
           const SizedBox(width: 16),
-          Text(
-            isEditMode ? 'Edit Item Inventaris' : 'Tambah Item Inventaris',
-            style: const TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-              color: Colors.white,
-              letterSpacing: 0.5,
+          Expanded( // Added Expanded to prevent overflow pushing the close button
+            child: Text(
+              isEditMode ? 'Edit Item Inventaris' : 'Tambah Item Inventaris',
+              style: const TextStyle(
+                fontSize: 16, // Reduced from 18
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+                letterSpacing: 0.5,
+              ),
+              overflow: TextOverflow.ellipsis, // Add ellipsis if it's still too long
             ),
           ),
-          const Spacer(),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
+            icon: const Icon(Icons.close, color: Colors.black54),
             onPressed: () => Navigator.pop(context),
             splashRadius: 24,
+            padding: EdgeInsets.zero, // Reduce padding of the button itself
+            constraints: const BoxConstraints(), // Remove minimum constraints
           ),
         ],
       ),
@@ -213,7 +218,7 @@ class _InventoryFormDialogState extends ConsumerState<InventoryFormDialog> {
                 border: Border.all(color: Colors.grey[300]!, width: 2), // Dashed border ideal but skipped for brevity
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -226,7 +231,7 @@ class _InventoryFormDialogState extends ConsumerState<InventoryFormDialog> {
                       : Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.add_a_photo_outlined, size: 32, color: AppTheme.primary.withOpacity(0.5)),
+                            Icon(Icons.add_a_photo_outlined, size: 32, color: AppTheme.primary.withValues(alpha: 0.5)),
                             const SizedBox(height: 8),
                             Text('Upload Foto', style: TextStyle(fontSize: 12, color: Colors.grey[500])),
                           ],
@@ -550,6 +555,9 @@ class _InventoryFormDialogState extends ConsumerState<InventoryFormDialog> {
       }
 
       if (mounted) {
+        // Auto-refresh list
+        ref.refresh(allInventoryItemsProvider);
+        
         Navigator.pop(context, true); 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(isEditMode ? 'Item diperbarui' : 'Item ditambahkan'), backgroundColor: Colors.green),

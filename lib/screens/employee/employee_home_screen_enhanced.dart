@@ -1,279 +1,226 @@
-// lib/screens/employee/employee_home_screen_enhanced.dart
-// 🏠 Employee Home Screen - ENHANCED with new design system
-// ✅ HookConsumerWidget
-// ✅ Pastel stat cards
-// ✅ Performance summary (Ringkasan Kinerja)
-// ✅ Bottom navigation (persistent across screens)
-// ✅ Modern greeting card
+﻿// lib/screens/employee/employee_home_screen_enhanced.dart
+// 🏠 Employee Dashboard - CLONED from platforms/mobile/admin/admin_dashboard_mobile_screen.dart
+// Confirmed to be the "True" Admin Mobile View (Solid Blue Header, Quick Actions, 2x2 Stats)
 
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../core/design/employee_colors.dart';
-import '../../core/design/shared_design_constants.dart';
+import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/employee_providers.dart';
-import '../../widgets/shared/cards/stat_card_base.dart';
-import '../../widgets/shared/cards/performance_summary_card.dart';
-import '../../widgets/shared/cards/action_card.dart';
-import '../../widgets/shared/states/empty_state_widget.dart';
-import '../../widgets/shared/states/error_state_widget.dart';
-import '../../widgets/shared/drawer_menu_widget.dart';
 
-class EmployeeHomeScreenEnhanced extends HookConsumerWidget {
+// Employee Providers
+import '../../riverpod/employee_providers.dart'; // For real data
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/notification_providers.dart';
+
+// Shared
+import '../../widgets/shared/drawer_menu_widget.dart';
+import '../../widgets/shared/dashboard_stat_card.dart';
+import '../../widgets/web_admin/charts/ticket_trend_chart.dart';
+
+// Screens for Quick Actions (Adapted for Employee)
+import '../inventory/inventory_request_form_screen.dart'; // For Request Stok
+
+class EmployeeHomeScreenEnhanced extends ConsumerStatefulWidget {
   const EmployeeHomeScreenEnhanced({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final scaffoldKey = useMemoized(() => GlobalKey<ScaffoldState>());
+  ConsumerState<EmployeeHomeScreenEnhanced> createState() =>
+      _EmployeeHomeScreenEnhancedState();
+}
+
+class _EmployeeHomeScreenEnhancedState extends ConsumerState<EmployeeHomeScreenEnhanced> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Selamat Pagi';
+    if (hour < 15) return 'Selamat Siang';
+    if (hour < 18) return 'Selamat Sore';
+    return 'Selamat Malam';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Data Providers
     final reportsAsync = ref.watch(employeeReportsProvider);
-    final summary = ref.watch(employeeReportsSummaryProvider);
+    final summaryAsync = ref.watch(employeeReportsSummaryProvider);
 
     return Scaffold(
-      key: scaffoldKey,
-      backgroundColor: EmployeeColors.background,
+      key: _scaffoldKey,
+      resizeToAvoidBottomInset: false, 
+      backgroundColor: Colors.white,
+      
+      endDrawer: Drawer(child: _buildDrawer()),
 
-      // ==================== APP BAR ====================
-      appBar: _buildAppBar(context, scaffoldKey),
-
-      // ==================== END DRAWER (Right Side Menu) ====================
-      endDrawer: Drawer(
-        child: _buildDrawer(context, ref),
-      ),
-
-      // ==================== BODY ====================
-      body: RefreshIndicator(
-        color: EmployeeColors.primary,
-        onRefresh: () async {
-          ref.invalidate(employeeReportsProvider);
-          await Future.delayed(const Duration(milliseconds: 500));
-        },
-        child: reportsAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(
-              color: EmployeeColors.primary,
-            ),
-          ),
-          error: (error, stack) => ErrorStateWidget.fetchFailed(
-            message: error.toString(),
-            onRetry: () => ref.invalidate(employeeReportsProvider),
-          ),
-          data: (reports) {
-            return CustomScrollView(
-              slivers: [
-                // Greeting Card
-                SliverToBoxAdapter(
-                  child: _buildGreetingCard(context, ref),
-                ),
-
-                // Stat Cards (2x2 Grid - Pastel Colors)
-                SliverToBoxAdapter(
-                  child: _buildStatCardsGrid(summary),
-                ),
-
-                // Ringkasan Kinerja (Performance Summary)
-                SliverToBoxAdapter(
-                  child: _buildPerformanceSummary(summary),
-                ),
-
-                // Quick Actions
-                SliverToBoxAdapter(
-                  child: _buildQuickActions(context),
-                ),
-
-                // Recent Activity
-                SliverToBoxAdapter(
-                  child: _buildRecentActivity(context, reports),
-                ),
-
-                // Bottom padding for nav bar
-                const SliverToBoxAdapter(
-                  child: SizedBox(height: 100),
-                ),
-              ],
-            );
+      body: SafeArea(
+        child: RefreshIndicator(
+          onRefresh: () async {
+            ref.invalidate(employeeReportsProvider);
+            ref.invalidate(employeeReportsSummaryProvider);
+            await Future.delayed(const Duration(milliseconds: 500));
           },
+          child: CustomScrollView(
+            slivers: [
+              // Header
+              SliverToBoxAdapter(
+                child: _buildHeader(),
+              ),
+
+              // Search Box (Admin has it, so we keep it)
+              SliverToBoxAdapter(
+                child: _buildSearchBox(),
+              ),
+
+              // Stats Cards (Grid 2x2)
+              SliverToBoxAdapter(
+                child: _buildStatsGrid(summaryAsync),
+              ),
+
+              // Quick Actions Row (Adapted)
+              SliverToBoxAdapter(
+                 child: Padding(
+                   padding: const EdgeInsets.only(top: 8.0),
+                   child: _buildQuickActions(context),
+                 ),
+              ),
+
+              // Ticket Trend Chart
+              SliverToBoxAdapter(
+                child: _buildChartsSection(reportsAsync),
+              ),
+
+              // Recent Activities Section
+              SliverToBoxAdapter(
+                child: _buildRecentActivities(reportsAsync),
+              ),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 40),
+              ),
+            ],
+          ),
         ),
       ),
-
-      // ==================== BOTTOM NAVIGATION ====================
-      bottomNavigationBar: _buildBottomNavBar(context, 0), // Home is active
     );
   }
 
-  // ==================== APP BAR ====================
-  AppBar _buildAppBar(BuildContext context, GlobalKey<ScaffoldState> scaffoldKey) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      automaticallyImplyLeading: false,
-      centerTitle: true,
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/logo-pemprov-kalsel.png',
-            height: 32,
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            'CleanOffice',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: EmployeeColors.appBarGradient,
-        ),
-      ),
-      actions: [
-        // Notification Icon with Badge
-        IconButton(
-          icon: Badge(
-            label: const Text('3'),
-            child: const Icon(Icons.notifications_outlined, color: Colors.white),
-          ),
-          onPressed: () => Navigator.pushNamed(context, '/notifications'),
-          tooltip: 'Notifikasi',
-        ),
-        // Drawer Menu Icon
-        IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () => scaffoldKey.currentState?.openEndDrawer(),
-          tooltip: 'Menu',
-        ),
-      ],
-    );
-  }
-
-  // ==================== DRAWER ====================
-  Widget _buildDrawer(BuildContext context, WidgetRef ref) {
-    return DrawerMenuWidget(
-      menuItems: [
-        DrawerMenuItem(
-          icon: Icons.home,
-          title: 'Beranda',
-          onTap: () => Navigator.pop(context),
-        ),
-        DrawerMenuItem(
-          icon: Icons.history,
-          title: 'Riwayat Laporan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/all_reports');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.person,
-          title: 'Profil',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/profile');
-          },
-        ),
-        DrawerMenuItem(
-          icon: Icons.settings,
-          title: 'Pengaturan',
-          onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamed(context, '/settings');
-          },
-        ),
-      ],
-      onLogout: () => _handleLogout(context, ref),
-      roleTitle: 'Employee',
-    );
-  }
-
-  // ==================== GREETING CARD ====================
-  Widget _buildGreetingCard(BuildContext context, WidgetRef ref) {
+  // ==================== HEADER (BLUE CARD & ICONS) ====================
+  Widget _buildHeader() {
     final userProfileAsync = ref.watch(currentUserProfileProvider);
-    final hour = DateTime.now().hour;
-    
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Selamat Pagi';
-    } else if (hour < 15) {
-      greeting = 'Selamat Siang';
-    } else if (hour < 18) {
-      greeting = 'Selamat Sore';
-    } else {
-      greeting = 'Selamat Malam';
-    }
+    final greeting = _getGreeting();
+    final today = DateFormatter.fullDate(DateTime.now());
 
-    return Container(
-      margin: const EdgeInsets.all(SharedDesignConstants.spaceMd),
-      padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: SharedDesignConstants.borderRadiusMd,
-        boxShadow: SharedDesignConstants.shadowCard,
-      ),
-      child: Row(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Column(
         children: [
-          // Avatar
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: EmployeeColors.primaryPastel,
-            child: const Icon(
-              Icons.person,
-              color: EmployeeColors.primary,
-              size: 28,
-            ),
+          // Row 1: Top Icons (Notification & Menu) - Outside Blue Card
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _buildNotificationIcon(isDark: true), // Dark icon for white bg
+              const SizedBox(width: 8),
+              InkWell(
+                onTap: () => _scaffoldKey.currentState?.openEndDrawer(),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: const Icon(Icons.menu, color: AppTheme.textPrimary, size: 24),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: SharedDesignConstants.spaceMd),
-          // Greeting Text
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          
+          const SizedBox(height: 8),
+
+          // Row 2: Blue Greeting Card
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF155BBC), // Solid Blue
+              borderRadius: BorderRadius.circular(24),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFF155BBC).withValues(alpha: 0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Row(
               children: [
-                Text(
-                  greeting,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: EmployeeColors.textSecondary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting + ',',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      userProfileAsync.when(
+                        data: (user) => Text(
+                          user?.displayName ?? 'Karyawan',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                            height: 1.2,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        loading: () => const Text('Loading...', style: TextStyle(color: Colors.white)),
+                        error: (e, _) => const Text('Karyawan', style: TextStyle(color: Colors.white)),
+                      ),
+                      const SizedBox(height: 16),
+                      
+                      // Date Chip
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2), 
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.calendar_today_outlined, size: 14, color: Colors.white),
+                            const SizedBox(width: 8),
+                            Text(
+                              today,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 2),
-                userProfileAsync.when(
-                  data: (profile) => Text(
-                    profile?.displayName ?? 'Employee',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: EmployeeColors.textPrimary,
-                    ),
-                  ),
-                  loading: () => const Text(
-                    'Employee',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: EmployeeColors.textPrimary,
-                    ),
-                  ),
-                  error: (_, __) => const Text(
-                    'Employee',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: EmployeeColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  DateFormatter.fullDate(DateTime.now()),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: EmployeeColors.textSecondary,
+                // Vector Image
+                SizedBox(
+                  height: 100,
+                  width: 90, 
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                       Image.asset(
+                        'assets/images/vector_greeting.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (_,__,___) => const Icon(Icons.person, size: 60, color: Colors.white54),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -284,128 +231,138 @@ class EmployeeHomeScreenEnhanced extends HookConsumerWidget {
     );
   }
 
-  // ==================== STAT CARDS GRID (2x2 Pastel) ====================
-  Widget _buildStatCardsGrid(EmployeeReportsSummary summary) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SharedDesignConstants.spaceMd,
-      ),
-      child: GridView.count(
-        crossAxisCount: 2,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        mainAxisSpacing: SharedDesignConstants.spaceMd,
-        crossAxisSpacing: SharedDesignConstants.spaceMd,
-        childAspectRatio: 1.1,
-        children: [
-          StatCardBase(
-            label: 'Total Reports',
-            value: summary.total.toString(),
-            icon: Icons.assignment_rounded,
-            colorIndex: 0, // Pink
-            trend: '↑ 12%',
-            trendUp: true,
-            onTap: () {}, // Navigate to reports
-          ),
-          StatCardBase(
-            label: 'Pending',
-            value: summary.pending.toString(),
-            icon: Icons.schedule_rounded,
-            colorIndex: 1, // Blue
-          ),
-          StatCardBase(
-            label: 'Verified',
-            value: summary.verified.toString(),
-            icon: Icons.verified_rounded,
-            colorIndex: 2, // Green
-          ),
-          StatCardBase(
-            label: 'Urgent',
-            value: summary.urgent.toString(),
-            icon: Icons.priority_high_rounded,
-            colorIndex: 3, // Yellow
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildNotificationIcon({bool isDark = false}) {
+    final unreadCountAsync = ref.watch(unreadNotificationCountProvider);
+    final iconColor = isDark ? AppTheme.textPrimary : Colors.white;
 
-  // ==================== PERFORMANCE SUMMARY ====================
-  Widget _buildPerformanceSummary(EmployeeReportsSummary summary) {
-    // Calculate completion rate
-    final total = summary.total;
-    final completed = summary.completed;
-    final completionRate = total > 0 ? (completed / total * 100) : 0.0;
-
-    return Padding(
-      padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
-      child: PerformanceSummaryCard(
-        completionRate: completionRate,
-        primaryColor: EmployeeColors.primary,
-        badge: completionRate >= 80 ? 'Maluk' : 'Baik',
-        badgeColor: completionRate >= 80 
-            ? EmployeeColors.performanceExcellent 
-            : EmployeeColors.performanceGood,
-        metrics: [
-          MetricItem(
-            label: 'Menunggu',
-            value: summary.pending.toString(),
-            color: EmployeeColors.warning,
-          ),
-          MetricItem(
-            label: 'Dalam Proses',
-            value: summary.inProgress.toString(),
-            color: EmployeeColors.info,
-          ),
-          MetricItem(
-            label: 'Selesai',
-            value: summary.completed.toString(),
-            color: EmployeeColors.success,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== QUICK ACTIONS ====================
-  Widget _buildQuickActions(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: SharedDesignConstants.spaceMd,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Quick Actions',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: EmployeeColors.textPrimary,
+    return InkWell(
+      onTap: () => context.push('/admin/notifications'),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+             Icon(Icons.notifications_outlined, color: iconColor, size: 24),
+            unreadCountAsync.when(
+              data: (count) {
+                if (count > 0) {
+                  return Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.error,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 8,
+                        minHeight: 8,
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (e, _) => const SizedBox.shrink(),
             ),
-          ),
-          const SizedBox(height: SharedDesignConstants.spaceSm),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== SEARCH BOX ====================
+  Widget _buildSearchBox() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(25),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.search, color: Colors.grey[400]),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Cari laporan...',
+                  hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+                  border: InputBorder.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== STATS GRID (2x2) ====================
+  Widget _buildStatsGrid(EmployeeReportsSummary summary) {
+    // Mapping Employee Data to Admin Grid Layout
+    final todayCount = summary.pending; // Placeholder: "Pending Today"
+    final weekCount = summary.total; // Placeholder: Total
+    final monthCount = summary.completed; // Placeholder: Completed
+    final urgentCount = summary.urgent;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        children: [
           Row(
             children: [
-              Expanded(
-                child: ActionCard(
-                  title: 'Create Report',
-                  subtitle: 'Quick action →',
-                  icon: Icons.description_rounded,
-                  iconColor: EmployeeColors.primary,
-                  onTap: () => Navigator.pushNamed(context, '/create_report'),
-                ),
-              ),
-              const SizedBox(width: SharedDesignConstants.spaceSm),
-              Expanded(
-                child: ActionCard(
-                  title: 'New Request',
-                  subtitle: 'Quick action →',
-                  icon: Icons.room_service_rounded,
-                  iconColor: EmployeeColors.success,
-                  onTap: () => Navigator.pushNamed(context, '/create_request'),
-                ),
-              ),
+              Expanded(child: DashboardStatCard(
+                icon: Icons.assignment_rounded,
+                label: 'Total Laporan',
+                value: summary.total.toString(),
+                bgColor: StatCardColors.blueBg,
+                iconColor: StatCardColors.blueIcon,
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: DashboardStatCard(
+                icon: Icons.pending_actions_rounded,
+                label: 'Menunggu',
+                value: summary.pending.toString(),
+                bgColor: StatCardColors.yellowBg,
+                iconColor: StatCardColors.yellowIcon,
+              )),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(child: DashboardStatCard(
+                icon: Icons.check_circle_rounded,
+                label: 'Selesai',
+                value: summary.completed.toString(),
+                bgColor: StatCardColors.greenBg,
+                iconColor: StatCardColors.greenIcon,
+              )),
+              const SizedBox(width: 12),
+              Expanded(child: DashboardStatCard(
+                icon: Icons.warning_amber_rounded,
+                label: 'Urgent',
+                value: summary.urgent.toString(),
+                bgColor: StatCardColors.redBg,
+                iconColor: StatCardColors.redIcon,
+                showBadge: summary.urgent > 0,
+                badgeText: 'Priority',
+              )),
             ],
           ),
         ],
@@ -413,316 +370,398 @@ class EmployeeHomeScreenEnhanced extends HookConsumerWidget {
     );
   }
 
-  // ==================== RECENT ACTIVITY ====================
-  Widget _buildRecentActivity(BuildContext context, List reports) {
-    if (reports.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
-        child: EmptyStateWidget.noReports(
-          onCreateReport: () => Navigator.pushNamed(context, '/create_report'),
+  // _buildStatCard removed - now using DashboardStatCard widget
+
+  // ==================== QUICK ACTIONS (ADAPTED) ====================
+  Widget _buildQuickActions(BuildContext context) {
+    // Map to Employee-relevant actions
+    final actions = [
+      _QuickActionData(
+        title: 'Kerusakan',
+        icon: Icons.build_circle_outlined, 
+        color: Colors.black, 
+        onTap: () => context.go('/admin/helpdesk/kerusakan'), // Reuse routes if valid or push new
+      ),
+      _QuickActionData(
+        title: 'Kebersihan',
+        icon: Icons.cleaning_services_outlined, 
+        color: Colors.black,
+        onTap: () => context.go('/admin/helpdesk/kebersihan'), 
+      ),
+      _QuickActionData(
+        title: 'Req Stok',
+        icon: Icons.inventory_2_outlined, 
+        color: Colors.black,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const InventoryRequestFormScreen()),
         ),
-      );
-    }
+      ),
+      _QuickActionData(
+        title: 'Riwayat',
+        icon: Icons.history_rounded, 
+        color: Colors.black,
+        onTap: () => context.push('/request_history'),
+      ),
+      _QuickActionData(
+        title: 'Lainnya',
+        icon: Icons.grid_view_rounded,
+        color: Colors.black,
+        onTap: () => context.push('/admin/quick-menu'),
+      ),
+    ];
 
-    // Show first 3 recent reports
-    final recentReports = reports.take(3).toList();
+    return Container(
+      height: 110,
+      margin: const EdgeInsets.only(top: 16, bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: actions.map((action) => _buildQuickActionItem(action)).toList(),
+      ),
+    );
+  }
 
-    return Padding(
-      padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
+  // _showQuickMenu removed as it is replaced by EmployeeQuickMenuScreen
+
+  Widget _buildQuickActionItem(_QuickActionData action) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        InkWell(
+          onTap: action.onTap,
+          borderRadius: BorderRadius.circular(50), 
+          child: Container(
+            width: 55,
+            height: 55,
+            decoration: BoxDecoration(
+               color: Colors.white,
+               shape: BoxShape.circle,
+               border: Border.all(color: Colors.grey.shade300), 
+            ),
+            child: Icon(action.icon, color: action.color, size: 26), 
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          action.title,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade700,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ==================== CHARTS SECTION ====================
+  // ==================== CHARTS SECTION ====================
+  Widget _buildChartsSection(AsyncValue reportsAsync) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+             color: Colors.black.withValues(alpha: 0.05),
+             blurRadius: 10,
+             offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.hardEdge, 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Recent Activity',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: EmployeeColors.textPrimary,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Tren Laporan Saya',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '7 hari terakhir',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                  ),
+                ],
               ),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/all_reports'),
-                child: const Text('View All'),
+              // Arrow similar to Admin
+              IconButton(
+                onPressed: () {
+                   // Optional: Navigate to full history or analytics
+                },
+                icon: const Icon(Icons.show_chart_rounded, color: AppTheme.primary),
+                tooltip: 'Lihat Detail',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
-          const SizedBox(height: SharedDesignConstants.spaceSm),
-          ...recentReports.map((report) => _buildReportCard(report)),
+          const SizedBox(height: 16),
+          
+          reportsAsync.when(
+            data: (reports) {
+              // Calculate trends for the last 7 days
+              final trends = _calculateTrendData(reports as List);
+              
+              if (reports.isEmpty) {
+                 // Empty state that keeps the chart space but empty
+                 return const SizedBox(
+                    height: 200, 
+                    child: Center(child: Text("Belum ada data grafik", style: TextStyle(color: Colors.grey)))
+                 );
+              }
+
+              return TicketTrendChart(
+                trendKerusakan: trends['kerusakan']!,
+                trendKebersihan: trends['kebersihan']!,
+                trendStok: trends['stok']!,
+                isMobile: true,
+                useWrapper: false, // Wrapper handled by this container
+              );
+            },
+            loading: () => const SizedBox(height: 200, child: Center(child: CircularProgressIndicator())),
+            error: (_,__) => const SizedBox(height: 200, child: Center(child: Text("Gagal memuat grafik"))),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildReportCard(dynamic report) {
+  Map<String, List<double>> _calculateTrendData(List reports) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Initialize lists for 7 days (6 days ago to today)
+    List<double> kerusakan = List.filled(7, 0.0);
+    List<double> kebersihan = List.filled(7, 0.0);
+    List<double> stok = List.filled(7, 0.0);
+
+    for (int i = 0; i < 7; i++) {
+        final date = today.subtract(Duration(days: 6 - i));
+        
+        // Filter reports for this date
+        final dailyReports = reports.where((r) {
+            // Need to cast if dynamic, but List<Report> is expected
+            // date getter is DateTime
+            final rDate = r.date; 
+            return rDate.year == date.year && 
+                   rDate.month == date.month && 
+                   rDate.day == date.day;
+        }).toList();
+
+        // Count by category
+        double countKerusakan = 0;
+        double countKebersihan = 0;
+        double countStok = 0;
+
+        for (var r in dailyReports) {
+            final titleLower = r.title.toString().toLowerCase();
+            final descLower = (r.description ?? '').toLowerCase();
+            
+            // Check known category Logic
+            if (titleLower.contains('kerusakan') || titleLower.contains('rusak') || descLower.contains('kerusakan')) {
+                countKerusakan++;
+            } else if (titleLower.contains('kebersihan') || titleLower.contains('sapu') || titleLower.contains('bersih')) {
+                countKebersihan++;
+            } else {
+                // Determine 'stok' or others
+                if (titleLower.contains('stok') || titleLower.contains('permintaan')) {
+                   countStok++;
+                } else {
+                   // Fallback: put in kerusakan or separate? For now put in Kerusakan as default or ignore
+                   countKerusakan++; 
+                }
+            }
+        }
+        
+        kerusakan[i] = countKerusakan;
+        kebersihan[i] = countKebersihan;
+        stok[i] = countStok;
+    }
+
+    return {
+        'kerusakan': kerusakan,
+        'kebersihan': kebersihan,
+        'stok': stok,
+    };
+  }
+
+  // ==================== RECENT ACTIVITIES ====================
+  Widget _buildRecentActivities(AsyncValue reportsAsync) {
     return Container(
-      margin: const EdgeInsets.only(bottom: SharedDesignConstants.spaceSm),
-      padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: SharedDesignConstants.borderRadiusMd,
-        border: Border.all(color: EmployeeColors.border),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withValues(alpha: 0.05),
+            blurRadius: 15,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Aktivitas Terakhir',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 16),
+          
+          reportsAsync.when(
+            data: (reports) {
+              if (reports.isEmpty) {
+                 return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text("Belum ada laporan")));
+              }
+              final list = (reports as List).take(5).toList();
+              return ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: list.length,
+                separatorBuilder: (context, i) => const SizedBox(height: 12),
+                itemBuilder: (context, i) => _buildActivityCard(list[i]),
+              );
+            },
+            loading: () => const SizedBox(height: 50, child: Center(child: CircularProgressIndicator())),
+            error: (e,__) => Text("Error: $e"),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(dynamic report) {
+    // Map Report model to UI
+    Color statusBg = Colors.grey.shade100;
+    Color statusText = Colors.grey.shade700;
+    
+    // Status Logic
+    final statusStr = report.status.label;
+    if (statusStr == 'Selesai' || statusStr == 'Terverifikasi') {
+      statusBg = Colors.green.shade50;
+      statusText = Colors.green.shade700;
+    } else if (statusStr == 'Ditolak') {
+      statusBg = Colors.red.shade50;
+      statusText = Colors.red.shade700;
+    } else {
+      statusBg = Colors.orange.shade50;
+      statusText = Colors.orange.shade800;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Icon(
-                Icons.location_on,
-                size: 16,
-                color: EmployeeColors.textSecondary,
+              Expanded(
+                child: Text(
+                  report.title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusBg,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  statusStr,
+                  style: TextStyle(color: statusText, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(Icons.location_on_outlined, size: 14, color: Colors.grey),
               const SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  report.location ?? 'Unknown',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: EmployeeColors.textPrimary,
-                  ),
+                  report.location,
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  maxLines: 1, overflow: TextOverflow.ellipsis,
                 ),
               ),
-              // Status badge
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: EmployeeColors.warning.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  report.status.displayName,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: EmployeeColors.warning,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            report.description ?? '',
-            style: TextStyle(
-              fontSize: 13,
-              color: EmployeeColors.textSecondary,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ==================== BOTTOM NAVIGATION BAR ====================
-  Widget _buildBottomNavBar(BuildContext context, int currentIndex) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: SharedDesignConstants.shadowBottomNav,
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            vertical: SharedDesignConstants.spaceXs,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                context: context,
-                icon: Icons.home_rounded,
-                label: 'Home',
-                index: 0,
-                currentIndex: currentIndex,
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.assignment_rounded,
-                label: 'Laporan',
-                index: 1,
-                currentIndex: currentIndex,
-                onTap: () => Navigator.pushNamed(context, '/all_reports'),
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.room_service_rounded,
-                label: 'Layanan',
-                index: 2,
-                currentIndex: currentIndex,
-                onTap: () => Navigator.pushNamed(context, '/service_requests'),
-              ),
-              _buildNavItem(
-                context: context,
-                icon: Icons.more_horiz_rounded,
-                label: 'Lainnya',
-                index: 3,
-                currentIndex: currentIndex,
-                onTap: () {
-                  // Show bottom sheet with more options
-                  showModalBottomSheet(
-                    context: context,
-                    builder: (context) => _buildMoreBottomSheet(context),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required int index,
-    required int currentIndex,
-    VoidCallback? onTap,
-  }) {
-    final isActive = index == currentIndex;
-    final activeColor = EmployeeColors.primary;
-    final inactiveColor = EmployeeColors.textTertiary;
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap ?? () {},
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: isActive ? activeColor : inactiveColor,
-                size: 26,
-              ),
-              const SizedBox(height: 4),
               Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  color: isActive ? activeColor : inactiveColor,
-                ),
+                DateFormatter.shortDate(report.createdAt),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade400),
               ),
             ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDrawer() {
+    return DrawerMenuWidget(
+      roleTitle: 'Karyawan',
+      menuItems: [
+        DrawerMenuItem(
+          icon: Icons.dashboard_outlined,
+          title: 'Beranda',
+          onTap: () => Navigator.pop(context),
         ),
-      ),
-    );
-  }
-
-  // ==================== MORE BOTTOM SHEET ====================
-  Widget _buildMoreBottomSheet(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(SharedDesignConstants.spaceMd),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Drag handle
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: SharedDesignConstants.spaceMd),
-          // Title
-          const Text(
-            'More Options',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: EmployeeColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: SharedDesignConstants.spaceMd),
-          // Menu items
-          ListTile(
-            leading: const Icon(Icons.bar_chart),
-            title: const Text('Analytics'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/analytics');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.person),
-            title: const Text('Profile'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/profile');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.settings),
-            title: const Text('Settings'),
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushNamed(context, '/settings');
-            },
-          ),
-          const SizedBox(height: SharedDesignConstants.spaceSm),
-        ],
-      ),
-    );
-  }
-
-  // ==================== LOGOUT ====================
-  Future<void> _handleLogout(BuildContext context, WidgetRef ref) async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keluar'),
-        content: const Text('Apakah Anda yakin ingin keluar?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: EmployeeColors.error,
-            ),
-            child: const Text('Keluar'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldLogout == true && context.mounted) {
-      try {
+         DrawerMenuItem(
+          icon: Icons.person_outline,
+          title: 'Profil',
+          onTap: () {
+             Navigator.pop(context);
+             context.push('/admin/profile');
+          },
+        ),
+      ],
+      onLogout: () async {
         await ref.read(authActionsProvider.notifier).logout();
-        if (context.mounted) {
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Gagal keluar: $e'),
-              backgroundColor: EmployeeColors.error,
-            ),
-          );
-        }
-      }
-    }
+        if (mounted) context.go('/login');
+      },
+    );
   }
 }
 
+class _QuickActionData {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  _QuickActionData({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+}

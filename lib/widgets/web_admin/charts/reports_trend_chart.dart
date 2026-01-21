@@ -7,7 +7,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 import '../../../models/chart_data.dart';
-import '../../../providers/riverpod/chart_providers.dart';
+import '../../../riverpod/chart_providers.dart';
 
 class ReportsTrendChart extends ConsumerWidget {
   const ReportsTrendChart({super.key});

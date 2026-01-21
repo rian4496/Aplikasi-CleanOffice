@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/layout/admin_bottom_nav.dart
+﻿// lib/widgets/web_admin/layout/admin_bottom_nav.dart
 // 🧭 Admin Bottom Navigation
 // Bottom navigation bar for mobile admin screens
 
@@ -24,7 +24,7 @@ class AdminBottomNav extends StatelessWidget {
         color: AdminColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

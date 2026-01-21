@@ -66,20 +66,20 @@ class UserRepository {
 
   /// Get all user profiles (for admin table)
   Future<List<UserProfile>> getAllUsers() async {
-    final data = await _client.from('profiles').select().order('created_at', ascending: false);
+    final data = await _client.from('users').select().order('updated_at', ascending: false);
     return (data as List).map((x) => UserProfile.fromSupabase(x)).toList();
   }
   
   /// Get single user
   Future<UserProfile?> getUser(String uid) async {
-    final data = await _client.from('profiles').select().eq('id', uid).maybeSingle();
+    final data = await _client.from('users').select().eq('id', uid).maybeSingle();
     if (data == null) return null;
     return UserProfile.fromSupabase(data);
   }
 
   /// Create or Update Profile
   Future<void> saveUserProfile(UserProfile user) async {
-    await _client.from('profiles').upsert(user.toSupabase());
+    await _client.from('users').upsert(user.toSupabase());
   }
   
   /// Admin: Update User Status/Role
@@ -89,7 +89,7 @@ class UserRepository {
     if (role != null) updates['role'] = role;
     
     if (updates.isNotEmpty) {
-      await _client.from('profiles').update(updates).eq('id', uid);
+      await _client.from('users').update(updates).eq('id', uid);
     }
   }
   

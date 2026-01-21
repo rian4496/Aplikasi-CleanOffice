@@ -1,4 +1,4 @@
-// lib/screens/web_admin/verification/verification_screen.dart
+﻿// lib/screens/web_admin/verification/verification_screen.dart
 // ✅ Verification Screen
 // Admin verifies completed reports with before/after image comparison
 
@@ -12,7 +12,7 @@ import '../../../core/design/admin_constants.dart';
 import '../../../widgets/web_admin/layout/mobile_admin_app_bar.dart';
 import '../../../widgets/web_admin/verification/image_comparison_widget.dart';
 import '../../../models/report.dart';
-import '../../../providers/riverpod/report_providers.dart';
+import '../../../riverpod/report_providers.dart';
 
 class VerificationScreen extends HookConsumerWidget {
   final String reportId;
@@ -202,7 +202,7 @@ class VerificationScreen extends HookConsumerWidget {
         vertical: 4,
       ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
       ),
       child: Text(
@@ -242,7 +242,7 @@ class VerificationScreen extends HookConsumerWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: AdminColors.error.withOpacity(0.5),
+              color: AdminColors.error.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(
@@ -271,7 +271,7 @@ class VerificationScreen extends HookConsumerWidget {
             Icon(
               Icons.search_off,
               size: 64,
-              color: AdminColors.textSecondary.withOpacity(0.5),
+              color: AdminColors.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(
@@ -298,7 +298,7 @@ class VerificationScreen extends HookConsumerWidget {
         color: AdminColors.surface,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

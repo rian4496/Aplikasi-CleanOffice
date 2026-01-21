@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/cleaner/cleaner_report_card.dart';
 import '../cleaner/report_detail_cleaner_screen.dart';

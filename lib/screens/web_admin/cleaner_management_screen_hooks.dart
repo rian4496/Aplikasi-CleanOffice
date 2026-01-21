@@ -7,10 +7,10 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
-import '../../providers/riverpod/request_providers.dart';
+import '../../riverpod/request_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 
 /// Management screen for cleaner staff
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget

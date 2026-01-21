@@ -1,4 +1,4 @@
-// lib/screens/inventory/inventory_detail_screen.dart
+﻿// lib/screens/inventory/inventory_detail_screen.dart
 // Detailed view of inventory item with actions and history
 
 import 'package:flutter/material.dart';
@@ -10,7 +10,7 @@ import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
 import '../../models/user_role.dart';
 import '../../services/inventory_service.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../models/stock_history.dart';
 import '../../widgets/inventory/stock_adjustment_dialog.dart';
 import '../../widgets/inventory/stock_history_dialog.dart';
@@ -67,39 +67,40 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
   }
 
   // ==================== APP BAR ====================
+  // ==================== APP BAR ====================
   AppBar _buildAppBar(bool isAdmin) {
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: Colors.white,
       elevation: 0,
-      flexibleSpace: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppTheme.headerGradientStart, AppTheme.headerGradientEnd],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-      ),
+      centerTitle: true,
       leading: IconButton(
-        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        icon: const Icon(Icons.arrow_back, color: AppTheme.textPrimary),
         onPressed: () => Navigator.pop(context),
       ),
       title: const Text(
         'Detail Item',
         style: TextStyle(
-          color: Colors.white,
+          color: AppTheme.textPrimary,
           fontWeight: FontWeight.bold,
+          fontSize: 18,
         ),
       ),
       actions: isAdmin
           ? [
               IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.white),
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
                 onPressed: _confirmDelete,
                 tooltip: 'Hapus Item',
               ),
             ]
           : null,
+      bottom: PreferredSize(
+        preferredSize: const Size.fromHeight(1.0),
+        child: Container(
+          color: Colors.grey[200],
+          height: 1.0,
+        ),
+      ),
     );
   }
 
@@ -571,7 +572,7 @@ class _InventoryDetailScreenState extends ConsumerState<InventoryDetailScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
-                  color: color.withOpacity(0.8),
+                  color: color.withValues(alpha: 0.8),
                 ),
               ),
             ],

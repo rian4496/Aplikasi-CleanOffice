@@ -7,8 +7,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/responsive_helper.dart';
-import '../../providers/riverpod/admin_providers.dart' hide currentUserProfileProvider;
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../riverpod/admin_providers.dart' hide currentUserProfileProvider;
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 import '../../widgets/web_admin/admin_analytics_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/web_admin/export_dialog.dart';

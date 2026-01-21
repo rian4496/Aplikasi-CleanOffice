@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+﻿import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -10,12 +10,13 @@ import 'package:image_picker/image_picker.dart';
 import '../../models/ticket.dart';
 import '../../models/location.dart';
 import '../../models/master/master_data_models.dart';
-import '../../providers/riverpod/ticket_providers.dart';
-import '../../providers/riverpod/supabase_service_providers.dart';
-import '../../providers/master_data_providers.dart';
+import '../../riverpod/ticket_providers.dart';
+import '../../riverpod/supabase_service_providers.dart';
+import '../../riverpod/dropdown_providers.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/config/supabase_config.dart';
 import '../../core/constants/app_constants.dart';
+import '../web_admin/transactions/helpdesk/helpdesk_screen.dart';
 
 class TicketFormScreen extends HookConsumerWidget {
   final TicketType? initialType;
@@ -36,6 +37,7 @@ class TicketFormScreen extends HookConsumerWidget {
     final selectedLocation = useState<Location?>(null);
     final selectedInventory = useState<Map<String, dynamic>?>(null);
     final quantityController = useTextEditingController();
+    final customLocationController = useTextEditingController();
 
     final isSubmitting = useState(false);
     final isUrgent = useState(false);
@@ -161,9 +163,11 @@ class TicketFormScreen extends HookConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon pilih aset yang bermasalah')));
         return;
       }
-      if (selectedType.value == TicketType.kebersihan && selectedLocation.value == null) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon pilih lokasi kebersihan')));
-        return;
+      if (selectedType.value == TicketType.kebersihan) {
+        if (selectedLocation.value == null && customLocationController.text.trim().isEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon isi lokasi masalah kebersihan')));
+          return;
+        }
       }
       if (selectedType.value == TicketType.stockRequest && (selectedInventory.value == null || quantityController.text.isEmpty)) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mohon pilih item dan jumlah')));
@@ -181,10 +185,17 @@ class TicketFormScreen extends HookConsumerWidget {
         }
 
         final repo = ref.read(ticketRepositoryProvider);
+        
+        // Build description with custom location if provided
+        String finalDescription = descriptionController.text.trim();
+        if (customLocationController.text.trim().isNotEmpty && selectedLocation.value == null) {
+          finalDescription = '[Lokasi: ${customLocationController.text.trim()}]\n$finalDescription';
+        }
+        
         final ticket = await repo.createTicket(
           type: selectedType.value,
           title: titleController.text.trim(),
-          description: descriptionController.text.trim(),
+          description: finalDescription,
           priority: selectedPriority.value,
           createdBy: userId,
           assetId: selectedAsset.value?.id,
@@ -201,7 +212,13 @@ class TicketFormScreen extends HookConsumerWidget {
               backgroundColor: Colors.green,
             ),
           );
-          context.pop();
+          
+          
+          // Refresh data so it appears immediately
+          ref.read(ticketControllerProvider).refresh();
+
+          // Explicitly go to helpdesk list to avoid pop errors and ensure correct flow
+          context.go('/admin/helpdesk');
         }
       } catch (e) {
         if (context.mounted) {
@@ -288,6 +305,7 @@ class TicketFormScreen extends HookConsumerWidget {
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: false, // Prevent keyboard blank space issue on mobile web
       backgroundColor: Colors.white, // Match clean background
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -300,7 +318,16 @@ class TicketFormScreen extends HookConsumerWidget {
               Row(
                 children: [
                    InkWell(
-                      onTap: () => context.pop(),
+                      onTap: () {
+                        // Go back to helpdesk and show create ticket popup
+                        context.go('/admin/helpdesk');
+                        // Small delay to ensure navigation completed, then show popup
+                        Future.delayed(const Duration(milliseconds: 100), () {
+                          if (context.mounted) {
+                            showCreateTicketDialogGlobal(context);
+                          }
+                        });
+                      },
                       borderRadius: BorderRadius.circular(50),
                       child: Container(
                         padding: const EdgeInsets.all(8),
@@ -335,7 +362,7 @@ class TicketFormScreen extends HookConsumerWidget {
                   decoration: BoxDecoration(
                     color: Colors.blue[50],
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue.withOpacity(0.2)),
+                    border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     children: [
@@ -351,9 +378,8 @@ class TicketFormScreen extends HookConsumerWidget {
                   ),
                 ),
 
-              // 3. Image Upload (Kebersihan Only - Android Style)
-              if (selectedType.value == TicketType.kebersihan) ...[
-                  Container(
+              // 3. Image Upload (For All Ticket Types)
+              Container(
                     width: double.infinity,
                     margin: const EdgeInsets.only(bottom: 24),
                     padding: const EdgeInsets.all(16),
@@ -404,7 +430,7 @@ class TicketFormScreen extends HookConsumerWidget {
                                             child: GestureDetector(
                                               onTap: showImageSourceDialog,
                                               child: CircleAvatar(
-                                                backgroundColor: Colors.black.withOpacity(0.5),
+                                                backgroundColor: Colors.black.withValues(alpha: 0.5),
                                                 child: const Icon(Icons.refresh, color: Colors.white),
                                               ),
                                             ),
@@ -426,7 +452,6 @@ class TicketFormScreen extends HookConsumerWidget {
                       ],
                     ),
                   ),
-              ],
 
               // 4. Dynamic Fields
               if (selectedType.value == TicketType.kerusakan) ...[
@@ -445,23 +470,67 @@ class TicketFormScreen extends HookConsumerWidget {
                   loading: () => const LinearProgressIndicator(),
                   error: (e, _) => Text('Gagal memuat aset: $e'),
                 ),
+                const SizedBox(height: 16),
+                // Location Dropdown (Optional for Kerusakan)
+                Text('Lokasi Aset (Opsional)', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                const SizedBox(height: 8),
+                locationsAsync.when(
+                  data: (locations) => DropdownButtonFormField<Location>(
+                    value: selectedLocation.value,
+                    decoration: inputDecoration('Pilih Lokasi (jika ada)', Icons.place_outlined),
+                    items: [
+                      const DropdownMenuItem<Location>(value: null, child: Text('-- Lokasi Tidak Terdaftar --')),
+                      ...locations.map((l) => DropdownMenuItem(
+                        value: l, 
+                        child: Text(l.name, overflow: TextOverflow.ellipsis),
+                      )),
+                    ],
+                    onChanged: (val) => selectedLocation.value = val,
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('Gagal: $e'),
+                ),
+                // Custom Location Text Field when "Lokasi Tidak Terdaftar" is selected
+                if (selectedLocation.value == null) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: customLocationController,
+                    decoration: inputDecoration('Ketik lokasi jika tidak ada di daftar (opsional)', Icons.edit_location_alt).copyWith(
+                      helperText: 'Contoh: Ruang Rapat Lt.2, Gudang Belakang',
+                    ),
+                  ),
+                ],
               ] else if (selectedType.value == TicketType.kebersihan) ...[
-                // Location Field (Dropdown but styled)
+                // Location Field (Required for Kebersihan)
                 Text('Lokasi', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700])),
                 const SizedBox(height: 8),
                 locationsAsync.when(
                   data: (locations) => DropdownButtonFormField<Location>(
                     value: selectedLocation.value,
                     decoration: inputDecoration('Pilih Lokasi', Icons.place_outlined),
-                    items: locations.map((l) => DropdownMenuItem(
-                      value: l, 
-                      child: Text(l.name, overflow: TextOverflow.ellipsis),
-                    )).toList(),
+                    items: [
+                      const DropdownMenuItem<Location>(value: null, child: Text('-- Lokasi Tidak Terdaftar --')),
+                      ...locations.map((l) => DropdownMenuItem(
+                        value: l, 
+                        child: Text(l.name, overflow: TextOverflow.ellipsis),
+                      )),
+                    ],
                     onChanged: (val) => selectedLocation.value = val,
                   ),
                   loading: () => const LinearProgressIndicator(),
                   error: (e, _) => Text('Gagal: $e'),
                 ),
+                // Custom Location Text Field when "Lokasi Tidak Terdaftar" is selected
+                if (selectedLocation.value == null) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: customLocationController,
+                    decoration: inputDecoration('Ketik lokasi jika tidak ada di daftar', Icons.edit_location_alt).copyWith(
+                      helperText: 'Contoh: Ruang Rapat Lt.2, Gudang Belakang',
+                    ),
+                    validator: (v) => v == null || v.isEmpty ? 'Lokasi wajib diisi jika tidak memilih dari daftar' : null,
+                  ),
+                ],
               ] else if (selectedType.value == TicketType.stockRequest) ...[
                 Text('Item Stok', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700])),
                 const SizedBox(height: 8),
@@ -471,7 +540,7 @@ class TicketFormScreen extends HookConsumerWidget {
                     decoration: inputDecoration('Pilih Barang', Icons.shopping_cart_outlined),
                     items: items.map((i) => DropdownMenuItem(
                       value: i, 
-                      child: Text('${i['item_name']} (Stok: ${i['stock_quantity']})', overflow: TextOverflow.ellipsis),
+                      child: Text('${i['name']} (Stok: ${i['current_stock']})', overflow: TextOverflow.ellipsis),
                     )).toList(),
                     onChanged: (val) => selectedInventory.value = val,
                   ),
@@ -486,6 +555,27 @@ class TicketFormScreen extends HookConsumerWidget {
                    keyboardType: TextInputType.number,
                    decoration: inputDecoration('Masukkan jumlah', Icons.numbers),
                    validator: (v) => v == null || v.isEmpty ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 16),
+                // Lokasi untuk Stock Request
+                Text('Lokasi Pengiriman', style: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey[700])),
+                const SizedBox(height: 8),
+                locationsAsync.when(
+                  data: (locations) => DropdownButtonFormField<Location>(
+                    value: selectedLocation.value,
+                    decoration: inputDecoration('Pilih Lokasi Tujuan', Icons.place_outlined),
+                    items: [
+                      const DropdownMenuItem<Location>(value: null, child: Text('-- Pilih Lokasi --')),
+                      ...locations.map((l) => DropdownMenuItem(
+                        value: l, 
+                        child: Text(l.name, overflow: TextOverflow.ellipsis),
+                      )),
+                    ],
+                    onChanged: (val) => selectedLocation.value = val,
+                    validator: (v) => v == null ? 'Lokasi tujuan wajib dipilih' : null,
+                  ),
+                  loading: () => const LinearProgressIndicator(),
+                  error: (e, _) => Text('Gagal: $e'),
                 ),
               ],
               
@@ -518,15 +608,18 @@ class TicketFormScreen extends HookConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: isUrgent.value ? Colors.red[50] : Colors.grey[50],
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: isUrgent.value ? Colors.red[200]! : Colors.grey[300]!),
+                    border: Border.all(color: Colors.grey[300]!),
                   ),
                   child: SwitchListTile(
-                    title: Text('Mendesak / Urgent?', style: TextStyle(fontWeight: FontWeight.bold, color: isUrgent.value ? Colors.red : Colors.grey[800])),
-                    subtitle: const Text('Aktifkan jika menghambat operasional utama.'),
+                    title: Text('Mendesak / Urgent?', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey[800])),
+                    subtitle: Text('Aktifkan jika menghambat operasional utama.', style: TextStyle(color: Colors.grey[600])),
                     activeColor: Colors.red,
-                    secondary: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                    activeTrackColor: Colors.red[200],
+                    inactiveThumbColor: Colors.grey[400],
+                    inactiveTrackColor: Colors.grey[300],
+                    secondary: Icon(Icons.warning_amber_rounded, color: isUrgent.value ? Colors.red : Colors.grey[400]),
                     value: isUrgent.value,
                     onChanged: (val) => isUrgent.value = val,
                   ),

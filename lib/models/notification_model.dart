@@ -47,20 +47,20 @@ class AppNotification extends Equatable {
     required this.createdAt,
   });
 
-  // From Firestore
+  // From Firestore / Supabase
   factory AppNotification.fromMap(String id, Map<String, dynamic> map) {
     return AppNotification(
       id: id,
-      userId: map['userId'] as String,
+      userId: map['userId'] as String? ?? 'system',
       type: NotificationType.values.firstWhere(
         (e) => e.name == map['type'],
         orElse: () => NotificationType.general,
       ),
-      title: map['title'] as String,
-      message: map['message'] as String,
+      title: map['title'] as String? ?? 'Notifikasi',
+      message: map['message'] as String? ?? map['body'] as String? ?? '',
       data: map['data'] as Map<String, dynamic>?,
-      read: map['read'] as bool? ?? false,
-      createdAt: DateTime.parse(map['createdAt'] as String),
+      read: map['read'] as bool? ?? map['is_read'] as bool? ?? false,
+      createdAt: DateTime.tryParse(map['createdAt'] as String? ?? map['created_at'] as String? ?? '') ?? DateTime.now(),
     );
   }
 

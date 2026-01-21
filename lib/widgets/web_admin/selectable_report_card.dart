@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/selection_state_provider.dart';
+import '../../riverpod/selection_state_provider.dart';
 
 /// Selectable report card with checkbox for batch operations.
 /// 

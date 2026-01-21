@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../providers/riverpod/chat_selection_provider.dart';
+import '../../riverpod/chat_selection_provider.dart';
 
 /// AppBar untuk mode selection di Chat List
 class SelectionAppBar extends ConsumerWidget implements PreferredSizeWidget {

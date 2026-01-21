@@ -3,9 +3,9 @@
 // Provides dashboard data for admin
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../master_data_providers.dart';
-import '../transaction_providers.dart';
-import 'cleaner_providers.dart';
+import '../../riverpod/master_data_providers.dart';
+import '../../riverpod/transaction_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
 import '../../models/transactions/transaction_models.dart';
 
 // ==================== ADMIN DASHBOARD DATA PROVIDER ====================

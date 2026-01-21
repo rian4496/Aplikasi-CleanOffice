@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/theme/app_theme.dart';
@@ -84,9 +84,9 @@ class ProcurementDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                         decoration: BoxDecoration(
-                          color: request.status.color.withOpacity(0.1),
+                          color: request.status.color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: request.status.color.withOpacity(0.3)),
+                          border: Border.all(color: request.status.color.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [

@@ -8,14 +8,15 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/admin_providers.dart';
-import '../../providers/riverpod/report_providers.dart';
+import '../../riverpod/admin_providers.dart';
+import '../../riverpod/report_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 import '../../widgets/web_admin/advanced_filter_dialog.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import '../shared/report_detail/report_detail_screen.dart';
+import '../chat/conversation_list_screen.dart';
 
 class AllReportsManagementScreen extends ConsumerStatefulWidget {
   const AllReportsManagementScreen({super.key});
@@ -526,7 +527,7 @@ class _AllReportsManagementScreenState
             const SizedBox(height: 24),
             // Title
             const Text(
-              'Belum ada laporan',
+              'Belum ada data laporan',
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
@@ -536,7 +537,7 @@ class _AllReportsManagementScreenState
             const SizedBox(height: 8),
             // Subtitle
             Text(
-              'Laporan yang Anda buat akan muncul di sini',
+              'Daftar semua laporan akan muncul di sini',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.grey[600],
@@ -1192,11 +1193,7 @@ class _AllReportsManagementScreenState
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.homeAdminRoute,
-                  (route) => false,
-                ),
+                onTap: () => Navigator.pop(context), // Simply pop back to dashboard
               ),
               _buildNavItem(
                 icon: Icons.assignment_rounded,
@@ -1209,7 +1206,12 @@ class _AllReportsManagementScreenState
                 label: 'Chat',
                 isActive: false,
                 onTap: () {
-                  Navigator.pushNamed(context, '/chat');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ConversationListScreen(),
+                    ),
+                  );
                 },
               ),
               _buildNavItem(

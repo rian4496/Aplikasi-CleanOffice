@@ -7,7 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/employee_providers.dart';
+import '../../riverpod/employee_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 /// All Reports Screen - Full list with search, filter, and sort

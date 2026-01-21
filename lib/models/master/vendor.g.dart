@@ -20,6 +20,7 @@ _Vendor _$VendorFromJson(Map json) => $checkedCreate(
       taxId: $checkedConvert('tax_id', (v) => v as String?),
       bankAccount: $checkedConvert('bank_account', (v) => v as String?),
       bankName: $checkedConvert('bank_name', (v) => v as String?),
+      imageUrl: $checkedConvert('image_url', (v) => v as String?),
       status: $checkedConvert('status', (v) => v as String? ?? 'active'),
       category: $checkedConvert('category', (v) => v as String? ?? 'Umum'),
     );
@@ -30,6 +31,7 @@ _Vendor _$VendorFromJson(Map json) => $checkedCreate(
     'taxId': 'tax_id',
     'bankAccount': 'bank_account',
     'bankName': 'bank_name',
+    'imageUrl': 'image_url',
   },
 );
 
@@ -43,6 +45,7 @@ Map<String, dynamic> _$VendorToJson(_Vendor instance) => <String, dynamic>{
   'tax_id': ?instance.taxId,
   'bank_account': ?instance.bankAccount,
   'bank_name': ?instance.bankName,
+  'image_url': ?instance.imageUrl,
   'status': instance.status,
   'category': instance.category,
 };

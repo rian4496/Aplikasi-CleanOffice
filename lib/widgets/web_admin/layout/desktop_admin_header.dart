@@ -5,7 +5,7 @@ import '../../../core/theme/app_theme.dart';
 import '../advanced_filter_dialog.dart';
 import '../global_search_dialog.dart';
 import '../realtime_indicator_widget.dart';
-import '../../../providers/riverpod/notification_providers.dart';
+import '../../../riverpod/notification_providers.dart';
 
 class DesktopAdminHeader extends ConsumerWidget {
   const DesktopAdminHeader({super.key});
@@ -75,16 +75,8 @@ class DesktopAdminHeader extends ConsumerWidget {
 
             const Spacer(flex: 3),
 
-            // Filter button
-            IconButton(
-              icon: const Icon(Icons.filter_list, color: Colors.white, size: 22),
-              onPressed: () => showDialog(
-                context: context,
-                builder: (_) => const AdvancedFilterDialog(),
-              ),
-              tooltip: 'Advanced Filters',
-            ),
-            const SizedBox(width: 24),
+            // Filter button removed
+            const SizedBox(width: 8),
 
             // Live/Online indicator
             const RealtimeIndicatorCompact(),

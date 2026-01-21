@@ -20,7 +20,7 @@ import 'package:intl/intl.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/error/exceptions.dart';
-import '../../providers/riverpod/request_providers.dart';
+import '../../riverpod/request_providers.dart';
 
 final _logger = AppLogger('CreateRequestScreen');
 

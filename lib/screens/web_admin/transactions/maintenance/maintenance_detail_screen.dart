@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../../core/theme/app_theme.dart';
-import '../../../../../providers/transaction_providers.dart';
+import '../../../../../riverpod/transaction_providers.dart';
 import '../../../../../models/transactions/transaction_models.dart';
 
 class MaintenanceDetailScreen extends ConsumerWidget {

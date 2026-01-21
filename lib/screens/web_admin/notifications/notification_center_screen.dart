@@ -1,19 +1,25 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../providers/riverpod/notification_providers.dart';
+import '../../../../riverpod/notification_providers.dart';
 import '../../../../models/notification_model.dart';
 
 class NotificationCenterScreen extends HookConsumerWidget {
-  const NotificationCenterScreen({super.key});
+  final String fallbackRoute;
+
+  const NotificationCenterScreen({
+    super.key, 
+    this.fallbackRoute = '/admin/dashboard',
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final filterMode = useState('all'); // all, unread
-    final notificationsAsync = ref.watch(userNotificationsProvider);
+    // Use Realtime Stream Provider
+    final notificationsAsync = ref.watch(notificationsStreamProvider);
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
@@ -21,43 +27,73 @@ class NotificationCenterScreen extends HookConsumerWidget {
         children: [
           // HEADER
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20), // Reduced from 32/24
             decoration: const BoxDecoration(
               color: Colors.white,
               border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Pusat Notifikasi',
-                      style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black87),
+            child: SafeArea( // Added SafeArea
+              bottom: false,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        // Back Button Icon Only
+                        IconButton(
+                          onPressed: () {
+                            if (context.canPop()) {
+                              context.pop();
+                            } else {
+                              context.go(fallbackRoute); 
+                            }
+                          },
+                          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87, size: 24),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Pusat Notifikasi',
+                                style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Pantau aktivitas sistem',
+                                style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Pantau semua aktivitas dan pembaruan sistem di sini',
-                      style: GoogleFonts.inter(fontSize: 14, color: Colors.grey[500]),
-                    ),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    ref.read(markAllNotificationsAsReadProvider.future);
-                  },
-                  icon: const Icon(Icons.done_all, size: 18),
-                  label: const Text('Tandai Semua Dibaca'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.primary,
-                    elevation: 0,
-                    side: BorderSide(color: AppTheme.primary.withOpacity(0.3)),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   ),
-                ),
-              ],
+                  const SizedBox(width: 8),
+                  // Mark Read Button
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(markAllNotificationsAsReadProvider.future);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: AppTheme.primary,
+                      elevation: 0,
+                      side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                      padding: const EdgeInsets.all(12), // Reduced padding
+                      minimumSize: const Size(40, 40),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Icon(Icons.done_all, size: 18),
+                  ),
+                ],
+              ),
             ),
           ),
 
@@ -110,18 +146,13 @@ class NotificationCenterScreen extends HookConsumerWidget {
                           );
                         }
 
-                        return RefreshIndicator(
-                          onRefresh: () {
-                            return ref.refresh(userNotificationsProvider.future);
+                        return ListView.separated(
+                          itemCount: filteredList.length,
+                          separatorBuilder: (ctx, idx) => const SizedBox(height: 12),
+                          itemBuilder: (ctx, idx) {
+                            final notification = filteredList[idx];
+                            return _NotificationItem(notification: notification);
                           },
-                          child: ListView.separated(
-                            itemCount: filteredList.length,
-                            separatorBuilder: (ctx, idx) => const SizedBox(height: 12),
-                            itemBuilder: (ctx, idx) {
-                              final notification = filteredList[idx];
-                              return _NotificationItem(notification: notification);
-                            },
-                          ),
                         );
                       },
                       loading: () => const Center(child: CircularProgressIndicator()),
@@ -167,7 +198,7 @@ class _NotificationItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       elevation: notification.read ? 0 : 2,
-      color: notification.read ? Colors.white : Colors.blue.shade50.withOpacity(0.3),
+      color: notification.read ? Colors.white : Colors.blue.shade50.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: Colors.grey.shade200),
@@ -193,7 +224,7 @@ class _NotificationItem extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: notification.iconColor.withOpacity(0.1),
+                  color: notification.iconColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(notification.icon, color: notification.iconColor, size: 24),

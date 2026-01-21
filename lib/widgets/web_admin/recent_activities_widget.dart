@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/recent_activities_widget.dart
+﻿// lib/widgets/web_admin/recent_activities_widget.dart
 // 📋 Recent Activities Widget for Admin
 // Menampilkan aktivitas terbaru yang perlu perhatian admin
 
@@ -10,7 +10,7 @@ import '../../models/request.dart';
 import '../../screens/shared/report_detail/report_detail_screen.dart';
 import '../../screens/shared/request_detail/request_detail_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/riverpod/selection_providers.dart';
+import '../../riverpod/selection_providers.dart';
 
 // Activity item untuk admin
 class _ActivityItem {
@@ -66,7 +66,7 @@ class RecentActivitiesWidget extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -208,7 +208,7 @@ class RecentActivitiesWidget extends ConsumerWidget {
         }
       },
       child: Container(
-        color: isSelected ? AppTheme.primary.withOpacity(0.05) : null,
+        color: isSelected ? AppTheme.primary.withValues(alpha: 0.05) : null,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
           children: [
@@ -237,7 +237,7 @@ class RecentActivitiesWidget extends ConsumerWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: activity.statusColor.withOpacity(0.1),
+                    color: activity.statusColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
@@ -320,7 +320,7 @@ class RecentActivitiesWidget extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: activity.statusColor.withOpacity(0.15),
+                          color: activity.statusColor.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

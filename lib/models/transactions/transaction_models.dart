@@ -17,6 +17,7 @@ class ProcurementRequest {
   final DateTime? createdAt;
   final String? requesterName;
   final List<ProcurementItem> items;
+  final bool isArchived;
 
   const ProcurementRequest({
     required this.id,
@@ -31,6 +32,7 @@ class ProcurementRequest {
     this.createdAt,
     this.requesterName,
     this.items = const [],
+    this.isArchived = false,
   });
 
   factory ProcurementRequest.fromJson(Map<String, dynamic> json) {
@@ -51,6 +53,7 @@ class ProcurementRequest {
       items: (json['items'] as List<dynamic>?)
           ?.map((e) => ProcurementItem.fromJson(e))
           .toList() ?? [],
+      isArchived: json['is_archived'] ?? false,
     );
   }
 
@@ -67,6 +70,7 @@ class ProcurementRequest {
     'created_at': createdAt?.toIso8601String(),
     'requester_name': requesterName,
     'items': items.map((e) => e.toJson()).toList(),
+    'is_archived': isArchived,
   };
 
   ProcurementRequest copyWith({
@@ -82,6 +86,7 @@ class ProcurementRequest {
     DateTime? createdAt,
     String? requesterName,
     List<ProcurementItem>? items,
+    bool? isArchived,
   }) {
     return ProcurementRequest(
       id: id ?? this.id,
@@ -96,6 +101,7 @@ class ProcurementRequest {
       createdAt: createdAt ?? this.createdAt,
       requesterName: requesterName ?? this.requesterName,
       items: items ?? this.items,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 }

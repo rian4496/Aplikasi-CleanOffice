@@ -9,11 +9,11 @@ import '../../core/theme/app_theme.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/admin_providers.dart';
-import '../../providers/riverpod/report_providers.dart';
+import '../../riverpod/admin_providers.dart';
+import '../../riverpod/report_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 import '../shared/report_detail/report_detail_screen.dart';
 
 /// All Reports Management Screen - Admin screen with filter, search, and responsive layout

@@ -8,8 +8,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/logging/app_logger.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/report_providers.dart';
-import '../../providers/riverpod/admin_providers.dart';
+import '../../riverpod/report_providers.dart';
+import '../../riverpod/admin_providers.dart';
 import '../../widgets/web_admin/report_list_item_widget.dart';
 import 'verification_screen.dart';
 

@@ -8,14 +8,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../models/report.dart';
-import '../../../providers/riverpod/auth_providers.dart';
+import '../../../riverpod/auth_providers.dart';
 
 // ✅ FIXED: Widget components (LANGSUNG dari lib/widgets/, TIDAK ada subfolder shared)
-import '../../../widgets/report_header.dart';
-import '../../../widgets/report_info_sections.dart';
-import '../../../widgets/report_timeline.dart';
-import '../../../widgets/report_images_section.dart';
-import '../../../widgets/report_verification_section.dart';
+import '../../../widgets/report/report_header.dart';
+import '../../../widgets/report/report_info_sections.dart';
+import '../../../widgets/report/report_timeline.dart';
+import '../../../widgets/report/report_images_section.dart';
+import '../../../widgets/report/report_verification_section.dart';
 
 // ✅ FIXED: Role-specific actions (dari lib/widgets/role_actions/)
 import '../../../widgets/role_actions/cleaner_actions.dart';

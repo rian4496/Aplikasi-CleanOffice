@@ -8,13 +8,14 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/responsive_helper.dart';
 import '../../models/request.dart';
-import '../../providers/riverpod/request_providers.dart';
+import '../../riverpod/request_providers.dart';
 import '../../widgets/shared/request_card_widget.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
-import '../../widgets/web_admin/admin_sidebar.dart';
+import '../../widgets/web_admin/layout/admin_sidebar.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import '../shared/request_detail/request_detail_screen.dart';
+import '../chat/conversation_list_screen.dart';
 
 class AllRequestsManagementScreen extends ConsumerStatefulWidget {
   const AllRequestsManagementScreen({super.key});
@@ -464,8 +465,8 @@ class _AllRequestsManagementScreenState
           icon: Icons.dashboard,
           title: 'Dashboard',
           onTap: () {
-            Navigator.pop(context);
-            Navigator.pushNamedAndRemoveUntil(context, AppConstants.homeAdminRoute, (route) => false);
+            Navigator.pop(context); // close drawer
+            Navigator.pop(context); // go back to dashboard
           },
         ),
         DrawerMenuItem(
@@ -1145,11 +1146,7 @@ class _AllRequestsManagementScreenState
                 icon: Icons.home_rounded,
                 label: 'Home',
                 isActive: false,
-                onTap: () => Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppConstants.homeAdminRoute,
-                  (route) => false,
-                ),
+                onTap: () => Navigator.pop(context), // Pop back to dashboard
               ),
               _buildNavItem(
                 icon: Icons.assignment_rounded,
@@ -1165,7 +1162,12 @@ class _AllRequestsManagementScreenState
                 label: 'Chat',
                 isActive: false,
                 onTap: () {
-                  Navigator.pushNamed(context, '/chat');
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ConversationListScreen(),
+                    ),
+                  );
                 },
               ),
               _buildNavItem(

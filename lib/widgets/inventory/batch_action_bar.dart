@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/inventory_item.dart';
-import '../../providers/riverpod/inventory_selection_provider.dart';
+import '../../riverpod/inventory_selection_provider.dart';
 import '../../services/inventory_service.dart';
 import './inventory_export_dialog.dart';
 

@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/organization/organization_detail_drawer.dart
+﻿// lib/widgets/web_admin/organization/organization_detail_drawer.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,9 +6,9 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/master/organization.dart';
-import '../../../models/user_profile.dart';
-import '../../../providers/riverpod/admin_providers.dart'; // For profiles
-import '../../../providers/riverpod/organization_stats_provider.dart'; // For stats
+import '../../../models/master/employee.dart'; // Use Employee model
+import '../../../riverpod/master_crud_controllers.dart'; // For employeesProvider
+import '../../../riverpod/organization_stats_provider.dart'; // For stats
 import 'assign_employee_dialog.dart';
 
 class OrganizationDetailDrawer extends ConsumerWidget {
@@ -27,11 +27,11 @@ class OrganizationDetailDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 1. Fetch Employees for this unit
-    final allUsersAsync = ref.watch(pendingVerificationUsersProvider); // Returns all users
-    final employees = allUsersAsync.maybeWhen(
-      data: (users) => users.where((u) => u.departmentId == organization.id).toList(),
-      orElse: () => <UserProfile>[],
+    // 1. Fetch Employees for this unit (Using Master Data)
+    final allEmployeesAsync = ref.watch(employeesProvider);
+    final employees = allEmployeesAsync.maybeWhen(
+      data: (emps) => emps.where((e) => e.organizationId == organization.id).toList(),
+      orElse: () => <Employee>[],
     );
 
     // 2. Fetch Stats 
@@ -124,12 +124,13 @@ class OrganizationDetailDrawer extends ConsumerWidget {
                     contentPadding: EdgeInsets.zero,
                     dense: true,
                     leading: CircleAvatar(
-                      backgroundColor: AppTheme.primary.withOpacity(0.1),
-                      child: Text(emp.displayName[0], style: TextStyle(color: AppTheme.primary)),
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.1),
+                      backgroundImage: emp.photoUrl != null ? NetworkImage(emp.photoUrl!) : null,
+                      child: emp.photoUrl == null ? Text(emp.fullName.isNotEmpty ? emp.fullName[0] : '?', style: TextStyle(color: AppTheme.primary)) : null,
                       radius: 16,
                     ),
-                    title: Text(emp.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
-                    subtitle: Text(emp.role, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                    title: Text(emp.fullName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                    subtitle: Text(emp.position ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                   )),
               ],
             ),
@@ -182,7 +183,7 @@ class OrganizationDetailDrawer extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppTheme.primary.withOpacity(0.1),
+                color: AppTheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(Icons.business, color: AppTheme.primary, size: 32),
@@ -202,9 +203,9 @@ class OrganizationDetailDrawer extends ConsumerWidget {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getTypeColor(organization.type).withOpacity(0.1),
+                          color: _getTypeColor(organization.type).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
-                          border: Border.all(color: _getTypeColor(organization.type).withOpacity(0.3)),
+                          border: Border.all(color: _getTypeColor(organization.type).withValues(alpha: 0.3)),
                         ),
                         child: Text(
                           organization.type.toUpperCase(),

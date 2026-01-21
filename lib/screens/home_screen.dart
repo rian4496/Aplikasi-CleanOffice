@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:aplikasi_cleanoffice/models/user_role.dart';
-import 'package:aplikasi_cleanoffice/providers/riverpod/auth_providers.dart';
+import 'package:aplikasi_cleanoffice/riverpod/auth_providers.dart';
 import 'package:aplikasi_cleanoffice/screens/employee/employee_home_screen.dart';
 import 'package:aplikasi_cleanoffice/screens/cleaner/cleaner_home_screen.dart';
-import 'package:aplikasi_cleanoffice/screens/web_admin/admin_dashboard_screen.dart';
+import 'package:aplikasi_cleanoffice/screens/web_admin/dashboard/admin_dashboard.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});

@@ -1,11 +1,11 @@
-// lib/screens/sim_aset/asset_maintenance_history_screen.dart
+﻿// lib/screens/sim_aset/asset_maintenance_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/ticket.dart';
-import '../../providers/riverpod/ticket_providers.dart';
+import '../../riverpod/ticket_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 class AssetMaintenanceHistoryScreen extends ConsumerWidget {
@@ -140,7 +140,7 @@ class _HistoryCard extends StatelessWidget {
                 Container(
                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                    decoration: BoxDecoration(
-                     color: statusColor.withOpacity(0.1),
+                     color: statusColor.withValues(alpha: 0.1),
                      borderRadius: BorderRadius.circular(8),
                    ),
                    child: Text(

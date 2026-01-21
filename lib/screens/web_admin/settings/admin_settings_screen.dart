@@ -1,243 +1,197 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import '../../../core/design/admin_colors.dart';
 import '../../../core/design/admin_typography.dart';
 import '../../../core/design/admin_constants.dart';
-import '../../../providers/riverpod/agency_providers.dart';
-import '../../../models/agency_profile.dart';
+import '../../../riverpod/settings_provider.dart';
+import '../../../models/app_settings.dart';
 import '../../../widgets/web_admin/layout/admin_layout_wrapper.dart';
-import 'user_management_tab.dart';
-import 'audit_logs_tab.dart';
+import '../../../services/web_notification_service_interface.dart';
 
 class AdminSettingsScreen extends HookConsumerWidget {
   const AdminSettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final tabController = useTabController(initialLength: 3);
-    final agencyProfileAsync = ref.watch(agencyProfileProvider);
-
-    return AdminLayoutWrapper(
-      title: 'Pengaturan Sistem',
-      child: Padding(
-        padding: const EdgeInsets.all(AdminConstants.spaceLg),
-        child: Column(
-          children: [
-            // Header Tabs
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(AdminConstants.radiusMd),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: TabBar(
-                controller: tabController,
-                labelColor: AdminColors.primary,
-                unselectedLabelColor: AdminColors.textSecondary,
-                indicatorColor: AdminColors.primary,
-                tabs: const [
-                  Tab(text: 'Profil Instansi', icon: Icon(Icons.business)),
-                  Tab(text: 'Manajemen User', icon: Icon(Icons.people)),
-                  Tab(text: 'Audit Logs', icon: Icon(Icons.history)),
-                ],
-              ),
-            ),
-            const SizedBox(height: AdminConstants.spaceMd),
-
-            // Tab Views
-            Expanded(
-              child: TabBarView(
-                controller: tabController,
-                children: [
-                  agencyProfileAsync.when(
-                    data: (profile) => _AgencyProfileTab(profile: profile),
-                    loading: () => const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => Center(child: Text('Error loading profile: $err')),
-                  ),
-                  _UserManagementTab(),
-                  _AuditLogTab(),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// 1. Agency Profile Tab
-class _AgencyProfileTab extends HookConsumerWidget {
-  final AgencyProfile profile;
-
-  const _AgencyProfileTab({required this.profile});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Basic form controllers (simplified)
-    final nameCtrl = useTextEditingController(text: profile.name);
-    final addressCtrl = useTextEditingController(text: profile.address);
-    final emailCtrl = useTextEditingController(text: profile.email);
-    final cityCtrl = useTextEditingController(text: profile.city);
+    final settingsAsync = ref.watch(settingsProvider);
+    final notificationService = WebNotificationService();
+    final isMobile = MediaQuery.of(context).size.width < 900;
+    
+    // State for notification permission
+    final notificationEnabled = useState(notificationService.isEnabled);
+    final permissionStatus = useState(notificationService.permissionStatus);
 
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    Widget buildContent(AppSettings settings) {
+      return Column(
         children: [
+
           _buildCard(
-            title: 'Informasi Instansi',
+            title: 'Notifikasi',
+            isMobile: isMobile,
             child: Column(
               children: [
-                _buildTextField('Nama Instansi', nameCtrl),
-                const SizedBox(height: 16),
-                _buildTextField('Alamat Lengkap', addressCtrl, maxLines: 2),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(child: _buildTextField('Email Resmi', emailCtrl)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildTextField('Kota Administrasi', cityCtrl)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      // Save Logic
-                       ref.read(agencyProfileProvider.notifier).updateProfile(
-                        AgencyProfile(
-                          id: profile.id,
-                          name: nameCtrl.text,
-                          shortName: profile.shortName,
-                          address: addressCtrl.text,
-                          phone: profile.phone, // TODO: add controller
-                          email: emailCtrl.text,
-                          website: profile.website, // TODO: add controller
-                          city: cityCtrl.text,
-                          signers: profile.signers,
-                        )
-                       );
-                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profil disimpan')));
-                    },
-                    icon: const Icon(Icons.save),
-                    label: const Text('Simpan Perubahan'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    ),
+                // Browser Push Notification Toggle
+                SwitchListTile(
+                  title: const Text('Notifikasi Push Browser'),
+                  subtitle: Text(
+                    permissionStatus.value == 'granted'
+                        ? 'Notifikasi aktif'
+                        : permissionStatus.value == 'denied'
+                            ? 'Izin ditolak'
+                            : 'Aktifkan notifikasi',
+                    style: TextStyle(fontSize: isMobile ? 12 : 14),
                   ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          _buildCard(
-            title: 'Pengaturan Tanda Tangan (Signing Block)',
-            child: Column(
-              children: [
-                if (profile.signers.isEmpty)
-                   const Center(child: Text('Belum ada penandatangan diatur.', style: TextStyle(color: Colors.grey)))
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: profile.signers.length,
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemBuilder: (context, index) {
-                      final signer = profile.signers[index];
-                      return ListTile(
-                        leading: CircleAvatar(child: Text((index + 1).toString())),
-                        title: Text(signer.name),
-                        subtitle: Text('${signer.roleLabel} - ${signer.position}'),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () {
-                            // Delete logic
-                          },
-                        ),
-                      );
-                    },
+                  secondary: Icon(
+                    permissionStatus.value == 'granted'
+                        ? Icons.notifications_active
+                        : permissionStatus.value == 'denied'
+                            ? Icons.notifications_off
+                            : Icons.notifications_outlined,
+                    color: permissionStatus.value == 'granted'
+                        ? Colors.green
+                        : permissionStatus.value == 'denied'
+                            ? Colors.red
+                            : AdminColors.primary,
                   ),
-                  const SizedBox(height: 16),
-                   OutlinedButton.icon(
-                    onPressed: () {
-                      // Add signer dialog
-                    },
-                     icon: const Icon(Icons.add),
-                     label: const Text('Tambah Penandatangan'),
-                   )
+                  value: notificationEnabled.value,
+                  onChanged: (val) async {
+                    if (val) {
+                      final result = await notificationService.requestPermission();
+                      permissionStatus.value = result;
+                      notificationEnabled.value = result == 'granted';
+                      
+                      if (result == 'granted') {
+                        notificationService.showNotification(
+                          title: 'SIM-ASET',
+                          body: 'Notifikasi berhasil diaktifkan! 🎉',
+                        );
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Notifikasi browser diaktifkan'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        }
+                      } else if (result == 'denied') {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Izin notifikasi ditolak'),
+                              backgroundColor: Colors.orange,
+                            ),
+                          );
+                        }
+                      }
+                    } else {
+                      notificationEnabled.value = false;
+                    }
+                  },
+                ),
+                const Divider(),
+                // Sound Toggle
+                SwitchListTile(
+                  secondary: Icon(
+                    settings.soundEnabled ? Icons.volume_up : Icons.volume_off,
+                    color: settings.soundEnabled ? Colors.green : Colors.grey,
+                  ),
+                  title: const Text('Suara Notifikasi'),
+                  subtitle: const Text('Mainkan suara saat notifikasi masuk'),
+                  value: settings.soundEnabled,
+                  onChanged: (val) {
+                     ref.read(settingsProvider.notifier).setSoundEnabled(val);
+                     if (val) {
+                       // Play test sound
+                       notificationService.playSound();
+                     }
+                  },
+                ),
               ],
             ),
           ),
         ],
+      );
+    }
+    
+    // ==================== MOBILE LAYOUT ====================
+    if (isMobile) {
+      return Scaffold(
+         backgroundColor: Colors.grey[50], // Light background
+         appBar: AppBar(
+           backgroundColor: Colors.white,
+           elevation: 0,
+           leadingWidth: 140, // Wider for text
+           leading: TextButton.icon(
+             icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 24),
+             label: const Text('Pengaturan', style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold, fontSize: 18)),
+             style: TextButton.styleFrom(
+               padding: const EdgeInsets.only(left: 8),
+               alignment: Alignment.centerLeft,
+             ),
+             onPressed: () {
+               if (Navigator.canPop(context)) {
+                 Navigator.pop(context);
+               } else {
+                 context.go('/admin/dashboard');
+               }
+             },
+           ),
+           // Hide title if back button has text
+           title: null, 
+         ),
+         body: settingsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error: $e')),
+            data: (settings) => SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: buildContent(settings),
+            ),
+         ),
+      );
+    }
+
+    // ==================== DESKTOP LAYOUT ====================
+    return AdminLayoutWrapper(
+      title: 'Pengaturan Umum',
+      child: Padding(
+        padding: const EdgeInsets.all(AdminConstants.spaceLg),
+        child: SingleChildScrollView(
+          child: settingsAsync.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, s) => Center(child: Text('Error: $e')),
+            data: (settings) => buildContent(settings),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildCard({required String title, required Widget child}) {
+  Widget _buildCard({required String title, required Widget child, required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: EdgeInsets.all(isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(AdminConstants.radiusMd),
+        borderRadius: BorderRadius.circular(isMobile ? 12 : AdminConstants.radiusMd),
          border: Border.all(color: AdminColors.border),
+         boxShadow: isMobile ? null : [ // Remove shadow on mobile for flatter look if desired, or keep light shadow
+           BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
+         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AdminTypography.h4),
-          const Divider(height: 32),
+          Text(title, style: isMobile 
+            ? const TextStyle(fontSize: 16, fontWeight: FontWeight.bold) 
+            : AdminTypography.h4.copyWith(fontWeight: FontWeight.bold)
+          ),
+          Divider(height: isMobile ? 24 : 32),
           child,
         ],
       ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: AdminTypography.body2.copyWith(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// 2. User Management Tab (wraps the imported UserManagementTab)
-class _UserManagementTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: 8.0),
-      child: UserManagementTab(),
-    );
-  }
-}
-
-// 3. Audit Log Tab
-class _AuditLogTab extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: 8.0),
-      child: AuditLogsTab(),
     );
   }
 }

@@ -1,4 +1,4 @@
-// lib/screens/web_admin/master_data/master_aset_screen.dart
+﻿// lib/screens/web_admin/master_data/master_aset_screen.dart
 // Redesigned: Folder Card Layout for Asset Categories (Grey Folder Icons)
 
 import 'package:flutter/material.dart';
@@ -14,9 +14,18 @@ class MasterAsetScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.modernBg,
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: Text('Master Aset', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        leading: MediaQuery.of(context).size.width < 900 ? IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.black87),
+          onPressed: () => context.canPop() ? context.pop() : context.go('/admin/dashboard'),
+        ) : null,
+       title: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text('Master Aset', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: Colors.black)),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(24),
@@ -36,30 +45,55 @@ class MasterAsetScreen extends StatelessWidget {
             const SizedBox(height: 32),
 
             // Folder Cards
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Card: Aset Bergerak
-                Expanded(
-                  child: _buildFolderCard(
-                    context,
-                    title: 'Aset Bergerak',
-                    subtitle: 'Kendaraan, Peralatan, Elektronik',
-                    onTap: () => context.push('/admin/assets?type=movable'),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                if (constraints.maxWidth < 600) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _buildFolderCard(
+                        context,
+                        title: 'Aset Bergerak',
+                        subtitle: 'Kendaraan, Peralatan, Elektronik',
+                        onTap: () => context.push('/admin/assets?type=movable'),
+                        isCenter: true,
+                      ),
+                      const SizedBox(height: 16),
+                      _buildFolderCard(
+                        context,
+                        title: 'Aset Tidak Bergerak',
+                        subtitle: 'Tanah, Gedung, Bangunan',
+                        onTap: () => context.push('/admin/assets?type=immovable'),
+                        isCenter: true,
+                      ),
+                    ],
+                  );
+                }
+                return IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        child: _buildFolderCard(
+                          context,
+                          title: 'Aset Bergerak',
+                          subtitle: 'Kendaraan, Peralatan, Elektronik',
+                          onTap: () => context.push('/admin/assets?type=movable'),
+                        ),
+                      ),
+                      const SizedBox(width: 24),
+                      Expanded(
+                        child: _buildFolderCard(
+                          context,
+                          title: 'Aset Tidak Bergerak',
+                          subtitle: 'Tanah, Gedung, Bangunan',
+                          onTap: () => context.push('/admin/assets?type=immovable'),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 24),
-
-                // Card: Aset Tidak Bergerak
-                Expanded(
-                  child: _buildFolderCard(
-                    context,
-                    title: 'Aset Tidak Bergerak',
-                    subtitle: 'Tanah, Gedung, Bangunan',
-                    onTap: () => context.push('/admin/assets?type=immovable'),
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ],
         ),
@@ -72,6 +106,7 @@ class MasterAsetScreen extends StatelessWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    bool isCenter = false,
   }) {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
@@ -85,14 +120,14 @@ class MasterAsetScreen extends StatelessWidget {
             border: Border.all(color: Colors.grey[200]!),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.08),
+                color: Colors.grey.withValues(alpha: 0.08),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: isCenter ? CrossAxisAlignment.center : CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
               // Grey Folder Icon
@@ -106,6 +141,7 @@ class MasterAsetScreen extends StatelessWidget {
               // Title
               Text(
                 title,
+                textAlign: isCenter ? TextAlign.center : TextAlign.start,
                 style: GoogleFonts.inter(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -117,6 +153,7 @@ class MasterAsetScreen extends StatelessWidget {
               // Subtitle
               Text(
                 subtitle,
+                textAlign: isCenter ? TextAlign.center : TextAlign.start,
                 style: GoogleFonts.inter(
                   fontSize: 12,
                   color: Colors.grey[500],

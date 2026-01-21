@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/riverpod/report_providers.dart';
+import '../../riverpod/report_providers.dart';
 
 // Quick Filters Enum
 enum QuickFilter {
@@ -125,7 +125,7 @@ class FilterChips extends ConsumerWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? Colors.transparent : chipColor.withOpacity(0.3),
+          color: isSelected ? Colors.transparent : chipColor.withValues(alpha: 0.3),
         ),
       ),
     );

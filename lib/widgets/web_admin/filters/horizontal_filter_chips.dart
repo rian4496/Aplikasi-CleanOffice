@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/filters/horizontal_filter_chips.dart
+﻿// lib/widgets/web_admin/filters/horizontal_filter_chips.dart
 // 🎯 Horizontal Filter Chips
 // Scrollable filter chips for quick filtering
 
@@ -39,7 +39,7 @@ class HorizontalFilterChips extends StatelessWidget {
             selected: isSelected,
             onSelected: (_) => onSelected(chip.id),
             backgroundColor: AdminColors.surface,
-            selectedColor: AdminColors.primaryLight.withOpacity(0.2),
+            selectedColor: AdminColors.primaryLight.withValues(alpha: 0.2),
             checkmarkColor: AdminColors.primary,
             labelStyle: AdminTypography.body2.copyWith(
               color: isSelected ? AdminColors.primary : AdminColors.textPrimary,

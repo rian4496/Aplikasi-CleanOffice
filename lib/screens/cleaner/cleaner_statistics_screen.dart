@@ -1,4 +1,4 @@
-// lib/screens/cleaner/cleaner_statistics_screen.dart
+﻿// lib/screens/cleaner/cleaner_statistics_screen.dart
 // Detailed Statistics Screen for Cleaner Performance
 
 import 'package:flutter/material.dart';
@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
-import '../../providers/riverpod/cleaner_providers.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../widgets/shared/notification_bell.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/navigation/cleaner_more_bottom_sheet.dart';
@@ -168,7 +168,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -180,7 +180,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -220,7 +220,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Center(
@@ -238,7 +238,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -324,7 +324,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
                 width: 32,
                 height: barHeight.clamp(8, 100),
                 decoration: BoxDecoration(
-                  color: isToday ? AppTheme.success : AppTheme.primary.withOpacity(0.6),
+                  color: isToday ? AppTheme.success : AppTheme.primary.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
                 ),
               ),
@@ -407,7 +407,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -418,7 +418,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: AppTheme.success.withOpacity(0.1),
+              color: AppTheme.success.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -491,7 +491,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.red.withOpacity(0.1),
+        color: Colors.red.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
       ),
       child: const Center(
@@ -555,7 +555,7 @@ class _CleanerStatisticsScreenState extends ConsumerState<CleanerStatisticsScree
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 8,
             offset: const Offset(0, -2),
           ),

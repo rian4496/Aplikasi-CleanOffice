@@ -6,8 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/notification_model.dart';
-import '../../providers/riverpod/notification_providers.dart';
-import '../../providers/riverpod/report_providers.dart';
+import '../../riverpod/notification_providers.dart';
+import '../../riverpod/report_providers.dart';
 import '../../screens/shared/report_detail/report_detail_screen.dart';
 import '../../screens/shared/request_detail/request_detail_screen.dart';
 

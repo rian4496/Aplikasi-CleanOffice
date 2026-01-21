@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../services/asset_export_service.dart';
 import '../../services/maintenance_export_service.dart';
 import '../../services/procurement_export_service.dart';
-import '../../providers/riverpod/asset_providers.dart';
-import '../../providers/riverpod/maintenance_providers.dart';
-// import '../../providers/riverpod/procurement_providers.dart'; // TODO: Create this provider
+import '../../riverpod/asset_providers.dart';
+import '../../riverpod/maintenance_providers.dart';
+// import '../../riverpod/procurement_providers.dart'; // TODO: Create this provider
 
 class AnalyticsReportScreen extends ConsumerStatefulWidget {
   const AnalyticsReportScreen({super.key});
@@ -251,7 +251,7 @@ class _AnalyticsReportScreenState extends ConsumerState<AnalyticsReportScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: color, size: 32),

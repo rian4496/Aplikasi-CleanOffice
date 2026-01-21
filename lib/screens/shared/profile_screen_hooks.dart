@@ -11,7 +11,7 @@ import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/user_profile.dart';
 import '../../models/user_role.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import 'change_password_screen.dart';
 import 'edit_profile_screen.dart';
 

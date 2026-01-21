@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../providers/riverpod/connectivity_provider.dart';
+import '../../riverpod/connectivity_provider.dart';
 
 /// Banner widget yang muncul di atas layar saat offline
 class OfflineBanner extends ConsumerWidget {

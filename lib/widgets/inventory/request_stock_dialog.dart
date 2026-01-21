@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/inventory_item.dart';
 import '../../services/inventory_service.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../models/stock_request.dart';
 
 class RequestStockDialog extends ConsumerStatefulWidget {

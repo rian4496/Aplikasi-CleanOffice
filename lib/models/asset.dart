@@ -65,13 +65,20 @@ enum AssetCondition {
 
   static AssetCondition fromString(String condition) {
     switch (condition.toLowerCase()) {
+      // English codes
       case 'good':
+      case 'baik':
         return AssetCondition.good;
       case 'fair':
+      case 'cukup':
         return AssetCondition.fair;
       case 'poor':
+      case 'kurang':
         return AssetCondition.poor;
       case 'broken':
+      case 'rusak':
+      case 'rusak_ringan':
+      case 'rusak_berat':
         return AssetCondition.broken;
       default:
         return AssetCondition.good;
@@ -96,9 +103,9 @@ enum AssetCondition {
       case AssetCondition.good:
         return 'Baik';
       case AssetCondition.fair:
-        return 'Cukup';
+        return 'Cukup Baik';
       case AssetCondition.poor:
-        return 'Buruk';
+        return 'Kurang Baik';
       case AssetCondition.broken:
         return 'Rusak';
     }
@@ -136,12 +143,16 @@ class Asset {
   final String id;
   final String name;
   final String? description;
-  final String qrCode;
+  final String qrCode; // Mapped from asset_code in DB
   final String category;
+  final String brand;
+  final String model;
   final String? typeId;       // FK to asset_types
   final String? categoryId;   // FK to asset_categories
   final String? departmentId; // FK to departments
   final String? conditionId;  // FK to asset_conditions
+  final String? organizationId; // FK to organizations
+  final String? organizationName; // Joined from organizations table
   final String? locationId;
   final String? locationName; // Joined from locations table
   final AssetStatus status;
@@ -154,6 +165,10 @@ class Asset {
   final String? createdBy;
   final DateTime createdAt;
   final DateTime updatedAt;
+  // Custodian (Pemegang Aset) - only for movable assets
+  final String? custodianId;
+  final String? custodianName;
+  final String? custodianNip;
 
   Asset({
     required this.id,
@@ -161,10 +176,14 @@ class Asset {
     this.description,
     required this.qrCode,
     required this.category,
+    this.brand = '-',
+    this.model = '-',
     this.typeId,
     this.categoryId,
     this.departmentId,
     this.conditionId,
+    this.organizationId,
+    this.organizationName,
     this.locationId,
     this.locationName,
     required this.status,
@@ -177,36 +196,48 @@ class Asset {
     this.createdBy,
     required this.createdAt,
     required this.updatedAt,
+    this.custodianId,
+    this.custodianName,
+    this.custodianNip,
   });
 
   // Factory constructor from Supabase
   factory Asset.fromSupabase(Map<String, dynamic> map) {
     return Asset(
-      id: map['id'] as String,
-      name: map['name'] as String,
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? 'Unknown Asset',
       description: map['description'] as String?,
-      qrCode: map['qr_code'] as String,
-      category: map['category'] as String,
+      qrCode: (map['asset_code'] ?? map['qr_code'])?.toString() ?? '-',
+      category: (map['category'] is Map 
+          ? map['category']['name'] 
+          : (map['asset_categories'] is Map ? map['asset_categories']['name'] : map['category']?.toString())) ?? 'Lainnya',
+      brand: map['brand']?.toString() ?? '-',
+      model: map['model']?.toString() ?? '-',
       typeId: map['type_id'] as String?,
       categoryId: map['category_id'] as String?,
       departmentId: map['department_id'] as String?,
       conditionId: map['condition_id'] as String?,
+      organizationId: map['organization_id'] as String?,
+      organizationName: map['organizations']?['name'] as String? ?? map['organization_name'] as String?,
       locationId: map['location_id'] as String?,
-      locationName: map['locations']?['name'] as String?, // Joined
+      locationName: map['locations']?['name'] as String? ?? map['location_name'] as String?, // Joined or direct
       status: AssetStatus.fromString(map['status'] ?? 'active'),
       condition: AssetCondition.fromString(map['condition'] ?? 'good'),
       purchaseDate: map['purchase_date'] != null 
           ? DateTime.parse(map['purchase_date']) 
           : null,
-      purchasePrice: (map['purchase_price'] as num?)?.toDouble(),
+      purchasePrice: (map['purchase_price'] ?? map['price'] as num?)?.toDouble(), // Try both column names
       warrantyUntil: map['warranty_until'] != null 
           ? DateTime.parse(map['warranty_until']) 
           : null,
       imageUrl: map['image_url'] as String?,
       notes: map['notes'] as String?,
       createdBy: map['created_by'] as String?,
-      createdAt: DateTime.parse(map['created_at']),
-      updatedAt: DateTime.parse(map['updated_at']),
+      createdAt: map['created_at'] != null ? DateTime.parse(map['created_at']) : DateTime.now(),
+      updatedAt: map['updated_at'] != null ? DateTime.parse(map['updated_at']) : DateTime.now(),
+      custodianId: map['custodian_id'] as String?,
+      custodianName: map['custodian']?['full_name'] as String? ?? map['custodian_name'] as String?,
+      custodianNip: map['custodian']?['nip'] as String? ?? map['custodian_nip'] as String?,
     );
   }
 
@@ -215,8 +246,11 @@ class Asset {
     return {
       'name': name,
       'description': description,
-      'qr_code': qrCode,
+      'asset_code': qrCode,
       'category': category,
+      'brand': brand,
+      'model': model,
+      'organization_id': organizationId,
       'location_id': locationId,
       'status': status.toDatabase(),
       'condition': condition.toDatabase(),
@@ -226,6 +260,7 @@ class Asset {
       'image_url': imageUrl,
       'notes': notes,
       'created_by': createdBy,
+      'custodian_id': custodianId,
     };
   }
 
@@ -236,6 +271,10 @@ class Asset {
     String? description,
     String? qrCode,
     String? category,
+    String? brand,
+    String? model,
+    String? organizationId,
+    String? organizationName,
     String? locationId,
     String? locationName,
     AssetStatus? status,
@@ -247,6 +286,9 @@ class Asset {
     String? notes,
     String? createdBy,
     DateTime? createdAt,
+    String? custodianId,
+    String? custodianName,
+    String? custodianNip,
     DateTime? updatedAt,
   }) {
     return Asset(
@@ -255,6 +297,10 @@ class Asset {
       description: description ?? this.description,
       qrCode: qrCode ?? this.qrCode,
       category: category ?? this.category,
+      brand: brand ?? this.brand,
+      model: model ?? this.model,
+      organizationId: organizationId ?? this.organizationId,
+      organizationName: organizationName ?? this.organizationName,
       locationId: locationId ?? this.locationId,
       locationName: locationName ?? this.locationName,
       status: status ?? this.status,
@@ -267,6 +313,9 @@ class Asset {
       createdBy: createdBy ?? this.createdBy,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      custodianId: custodianId ?? this.custodianId,
+      custodianName: custodianName ?? this.custodianName,
+      custodianNip: custodianNip ?? this.custodianNip,
     );
   }
 

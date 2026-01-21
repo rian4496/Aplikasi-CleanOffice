@@ -20,6 +20,7 @@ class SupabaseConfig {
   static const String reportImagesBucket = 'report_images';
   static const String profileImagesBucket = 'profile_images';
   static const String inventoryImagesBucket = 'inventory_images'; // Changed to match user's bucket (underscore)
+  static const String chatImagesBucket = 'chat_images'; // For chat media uploads
 
   // Realtime Channels
   static const String reportsChannel = 'public:reports';

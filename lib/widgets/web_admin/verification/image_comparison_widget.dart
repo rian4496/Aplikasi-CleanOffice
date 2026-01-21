@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/verification/image_comparison_widget.dart
+﻿// lib/widgets/web_admin/verification/image_comparison_widget.dart
 // 🖼️ Image Comparison Widget
 // Side-by-side before/after image comparison with swipe and zoom
 
@@ -143,7 +143,7 @@ class _ImageComparisonWidgetState extends State<ImageComparisonWidget> {
                       child: Icon(
                         Icons.broken_image,
                         size: 48,
-                        color: AdminColors.textSecondary.withOpacity(0.5),
+                        color: AdminColors.textSecondary.withValues(alpha: 0.5),
                       ),
                     ),
                   ),
@@ -169,7 +169,7 @@ class _ImageComparisonWidgetState extends State<ImageComparisonWidget> {
                   vertical: 4,
                 ),
                 decoration: BoxDecoration(
-                  color: labelColor.withOpacity(0.9),
+                  color: labelColor.withValues(alpha: 0.9),
                   borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                 ),
                 child: Text(
@@ -190,7 +190,7 @@ class _ImageComparisonWidgetState extends State<ImageComparisonWidget> {
                 child: Container(
                   padding: const EdgeInsets.all(AdminConstants.spaceXs),
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                   ),
                   child: const Icon(

@@ -6,8 +6,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 import '../../models/inventory_item.dart';
-import '../../providers/riverpod/inventory_providers.dart';
-import '../../providers/riverpod/inventory_selection_provider.dart';
+import '../../riverpod/inventory_providers.dart';
+import '../../riverpod/inventory_selection_provider.dart';
 import '../../widgets/inventory/inventory_card.dart';
 import '../../widgets/inventory/batch_action_bar.dart';
 import '../../widgets/inventory/inventory_detail_dialog.dart';

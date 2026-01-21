@@ -8,10 +8,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/asset.dart';
-import '../../providers/riverpod/master_data_providers.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/dropdown_providers.dart' hide locationsProvider;
+import '../../riverpod/master_crud_controllers.dart'; // For organizationsProvider, employeesStreamProvider
+import '../../riverpod/auth_providers.dart';
 import '../../services/barcode_lookup_service.dart';
 import '../../widgets/shared/barcode_scanner_dialog.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:image_picker/image_picker.dart';
+import '../../riverpod/supabase_service_providers.dart';
+import '../../riverpod/asset_providers.dart';
 
 class AssetFormScreen extends ConsumerStatefulWidget {
   final Asset? asset; // null for create, non-null for edit
@@ -32,18 +38,31 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
   late TextEditingController _descriptionController;
   late TextEditingController _qrCodeController;
   late TextEditingController _purchasePriceController;
+
   late TextEditingController _notesController;
+  late TextEditingController _brandController;
+  late TextEditingController _modelController;
 
   // Dropdown values
   String? _selectedTypeId;
   String? _selectedCategoryId;
+  String? _selectedCategoryName; // Track category name for dynamic labels
   String? _selectedLocationId;
   String? _selectedConditionId;
+  String? _selectedConditionCode; // Track condition code for database
   String? _selectedDepartmentId;
+  String? _selectedOrganizationId; // FK to organizations
+  String? _selectedCustodianId; // Pemegang Aset (movable only)
   String _selectedStatus = 'active';
 
   DateTime? _purchaseDate;
+
   DateTime? _warrantyUntil;
+
+  // Image Helper
+  XFile? _newImageFile;
+  String? _existingImageUrl;
+  bool _isUploadingImage = false;
 
   bool _isLoading = false;
   bool get _isEditing => widget.asset != null;
@@ -67,6 +86,8 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
       text: asset?.purchasePrice?.toString() ?? '',
     );
     _notesController = TextEditingController(text: asset?.notes ?? '');
+    _brandController = TextEditingController(text: asset?.brand != '-' ? asset?.brand : '');
+    _modelController = TextEditingController(text: asset?.model != '-' ? asset?.model : '');
 
     if (asset != null) {
       _selectedTypeId = asset.typeId;
@@ -74,9 +95,13 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
       _selectedLocationId = asset.locationId;
       _selectedConditionId = asset.conditionId;
       _selectedDepartmentId = asset.departmentId;
+      _selectedOrganizationId = asset.organizationId;
+      _selectedCustodianId = asset.custodianId;
       _selectedStatus = asset.status.toDatabase();
       _purchaseDate = asset.purchaseDate;
+
       _warrantyUntil = asset.warrantyUntil;
+      _existingImageUrl = asset.imageUrl;
     }
   }
 
@@ -91,8 +116,70 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
     _descriptionController.dispose();
     _qrCodeController.dispose();
     _purchasePriceController.dispose();
+    _purchasePriceController.dispose();
     _notesController.dispose();
+    _brandController.dispose();
+    _modelController.dispose();
     super.dispose();
+  }
+
+  // NEW: Image Picker Logic
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 80,
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _newImageFile = pickedFile;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal mengambil gambar')),
+      );
+    }
+  }
+
+  void _removeImage() {
+    setState(() {
+      _newImageFile = null;
+      _existingImageUrl = null;
+    });
+  }
+
+  void _showImagePickerOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Galeri'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Kamera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -102,10 +189,11 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
     final locationsAsync = ref.watch(locationsProvider);
     final conditionsAsync = ref.watch(assetConditionsProvider);
     final departmentsAsync = ref.watch(departmentsProvider);
+    final organizationsAsync = ref.watch(organizationsProvider);
 
-    return Container(
-      color: AppTheme.modernBg,
-      child: Column(
+    return Scaffold(
+      backgroundColor: AppTheme.modernBg,
+      body: Column(
         children: [
           // Custom Header
           Container(
@@ -170,6 +258,59 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // NEW: Image Upload Section
+                          Center(
+                            child: GestureDetector(
+                              onTap: () => _showImagePickerOptions(),
+                              child: Container(
+                                width: 120,
+                                height: 120,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200],
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.grey[300]!),
+                                  image: _newImageFile != null
+                                      ? DecorationImage(
+                                          image: kIsWeb 
+                                              ? NetworkImage(_newImageFile!.path) 
+                                              : FileImage(File(_newImageFile!.path)) as ImageProvider,
+                                          fit: BoxFit.cover,
+                                        )
+                                      : _existingImageUrl != null
+                                          ? DecorationImage(
+                                              image: NetworkImage(_existingImageUrl!),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
+                                ),
+                                child: _newImageFile == null && _existingImageUrl == null
+                                    ? const Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add_a_photo, size: 32, color: Colors.grey),
+                                          SizedBox(height: 4),
+                                          Text('Foto Aset', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                                        ],
+                                      )
+                                    : Align(
+                                        alignment: Alignment.topRight,
+                                        child: InkWell(
+                                          onTap: _removeImage,
+                                          child: Container(
+                                            padding: const EdgeInsets.all(4),
+                                            decoration: const BoxDecoration(
+                                              color: Colors.white,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(Icons.close, size: 16, color: Colors.red),
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
                           // Basic Info Card
                           _buildCard(
                             title: 'Informasi Dasar',
@@ -182,7 +323,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                                 required: true,
                               ),
                               const SizedBox(height: 16),
-                              _buildTextField(
+                                _buildTextField(
                                 controller: _descriptionController,
                                 label: 'Deskripsi',
                                 hint: 'Deskripsi detail aset',
@@ -193,27 +334,55 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                                 children: [
                                   Expanded(
                                     child: _buildTextField(
-                                      controller: _qrCodeController,
-                                      label: 'Kode QR',
-                                      enabled: !_isEditing,
-                                      prefixIcon: Icons.qr_code,
+                                      controller: _brandController,
+                                      label: 'Merk / Brand',
+                                      hint: 'Contoh: Dell, Toyota, Samsung',
                                     ),
                                   ),
-                                  if (!_isEditing) ...[
-                                    const SizedBox(width: 8),
-                                    IconButton(
-                                      icon: const Icon(Icons.refresh),
-                                      onPressed: () {
-                                        setState(() {
-                                          _qrCodeController.text =
-                                              _generateQrCode();
-                                        });
-                                      },
-                                      tooltip: 'Generate baru',
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: _buildTextField(
+                                      controller: _modelController,
+                                      label: 'Tipe / Model',
+                                      hint: 'Contoh: Latitude 5420',
                                     ),
-                                  ],
+                                  ),
                                 ],
                               ),
+                              const SizedBox(height: 16),
+                              // Hide Kode Aset for immovable assets
+                              if (widget.assetType != 'immovable')
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildTextField(
+                                        controller: _qrCodeController,
+                                        label: _selectedCategoryName?.toLowerCase().contains('kendaraan') == true
+                                            ? 'Nomor Polisi'
+                                            : 'Kode Aset',
+                                        // Vehicles can always edit plate number; other assets can't edit QR
+                                        enabled: _selectedCategoryName?.toLowerCase().contains('kendaraan') == true || !_isEditing,
+                                        prefixIcon: _selectedCategoryName?.toLowerCase().contains('kendaraan') == true
+                                            ? Icons.directions_car
+                                            : Icons.qr_code,
+                                      ),
+                                    ),
+                                    // Only show generate button for non-vehicles when adding new asset
+                                    if (!_isEditing && _selectedCategoryName?.toLowerCase().contains('kendaraan') != true) ...[
+                                      const SizedBox(width: 8),
+                                      IconButton(
+                                        icon: const Icon(Icons.refresh),
+                                        onPressed: () {
+                                          setState(() {
+                                            _qrCodeController.text =
+                                                _generateQrCode();
+                                          });
+                                        },
+                                        tooltip: 'Generate baru',
+                                      ),
+                                    ],
+                                  ],
+                                ),
                             ],
                           ),
                           const SizedBox(height: 16),
@@ -281,9 +450,16 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                                           ),
                                         )
                                         .toList(),
-                                    onChanged: (value) => setState(
-                                      () => _selectedCategoryId = value,
-                                    ),
+                                    onChanged: (value) {
+                                      final selectedCategory = filtered.firstWhere(
+                                        (c) => c.id == value,
+                                        orElse: () => filtered.first,
+                                      );
+                                      setState(() {
+                                        _selectedCategoryId = value;
+                                        _selectedCategoryName = selectedCategory.name;
+                                      });
+                                    },
                                     required: true,
                                   );
                                 },
@@ -293,26 +469,51 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                               ),
                               const SizedBox(height: 16),
 
-                              // Department dropdown
-                              departmentsAsync.when(
-                                data: (departments) => _buildDropdown(
-                                  label: 'Bidang/Bagian',
-                                  value: _selectedDepartmentId,
-                                  items: departments
+                              // Department dropdown - hide for immovable assets
+                              if (widget.assetType != 'immovable')
+                                departmentsAsync.when(
+                                  data: (departments) => _buildDropdown(
+                                    label: 'Bidang/Bagian',
+                                    value: _selectedDepartmentId,
+                                    items: departments
+                                        .map(
+                                          (d) => DropdownMenuItem(
+                                            value: d.id,
+                                            child: Text(d.name),
+                                          ),
+                                        )
+                                        .toList(),
+                                    onChanged: (value) => setState(
+                                      () => _selectedDepartmentId = value,
+                                    ),
+                                  ),
+                                  loading: () => const LinearProgressIndicator(),
+                                  error: (_, __) =>
+                                      const Text('Error loading departments'),
+                                ),
+                              if (widget.assetType != 'immovable')
+                                const SizedBox(height: 16),
+                              
+                              // Organization dropdown
+                              organizationsAsync.when(
+                                data: (orgs) => _buildDropdown(
+                                  label: 'Unit Organisasi Pemilik',
+                                  value: _selectedOrganizationId,
+                                  items: orgs
                                       .map(
-                                        (d) => DropdownMenuItem(
-                                          value: d.id,
-                                          child: Text(d.name),
+                                        (o) => DropdownMenuItem(
+                                          value: o.id,
+                                          child: Text(o.name),
                                         ),
                                       )
                                       .toList(),
                                   onChanged: (value) => setState(
-                                    () => _selectedDepartmentId = value,
+                                    () => _selectedOrganizationId = value,
                                   ),
                                 ),
                                 loading: () => const LinearProgressIndicator(),
                                 error: (_, __) =>
-                                    const Text('Error loading departments'),
+                                    const Text('Error loading organizations'),
                               ),
                             ],
                           ),
@@ -372,9 +573,16 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                                         ),
                                       )
                                       .toList(),
-                                  onChanged: (value) => setState(
-                                    () => _selectedConditionId = value,
-                                  ),
+                                  onChanged: (value) {
+                                    final selectedCondition = conditions.firstWhere(
+                                      (c) => c.id == value,
+                                      orElse: () => conditions.first,
+                                    );
+                                    setState(() {
+                                      _selectedConditionId = value;
+                                      _selectedConditionCode = selectedCondition.code;
+                                    });
+                                  },
                                   required: true,
                                 ),
                                 loading: () => const LinearProgressIndicator(),
@@ -410,43 +618,85 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          // Purchase Info Card
-                          _buildCard(
-                            title: 'Informasi Pembelian',
-                            icon: Icons.shopping_cart_outlined,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildDatePicker(
-                                      label: 'Tanggal Pembelian',
-                                      value: _purchaseDate,
-                                      onChanged: (date) =>
-                                          setState(() => _purchaseDate = date),
+                          // Pemegang Aset Card - only for movable assets
+                          if (widget.assetType == 'movable')
+                            _buildCard(
+                              title: 'Pemegang Aset',
+                              icon: Icons.person_outline,
+                              children: [
+                                Consumer(
+                                  builder: (context, ref, _) {
+                                    final employeesAsync = ref.watch(employeesProvider);
+                                    return employeesAsync.when(
+                                      data: (employees) => _buildDropdown<String>(
+                                        label: 'Pegawai Penanggung Jawab',
+                                        value: _selectedCustodianId ?? '',
+                                        items: <DropdownMenuItem<String>>[
+                                          const DropdownMenuItem<String>(
+                                            value: '',
+                                            child: Text('- Belum Ada Pemegang -'),
+                                          ),
+                                          ...employees.map(
+                                            (e) => DropdownMenuItem<String>(
+                                              value: e.id,
+                                              child: Text('${e.fullName} (${e.nip})'),
+                                            ),
+                                          ),
+                                        ],
+                                        onChanged: (value) => setState(
+                                          () => _selectedCustodianId = value?.isEmpty == true ? null : value,
+                                        ),
+                                      ),
+                                      loading: () => const LinearProgressIndicator(),
+                                      error: (_, __) =>
+                                          const Text('Error loading employees'),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          if (widget.assetType == 'movable')
+                            const SizedBox(height: 16),
+
+                          // Purchase Info Card - hide for immovable assets
+                          if (widget.assetType != 'immovable')
+                            _buildCard(
+                              title: 'Informasi Pembelian',
+                              icon: Icons.shopping_cart_outlined,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: _buildDatePicker(
+                                        label: 'Tanggal Pembelian',
+                                        value: _purchaseDate,
+                                        onChanged: (date) =>
+                                            setState(() => _purchaseDate = date),
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: _buildDatePicker(
-                                      label: 'Garansi Sampai',
-                                      value: _warrantyUntil,
-                                      onChanged: (date) =>
-                                          setState(() => _warrantyUntil = date),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildDatePicker(
+                                        label: 'Garansi Sampai',
+                                        value: _warrantyUntil,
+                                        onChanged: (date) =>
+                                            setState(() => _warrantyUntil = date),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              _buildTextField(
-                                controller: _purchasePriceController,
-                                label: 'Harga Pembelian (Rp)',
-                                hint: '0',
-                                keyboardType: TextInputType.number,
-                                prefixIcon: Icons.attach_money,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
+                                  ],
+                                ),
+                                const SizedBox(height: 16),
+                                _buildTextField(
+                                  controller: _purchasePriceController,
+                                  label: 'Harga Pembelian (Rp)',
+                                  hint: '0',
+                                  keyboardType: TextInputType.number,
+                                  prefixIcon: Icons.attach_money,
+                                ),
+                              ],
+                            ),
+                          if (widget.assetType != 'immovable')
+                            const SizedBox(height: 16),
 
                           // Notes Card
                           _buildCard(
@@ -742,28 +992,98 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
         }
       }
 
-      final data = {
+      // Handle Image Upload
+      String? finalImageUrl = _existingImageUrl;
+      
+      if (_newImageFile != null) {
+        // Upload new image
+        final storageService = ref.read(supabaseStorageServiceProvider);
+        finalImageUrl = await storageService.uploadInventoryImage(_newImageFile!);
+      } else if (_existingImageUrl == null && widget.asset?.imageUrl != null) {
+        // If existing image was nullified (deleted by user), finalImageUrl is already null
+        // But if we just didn't touch it, we might need to keep it?
+        // Actually _existingImageUrl starts as widget.asset?.imageUrl
+        // If _removeImage() was called, _existingImageUrl became null.
+        // So finalImageUrl is correct as is.
+      }
+
+      final data = <String, dynamic>{
         'name': _nameController.text.trim(),
         'description': _descriptionController.text.trim(),
-        'qr_code': _qrCodeController.text.trim(),
-        'category': 'default', // Required field in original schema
-        'type_id': resolvedTypeId,
-        'category_id': _selectedCategoryId,
-        'location_id': _selectedLocationId,
-        'condition_id': _selectedConditionId,
-        'department_id': _selectedDepartmentId,
+        'asset_code': _qrCodeController.text.trim(),
         'status': _selectedStatus,
-        'purchase_date': _purchaseDate?.toIso8601String(),
-        'warranty_until': _warrantyUntil?.toIso8601String(),
-        'purchase_price': double.tryParse(_purchasePriceController.text),
+        'price': double.tryParse(_purchasePriceController.text) ?? 0,
         'notes': _notesController.text.trim(),
+        'notes': _notesController.text.trim(),
+        'brand': _brandController.text.trim().isEmpty ? '-' : _brandController.text.trim(),
+        'model': _modelController.text.trim().isEmpty ? '-' : _modelController.text.trim(),
+        'updated_at': DateTime.now().toIso8601String(),
       };
+      
+      // Only add FK fields if they have valid values (prevents constraint violations)
+      if (_selectedCategoryId != null && _selectedCategoryId!.isNotEmpty) {
+        data['category_id'] = _selectedCategoryId;
+      }
+      if (_selectedDepartmentId != null && _selectedDepartmentId!.isNotEmpty) {
+        data['department_id'] = _selectedDepartmentId;
+      }
+      if (_selectedConditionId != null && _selectedConditionId!.isNotEmpty) {
+        data['condition_id'] = _selectedConditionId;
+      }
+      if (_selectedConditionCode != null && _selectedConditionCode!.isNotEmpty) {
+        data['condition'] = _selectedConditionCode;
+      }
+      if (_selectedLocationId != null && _selectedLocationId!.isNotEmpty) {
+        data['location_id'] = _selectedLocationId;
+      }
+      if (_selectedOrganizationId != null && _selectedOrganizationId!.isNotEmpty) {
+        data['organization_id'] = _selectedOrganizationId;
+      }
+      // Custodian (Pemegang Aset) - can be null
+      if (_selectedCustodianId != null && _selectedCustodianId!.isNotEmpty) {
+        data['custodian_id'] = _selectedCustodianId;
+      } else {
+        data['custodian_id'] = null; // Allow clearing custodian
+      }
+      if (finalImageUrl != null && finalImageUrl.isNotEmpty) {
+        data['image_url'] = finalImageUrl;
+      }
+      if (_purchaseDate != null) {
+        data['purchase_date'] = _purchaseDate!.toIso8601String().split('T').first;
+      }
+      if (_warrantyUntil != null) {
+        data['warranty_until'] = _warrantyUntil!.toIso8601String().split('T').first;
+      }
 
       if (_isEditing) {
+        // Log custodian change if custodian was modified
+        final oldCustodianId = widget.asset?.custodianId;
+        final newCustodianId = _selectedCustodianId;
+        
+        if (oldCustodianId != newCustodianId) {
+          // Log to custodian history
+          await _supabase.from('asset_custodian_history').insert({
+            'asset_id': widget.asset!.id,
+            'old_custodian_id': oldCustodianId,
+            'new_custodian_id': newCustodianId?.isEmpty == true ? null : newCustodianId,
+            'change_reason': 'Perubahan pemegang aset melalui edit form',
+          });
+        }
+        
         await _supabase.from('assets').update(data).eq('id', widget.asset!.id);
       } else {
-        data['created_by'] = userId;
-        await _supabase.from('assets').insert(data);
+        // 'created_by' now exists in assets table
+        final result = await _supabase.from('assets').insert(data).select().single();
+        
+        // Log initial custodian assignment if set
+        if (_selectedCustodianId != null && _selectedCustodianId!.isNotEmpty) {
+          await _supabase.from('asset_custodian_history').insert({
+            'asset_id': result['id'],
+            'old_custodian_id': null,
+            'new_custodian_id': _selectedCustodianId,
+            'change_reason': 'Pemegang awal saat pendaftaran aset',
+          });
+        }
       }
 
       if (mounted) {
@@ -777,6 +1097,9 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        // Auto-refresh Asset List
+        ref.refresh(allAssetsProvider);
+
         if (widget.assetType != null) {
           context.go('/admin/assets?type=${widget.assetType}');
         } else {
@@ -784,6 +1107,7 @@ class _AssetFormScreenState extends ConsumerState<AssetFormScreen> {
         }
       }
     } catch (e) {
+      debugPrint('Error submit form: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),

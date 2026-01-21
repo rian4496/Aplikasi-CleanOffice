@@ -9,9 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/error/exceptions.dart';
 import '../../core/logging/app_logger.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/employee_providers.dart';
-import '../../providers/riverpod/supabase_service_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/employee_providers.dart';
+import '../../riverpod/supabase_service_providers.dart';
 import '../../core/config/supabase_config.dart';
 
 final _logger = AppLogger('CreateReportScreen');

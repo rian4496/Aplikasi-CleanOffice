@@ -18,11 +18,14 @@ class WeeklyReportChart extends StatelessWidget {
 
   Map<String, Map<String, int>> _calculateWeeklyData() {
     final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final weekStart = today.subtract(const Duration(days: 6));
     final weekData = <String, Map<String, int>>{};
 
-    // Initialize 7 days
-    for (int i = 6; i >= 0; i--) {
-      final date = now.subtract(Duration(days: i));
+    // Initialize 7 days with their dates
+    final dayDates = <String, DateTime>{};
+    for (int i = 0; i < 7; i++) {
+      final date = weekStart.add(Duration(days: i));
       final dayName = DateFormat('EEE', 'id_ID').format(date);
       weekData[dayName] = {
         'pending': 0,
@@ -30,12 +33,16 @@ class WeeklyReportChart extends StatelessWidget {
         'completed': 0,
         'needsVerification': 0,
       };
+      dayDates[dayName] = date;
     }
 
     // Count reports by day and status
     for (final report in reports) {
-      final diffDays = now.difference(report.date).inDays;
-      if (diffDays <= 6) {
+      final reportDate = DateTime(report.date.year, report.date.month, report.date.day);
+      
+      // Check if report is within the 7-day range
+      if (reportDate.isAfter(weekStart.subtract(const Duration(days: 1))) && 
+          reportDate.isBefore(today.add(const Duration(days: 1)))) {
         final dayName = DateFormat('EEE', 'id_ID').format(report.date);
         if (weekData.containsKey(dayName)) {
           final statusKey = _getStatusKey(report.status);

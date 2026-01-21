@@ -2,6 +2,7 @@
 // ✅ MIGRATED TO SUPABASE
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:go_router/go_router.dart';
 import 'login_screen_web.dart';
 import '../../services/supabase_auth_service.dart';
@@ -65,17 +66,40 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Continue with normal routing for approved users
       String route;
-      switch (userProfile.role) {
-        case 'admin':
-          route = AppConstants.homeAdminRoute;
-          break;
-        case 'cleaner':
-          route = AppConstants.homeCleanerRoute;
-          break;
-        case 'employee':
-        default:
-          route = AppConstants.homeEmployeeRoute;
-          break;
+      
+      // Check if running on Web to redirect to Console/Web Dashboard
+      if (kIsWeb) {
+        switch (userProfile.role) {
+          case 'admin':
+          case 'kasubbag_umpeg': // Kasubbag uses Admin Dashboard on Web
+             route = '/admin/dashboard';
+             break;
+          case 'cleaner':
+            route = '/console/cleaner/dashboard';
+            break;
+          case 'employee':
+            route = '/console/employee/dashboard';
+            break;
+          case 'teknisi':
+            route = '/admin/helpdesk';
+            break;
+          default:
+            route = '/login';
+        }
+      } else {
+        // Mobile App Routing
+        switch (userProfile.role) {
+          case 'admin':
+            route = AppConstants.homeAdminRoute;
+            break;
+          case 'cleaner':
+            route = AppConstants.homeCleanerRoute;
+            break;
+          case 'employee':
+          default:
+            route = AppConstants.homeEmployeeRoute;
+            break;
+        }
       }
 
       if (!mounted) return;

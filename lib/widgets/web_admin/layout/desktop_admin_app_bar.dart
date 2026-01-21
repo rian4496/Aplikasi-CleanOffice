@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/layout/desktop_admin_app_bar.dart
+﻿// lib/widgets/web_admin/layout/desktop_admin_app_bar.dart
 // 💻 Desktop Admin AppBar
 // Wide app bar for desktop with search and notifications
 
@@ -135,7 +135,7 @@ class DesktopAdminAppBar extends StatelessWidget implements PreferredSizeWidget 
                 children: [
                   CircleAvatar(
                     radius: 18,
-                    backgroundColor: AdminColors.primaryLight.withOpacity(0.2),
+                    backgroundColor: AdminColors.primaryLight.withValues(alpha: 0.2),
                     child: Text(
                       'A',
                       style: AdminTypography.body2.copyWith(

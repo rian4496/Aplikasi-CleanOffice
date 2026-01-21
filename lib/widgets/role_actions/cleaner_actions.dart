@@ -1,18 +1,18 @@
-// lib/screens/shared/report_detail/widgets/role_actions/cleaner_actions.dart
+// lib/widgets/role_actions/cleaner_actions.dart
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../../core/theme/app_theme.dart';
-import '../../../../../core/constants/app_constants.dart';
-import '../../../../../core/logging/app_logger.dart';
-import '../../../../../core/error/exceptions.dart';
-import '../../../../../models/report.dart';
-import '../../../../../providers/riverpod/auth_providers.dart';
-import '../../../../../providers/riverpod/cleaner_providers.dart';
-import '../../../../../services/storage_service.dart';
-import '../../../../../core/config/supabase_config.dart';
-import '../../../../../widgets/completion_photo_dialog.dart';
+import '../../core/theme/app_theme.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/logging/app_logger.dart';
+import '../../core/error/exceptions.dart';
+import '../../models/report.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/cleaner_providers.dart';
+import '../../services/storage_service.dart';
+import '../../core/config/supabase_config.dart';
+import '../shared/completion_photo_dialog.dart';
 
 final _logger = AppLogger('CleanerActions');
 

@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/inventory_item.dart';
 import '../../models/stock_request.dart';
-import '../../providers/riverpod/inventory_providers.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/inventory_providers.dart';
+import '../../riverpod/auth_providers.dart';
 // import '../../widgets/shared/custom_text_field.dart';
 
 class InventoryRequestFormScreen extends ConsumerStatefulWidget {
@@ -60,7 +60,7 @@ class _InventoryRequestFormScreenState extends ConsumerState<InventoryRequestFor
                 child: Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.inventory_2_rounded, size: 64, color: Colors.blue),

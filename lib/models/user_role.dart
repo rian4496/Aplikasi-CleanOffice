@@ -2,7 +2,7 @@
 class UserRole {
   // Role constants
   static const String admin = 'admin'; // SYS_ADMIN
-  static const String kasubbag = 'kasubbag'; // KASUBBAG UMPEG
+  static const String kasubbag = 'kasubbag_umpeg'; // KASUBBAG UMPEG
   static const String teknisi = 'teknisi'; // TEKNISI (Executor)
   static const String cleaner = 'cleaner'; // CLEANER (Field Staff)
   static const String employee = 'employee'; // EMPLOYEE (General Staff)

@@ -15,7 +15,11 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Employee {
 
- String get id; String get nip;@JsonKey(name: 'full_name') String get fullName; String? get email; String? get phone; String? get position;@JsonKey(name: 'organization_id') String? get organizationId; String get status;@JsonKey(name: 'photo_url') String? get photoUrl;@JsonKey(name: 'department_name') String? get departmentName;
+ String get id; String get nip;@JsonKey(name: 'full_name') String get fullName; String? get email; String? get phone; String? get position;// Jabatan (contoh: Analis Kepegawaian)
+@JsonKey(name: 'employee_type') String get employeeType;// pns, pppk, honorer
+@JsonKey(name: 'golongan_pangkat') String? get golonganPangkat;// Hanya untuk ASN: I/a, II/b, III/c, IV/d
+ String? get eselon;// Hanya untuk ASN dengan jabatan struktural: I, II, III, IV
+@JsonKey(name: 'organization_id') String? get organizationId; String get status;@JsonKey(name: 'photo_url') String? get photoUrl;@JsonKey(name: 'department_name') String? get departmentName;
 /// Create a copy of Employee
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +32,16 @@ $EmployeeCopyWith<Employee> get copyWith => _$EmployeeCopyWithImpl<Employee>(thi
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Employee&&(identical(other.id, id) || other.id == id)&&(identical(other.nip, nip) || other.nip == nip)&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.position, position) || other.position == position)&&(identical(other.organizationId, organizationId) || other.organizationId == organizationId)&&(identical(other.status, status) || other.status == status)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Employee&&(identical(other.id, id) || other.id == id)&&(identical(other.nip, nip) || other.nip == nip)&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.position, position) || other.position == position)&&(identical(other.employeeType, employeeType) || other.employeeType == employeeType)&&(identical(other.golonganPangkat, golonganPangkat) || other.golonganPangkat == golonganPangkat)&&(identical(other.eselon, eselon) || other.eselon == eselon)&&(identical(other.organizationId, organizationId) || other.organizationId == organizationId)&&(identical(other.status, status) || other.status == status)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,nip,fullName,email,phone,position,organizationId,status,photoUrl,departmentName);
+int get hashCode => Object.hash(runtimeType,id,nip,fullName,email,phone,position,employeeType,golonganPangkat,eselon,organizationId,status,photoUrl,departmentName);
 
 @override
 String toString() {
-  return 'Employee(id: $id, nip: $nip, fullName: $fullName, email: $email, phone: $phone, position: $position, organizationId: $organizationId, status: $status, photoUrl: $photoUrl, departmentName: $departmentName)';
+  return 'Employee(id: $id, nip: $nip, fullName: $fullName, email: $email, phone: $phone, position: $position, employeeType: $employeeType, golonganPangkat: $golonganPangkat, eselon: $eselon, organizationId: $organizationId, status: $status, photoUrl: $photoUrl, departmentName: $departmentName)';
 }
 
 
@@ -48,7 +52,7 @@ abstract mixin class $EmployeeCopyWith<$Res>  {
   factory $EmployeeCopyWith(Employee value, $Res Function(Employee) _then) = _$EmployeeCopyWithImpl;
 @useResult
 $Res call({
- String id, String nip,@JsonKey(name: 'full_name') String fullName, String? email, String? phone, String? position,@JsonKey(name: 'organization_id') String? organizationId, String status,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'department_name') String? departmentName
+ String id, String nip,@JsonKey(name: 'full_name') String fullName, String? email, String? phone, String? position,@JsonKey(name: 'employee_type') String employeeType,@JsonKey(name: 'golongan_pangkat') String? golonganPangkat, String? eselon,@JsonKey(name: 'organization_id') String? organizationId, String status,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'department_name') String? departmentName
 });
 
 
@@ -65,7 +69,7 @@ class _$EmployeeCopyWithImpl<$Res>
 
 /// Create a copy of Employee
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? nip = null,Object? fullName = null,Object? email = freezed,Object? phone = freezed,Object? position = freezed,Object? organizationId = freezed,Object? status = null,Object? photoUrl = freezed,Object? departmentName = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? nip = null,Object? fullName = null,Object? email = freezed,Object? phone = freezed,Object? position = freezed,Object? employeeType = null,Object? golonganPangkat = freezed,Object? eselon = freezed,Object? organizationId = freezed,Object? status = null,Object? photoUrl = freezed,Object? departmentName = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,nip: null == nip ? _self.nip : nip // ignore: cast_nullable_to_non_nullable
@@ -73,6 +77,9 @@ as String,fullName: null == fullName ? _self.fullName : fullName // ignore: cast
 as String,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
+as String?,employeeType: null == employeeType ? _self.employeeType : employeeType // ignore: cast_nullable_to_non_nullable
+as String,golonganPangkat: freezed == golonganPangkat ? _self.golonganPangkat : golonganPangkat // ignore: cast_nullable_to_non_nullable
+as String?,eselon: freezed == eselon ? _self.eselon : eselon // ignore: cast_nullable_to_non_nullable
 as String?,organizationId: freezed == organizationId ? _self.organizationId : organizationId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable
@@ -162,10 +169,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'employee_type')  String employeeType, @JsonKey(name: 'golongan_pangkat')  String? golonganPangkat,  String? eselon, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Employee() when $default != null:
-return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
+return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.employeeType,_that.golonganPangkat,_that.eselon,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
   return orElse();
 
 }
@@ -183,10 +190,10 @@ return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'employee_type')  String employeeType, @JsonKey(name: 'golongan_pangkat')  String? golonganPangkat,  String? eselon, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)  $default,) {final _that = this;
 switch (_that) {
 case _Employee():
-return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
+return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.employeeType,_that.golonganPangkat,_that.eselon,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -203,10 +210,10 @@ return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String nip, @JsonKey(name: 'full_name')  String fullName,  String? email,  String? phone,  String? position, @JsonKey(name: 'employee_type')  String employeeType, @JsonKey(name: 'golongan_pangkat')  String? golonganPangkat,  String? eselon, @JsonKey(name: 'organization_id')  String? organizationId,  String status, @JsonKey(name: 'photo_url')  String? photoUrl, @JsonKey(name: 'department_name')  String? departmentName)?  $default,) {final _that = this;
 switch (_that) {
 case _Employee() when $default != null:
-return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
+return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.position,_that.employeeType,_that.golonganPangkat,_that.eselon,_that.organizationId,_that.status,_that.photoUrl,_that.departmentName);case _:
   return null;
 
 }
@@ -218,7 +225,7 @@ return $default(_that.id,_that.nip,_that.fullName,_that.email,_that.phone,_that.
 @JsonSerializable()
 
 class _Employee implements Employee {
-  const _Employee({required this.id, required this.nip, @JsonKey(name: 'full_name') required this.fullName, this.email, this.phone, this.position, @JsonKey(name: 'organization_id') this.organizationId, this.status = 'active', @JsonKey(name: 'photo_url') this.photoUrl, @JsonKey(name: 'department_name') this.departmentName});
+  const _Employee({required this.id, required this.nip, @JsonKey(name: 'full_name') required this.fullName, this.email, this.phone, this.position, @JsonKey(name: 'employee_type') this.employeeType = 'pns', @JsonKey(name: 'golongan_pangkat') this.golonganPangkat, this.eselon, @JsonKey(name: 'organization_id') this.organizationId, this.status = 'active', @JsonKey(name: 'photo_url') this.photoUrl, @JsonKey(name: 'department_name') this.departmentName});
   factory _Employee.fromJson(Map<String, dynamic> json) => _$EmployeeFromJson(json);
 
 @override final  String id;
@@ -227,6 +234,13 @@ class _Employee implements Employee {
 @override final  String? email;
 @override final  String? phone;
 @override final  String? position;
+// Jabatan (contoh: Analis Kepegawaian)
+@override@JsonKey(name: 'employee_type') final  String employeeType;
+// pns, pppk, honorer
+@override@JsonKey(name: 'golongan_pangkat') final  String? golonganPangkat;
+// Hanya untuk ASN: I/a, II/b, III/c, IV/d
+@override final  String? eselon;
+// Hanya untuk ASN dengan jabatan struktural: I, II, III, IV
 @override@JsonKey(name: 'organization_id') final  String? organizationId;
 @override@JsonKey() final  String status;
 @override@JsonKey(name: 'photo_url') final  String? photoUrl;
@@ -245,16 +259,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Employee&&(identical(other.id, id) || other.id == id)&&(identical(other.nip, nip) || other.nip == nip)&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.position, position) || other.position == position)&&(identical(other.organizationId, organizationId) || other.organizationId == organizationId)&&(identical(other.status, status) || other.status == status)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _Employee&&(identical(other.id, id) || other.id == id)&&(identical(other.nip, nip) || other.nip == nip)&&(identical(other.fullName, fullName) || other.fullName == fullName)&&(identical(other.email, email) || other.email == email)&&(identical(other.phone, phone) || other.phone == phone)&&(identical(other.position, position) || other.position == position)&&(identical(other.employeeType, employeeType) || other.employeeType == employeeType)&&(identical(other.golonganPangkat, golonganPangkat) || other.golonganPangkat == golonganPangkat)&&(identical(other.eselon, eselon) || other.eselon == eselon)&&(identical(other.organizationId, organizationId) || other.organizationId == organizationId)&&(identical(other.status, status) || other.status == status)&&(identical(other.photoUrl, photoUrl) || other.photoUrl == photoUrl)&&(identical(other.departmentName, departmentName) || other.departmentName == departmentName));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,nip,fullName,email,phone,position,organizationId,status,photoUrl,departmentName);
+int get hashCode => Object.hash(runtimeType,id,nip,fullName,email,phone,position,employeeType,golonganPangkat,eselon,organizationId,status,photoUrl,departmentName);
 
 @override
 String toString() {
-  return 'Employee(id: $id, nip: $nip, fullName: $fullName, email: $email, phone: $phone, position: $position, organizationId: $organizationId, status: $status, photoUrl: $photoUrl, departmentName: $departmentName)';
+  return 'Employee(id: $id, nip: $nip, fullName: $fullName, email: $email, phone: $phone, position: $position, employeeType: $employeeType, golonganPangkat: $golonganPangkat, eselon: $eselon, organizationId: $organizationId, status: $status, photoUrl: $photoUrl, departmentName: $departmentName)';
 }
 
 
@@ -265,7 +279,7 @@ abstract mixin class _$EmployeeCopyWith<$Res> implements $EmployeeCopyWith<$Res>
   factory _$EmployeeCopyWith(_Employee value, $Res Function(_Employee) _then) = __$EmployeeCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String nip,@JsonKey(name: 'full_name') String fullName, String? email, String? phone, String? position,@JsonKey(name: 'organization_id') String? organizationId, String status,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'department_name') String? departmentName
+ String id, String nip,@JsonKey(name: 'full_name') String fullName, String? email, String? phone, String? position,@JsonKey(name: 'employee_type') String employeeType,@JsonKey(name: 'golongan_pangkat') String? golonganPangkat, String? eselon,@JsonKey(name: 'organization_id') String? organizationId, String status,@JsonKey(name: 'photo_url') String? photoUrl,@JsonKey(name: 'department_name') String? departmentName
 });
 
 
@@ -282,7 +296,7 @@ class __$EmployeeCopyWithImpl<$Res>
 
 /// Create a copy of Employee
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? nip = null,Object? fullName = null,Object? email = freezed,Object? phone = freezed,Object? position = freezed,Object? organizationId = freezed,Object? status = null,Object? photoUrl = freezed,Object? departmentName = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? nip = null,Object? fullName = null,Object? email = freezed,Object? phone = freezed,Object? position = freezed,Object? employeeType = null,Object? golonganPangkat = freezed,Object? eselon = freezed,Object? organizationId = freezed,Object? status = null,Object? photoUrl = freezed,Object? departmentName = freezed,}) {
   return _then(_Employee(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,nip: null == nip ? _self.nip : nip // ignore: cast_nullable_to_non_nullable
@@ -290,6 +304,9 @@ as String,fullName: null == fullName ? _self.fullName : fullName // ignore: cast
 as String,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
 as String?,phone: freezed == phone ? _self.phone : phone // ignore: cast_nullable_to_non_nullable
 as String?,position: freezed == position ? _self.position : position // ignore: cast_nullable_to_non_nullable
+as String?,employeeType: null == employeeType ? _self.employeeType : employeeType // ignore: cast_nullable_to_non_nullable
+as String,golonganPangkat: freezed == golonganPangkat ? _self.golonganPangkat : golonganPangkat // ignore: cast_nullable_to_non_nullable
+as String?,eselon: freezed == eselon ? _self.eselon : eselon // ignore: cast_nullable_to_non_nullable
 as String?,organizationId: freezed == organizationId ? _self.organizationId : organizationId // ignore: cast_nullable_to_non_nullable
 as String?,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
 as String,photoUrl: freezed == photoUrl ? _self.photoUrl : photoUrl // ignore: cast_nullable_to_non_nullable

@@ -7,7 +7,7 @@ import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_formatter.dart';
 import '../../models/user_profile.dart';
-import '../../providers/riverpod/admin_providers.dart';
+import '../../riverpod/admin_providers.dart';
 import '../../widgets/navigation/admin_more_bottom_sheet.dart';
 import '../../widgets/shared/drawer_menu_widget.dart';
 import '../../widgets/web_admin/role_selector_widget.dart';

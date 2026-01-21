@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/actions/batch_action_bar.dart
+﻿// lib/widgets/web_admin/actions/batch_action_bar.dart
 // ✅ Batch Action Bar
 // Sliding action bar for batch operations
 
@@ -34,7 +34,7 @@ class BatchActionBar extends StatelessWidget {
         color: AdminColors.primary,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.15),
+            color: Colors.black.withValues(alpha: 0.15),
             blurRadius: 12,
             offset: const Offset(0, -4),
           ),

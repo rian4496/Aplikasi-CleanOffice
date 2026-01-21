@@ -1,9 +1,9 @@
-// lib/widgets/navigation/cleaner_more_bottom_sheet.dart
+﻿// lib/widgets/navigation/cleaner_more_bottom_sheet.dart
 // Cleaner More Menu Bottom Sheet - Slide up from bottom
 
 import 'package:flutter/material.dart';
 import '../../core/theme/app_theme.dart';
-import '../../screens/cleaner/my_tasks_screen.dart';
+import '../../screens/cleaner/inbox_screen.dart';
 import '../../screens/cleaner/available_requests_list_screen.dart';
 import '../../screens/cleaner/cleaner_inbox_screen.dart';
 import '../../screens/inventory/inventory_list_screen.dart';
@@ -82,7 +82,7 @@ class CleanerMoreBottomSheet extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const MyTasksScreen(),
+                        builder: (context) => const InboxScreen(),
                       ),
                     );
                   },
@@ -211,7 +211,7 @@ class CleanerMoreBottomSheet extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 22),

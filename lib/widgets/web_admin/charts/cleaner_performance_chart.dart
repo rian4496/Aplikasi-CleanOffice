@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 
-import '../../../providers/riverpod/chart_providers.dart';
+import '../../../riverpod/chart_providers.dart';
 
 class CleanerPerformanceChart extends ConsumerWidget {
   const CleanerPerformanceChart({super.key});

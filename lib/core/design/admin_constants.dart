@@ -1,4 +1,4 @@
-// lib/core/design/admin_constants.dart
+﻿// lib/core/design/admin_constants.dart
 // 📏 Admin Role - Design Constants
 // Spacing, sizing, radius, shadows, and animations
 
@@ -101,7 +101,7 @@ class AdminConstants {
   /// Card shadow (elevation 1)
   static final List<BoxShadow> shadowCard = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.05),
+      color: Colors.black.withValues(alpha: 0.05),
       blurRadius: 4,
       offset: const Offset(0, 2),
     ),
@@ -110,7 +110,7 @@ class AdminConstants {
   /// Elevated shadow (elevation 2)
   static final List<BoxShadow> shadowElevated = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.08),
+      color: Colors.black.withValues(alpha: 0.08),
       blurRadius: 8,
       offset: const Offset(0, 4),
     ),
@@ -119,7 +119,7 @@ class AdminConstants {
   /// Modal shadow (elevation 3)
   static final List<BoxShadow> shadowModal = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.12),
+      color: Colors.black.withValues(alpha: 0.12),
       blurRadius: 16,
       offset: const Offset(0, 8),
     ),
@@ -128,7 +128,7 @@ class AdminConstants {
   /// Hover shadow
   static final List<BoxShadow> shadowHover = [
     BoxShadow(
-      color: Colors.black.withOpacity(0.1),
+      color: Colors.black.withValues(alpha: 0.1),
       blurRadius: 12,
       offset: const Offset(0, 6),
     ),

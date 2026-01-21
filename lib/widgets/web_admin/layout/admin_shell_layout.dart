@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/responsive_helper.dart';
-import '../admin_sidebar.dart'; // Uses original ../admin_sidebar.dart (not layout/)
+import 'admin_sidebar.dart'; // Updated import path
 import 'desktop_admin_header.dart';
+import '../../shared/notification_bell.dart';
+import '../../shared/realtime_notification_listener.dart';
 
 class AdminShellLayout extends ConsumerWidget {
   final Widget child;
@@ -37,30 +39,81 @@ class AdminShellLayout extends ConsumerWidget {
     if (currentPath.contains('reports')) currentRoute = '/admin/reports';
     if (currentPath.contains('users')) currentRoute = '/admin/users';
     if (currentPath.contains('settings')) currentRoute = '/admin/settings';
+    if (currentPath.contains('profile')) currentRoute = '/admin/profile'; // Added Profile
     if (currentPath.contains('dashboard')) currentRoute = '/admin/dashboard';
+    if (currentPath.contains('cleaner')) currentRoute = '/console/cleaner/dashboard'; // Added for Cleaner
 
+    // DESKTOP LAYOUT (Sidebar + Content)
+    if (isDesktop) {
+      return RealtimeNotificationListener(
+        child: Scaffold(
+          backgroundColor: AppTheme.modernBg,
+          body: Row(
+            children: [
+              // Persistent Sidebar
+              AdminSidebar(currentRoute: currentRoute),
 
-    if (!isDesktop) {
-      return child;
+              // Main Content Area
+              Expanded(
+                child: Column(
+                  children: [
+                    const DesktopAdminHeader(),
+                    Expanded(child: child),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
-    return Scaffold(
-      backgroundColor: AppTheme.modernBg,
-      body: Row(
-        children: [
-          // Persistent Sidebar (Original Full Menu)
-          AdminSidebar(currentRoute: currentRoute),
+    // MOBILE/TABLET WEB LAYOUT
+    // Special Case: Cleaner Dashboard handles its own layout (Custom Header + EndDrawer)
+    if (currentRoute == '/console/cleaner/dashboard') {
+      return child; 
+    }
 
-          // Main Content Area
-          Expanded(
-            child: Column(
-              children: [
-                const DesktopAdminHeader(), 
-                Expanded(child: child),
-              ],
+    // Check if on dashboard
+    final bool isDashboard = currentPath == '/admin/dashboard' || currentPath == '/admin';
+
+    // Non-dashboard pages: Let individual screens handle their own AppBar
+    // This prevents duplicate headers
+    if (!isDashboard) {
+      return RealtimeNotificationListener(child: child);
+    }
+
+    // Dashboard only: Show AppBar with notification + hamburger menu
+    return RealtimeNotificationListener(
+      child: Scaffold(
+        resizeToAvoidBottomInset: false,
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+          actions: [
+            // Notification Bell
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: NotificationBell(
+                iconColor: Colors.black87,
+                onTap: () => context.push('/admin/notifications'),
+              ),
             ),
-          ),
-        ],
+            // Hamburger Menu (Triggers EndDrawer)
+            Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu_rounded, color: Colors.black87),
+                onPressed: () => Scaffold.of(context).openEndDrawer(),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        endDrawer: AdminSidebar(currentRoute: currentRoute, isDrawer: true),
+        body: child,
       ),
     );
   }

@@ -1,4 +1,4 @@
-// lib/core/design/admin_typography.dart
+﻿// lib/core/design/admin_typography.dart
 // ✍️ Admin Role - Typography System
 // Consistent text styles for mobile and desktop
 
@@ -191,7 +191,7 @@ class AdminTypography {
   /// Apply opacity to text style
   static TextStyle withOpacity(TextStyle style, double opacity) {
     return style.copyWith(
-      color: style.color?.withOpacity(opacity),
+      color: style.color?.withValues(alpha: opacity),
     );
   }
 }

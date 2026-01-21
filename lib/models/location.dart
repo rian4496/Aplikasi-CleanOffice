@@ -35,6 +35,9 @@ class Location {
     );
   }
 
+  // Alias for fromJson compatibility
+  factory Location.fromJson(Map<String, dynamic> json) => Location.fromSupabase(json);
+
   Map<String, dynamic> toSupabase() {
     return {
       'name': name,

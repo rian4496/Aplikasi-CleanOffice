@@ -1,4 +1,4 @@
-// lib/core/design/admin_theme.dart
+﻿// lib/core/design/admin_theme.dart
 // 🎨 Admin Role - Theme Configuration
 // Complete theme setup for Admin role
 
@@ -49,7 +49,7 @@ class AdminTheme {
         shape: RoundedRectangleBorder(
           borderRadius: AdminConstants.borderRadiusCard,
         ),
-        shadowColor: Colors.black.withOpacity(0.05),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
       ),
 
       // ==================== BUTTONS ====================

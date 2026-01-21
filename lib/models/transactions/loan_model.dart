@@ -31,6 +31,7 @@ class LoanRequest {
   final String? agreementDoc; // Naskah Perjanjian
   final String? bastHandoverDoc; // BAST Penyerahan
   final String? bastReturnDoc; // BAST Pengembalian
+  final String? purpose; // Keperluan / Deskripsi Singkat
 
   const LoanRequest({
     required this.id,
@@ -51,6 +52,7 @@ class LoanRequest {
     this.agreementDoc,
     this.bastHandoverDoc,
     this.bastReturnDoc,
+    this.purpose,
   });
   
   // Helper to calculate EndDate automatically if needed, 
@@ -75,6 +77,7 @@ class LoanRequest {
     String? agreementDoc,
     String? bastHandoverDoc,
     String? bastReturnDoc,
+    String? purpose,
   }) {
     return LoanRequest(
       id: id ?? this.id,
@@ -95,17 +98,17 @@ class LoanRequest {
       agreementDoc: agreementDoc ?? this.agreementDoc,
       bastHandoverDoc: bastHandoverDoc ?? this.bastHandoverDoc,
       bastReturnDoc: bastReturnDoc ?? this.bastReturnDoc,
+      purpose: purpose ?? this.purpose,
     );
   }
 
   Map<String, dynamic> toMap() {
-    return {
+    final map = <String, dynamic>{
       'id': id,
       'request_number': requestNumber,
       'borrower_name': borrowerName,
       'borrower_address': borrowerAddress,
       'borrower_contact': borrowerContact,
-      'asset_id': assetId,
       'start_date': startDate.toIso8601String(),
       'duration_years': durationYears,
       'end_date': endDate.toIso8601String(),
@@ -116,7 +119,15 @@ class LoanRequest {
       'agreement_doc': agreementDoc,
       'bast_handover_doc': bastHandoverDoc,
       'bast_return_doc': bastReturnDoc,
+      'purpose': purpose,
     };
+    
+    // Only include asset_id if it's actually set (not empty)
+    if (assetId.isNotEmpty) {
+      map['asset_id'] = assetId;
+    }
+    
+    return map;
   }
 
   factory LoanRequest.fromMap(Map<String, dynamic> map) {
@@ -127,8 +138,8 @@ class LoanRequest {
       borrowerAddress: map['borrower_address'] ?? '',
       borrowerContact: map['borrower_contact'] ?? '',
       assetId: map['asset_id'] ?? '',
-      assetName: map['asset_name'] ?? map['master_assets']?['name'] ?? 'Unknown Asset', // Nested join
-      assetCondition: map['asset_condition'] ?? map['master_assets']?['condition'] ?? 'Baik',
+      assetName: map['asset_name'] ?? map['assets']?['name'] ?? 'Unknown Asset', // Nested join
+      assetCondition: map['asset_condition'] ?? map['assets']?['condition'] ?? 'Baik',
       startDate: DateTime.parse(map['start_date']),
       durationYears: map['duration_years'] ?? 1,
       endDate: DateTime.parse(map['end_date']),
@@ -139,6 +150,7 @@ class LoanRequest {
       agreementDoc: map['agreement_doc'],
       bastHandoverDoc: map['bast_handover_doc'],
       bastReturnDoc: map['bast_return_doc'],
+      purpose: map['purpose'],
     );
   }
 }

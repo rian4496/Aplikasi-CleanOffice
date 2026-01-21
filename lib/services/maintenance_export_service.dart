@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/maintenance_log.dart';
 import '../core/utils/date_formatter.dart';
+import '../utils/pdf_template_helper.dart';
 
 // Conditional import for web download
 import 'web_download_stub.dart' if (dart.library.html) 'web_download_web.dart' as web_download;
@@ -21,6 +22,11 @@ class MaintenanceExportService {
   ) async {
     final pdf = pw.Document();
 
+    // Load fonts and logo for professional header
+    final fontRegular = await PdfGoogleFonts.robotoRegular();
+    final fontBold = await PdfGoogleFonts.robotoBold();
+    final logoBytes = await PdfTemplateHelper.loadLogo();
+
     // Add header
     pdf.addPage(
       pw.MultiPage(
@@ -29,29 +35,23 @@ class MaintenanceExportService {
         header: (context) => pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'LAPORAN RIWAYAT MAINTENANCE',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
-                  ),
-                ),
-                pw.Text(
-                  'BRIDA Prov. Kalimantan Selatan',
-                  style: const pw.TextStyle(fontSize: 12),
-                ),
-              ],
+            // Use same professional Kop Surat
+            PdfTemplateHelper.buildKopSurat(
+              logoBytes: logoBytes,
+              fontRegular: fontRegular,
+              fontBold: fontBold,
             ),
-            pw.SizedBox(height: 4),
-            pw.Text(
-              'Tanggal: ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
-              style: const pw.TextStyle(fontSize: 10),
+            // Title
+            pw.Center(
+              child: pw.Text(
+                'Data Riwayat Maintenance',
+                style: pw.TextStyle(
+                  font: fontBold,
+                  fontSize: 14,
+                ),
+              ),
             ),
-            pw.SizedBox(height: 10),
-            pw.Divider(),
+            pw.SizedBox(height: 16),
           ],
         ),
         footer: (context) => pw.Row(

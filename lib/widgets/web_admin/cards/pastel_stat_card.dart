@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/cards/pastel_stat_card.dart
+﻿// lib/widgets/web_admin/cards/pastel_stat_card.dart
 // 📊 Pastel Stat Card
 // Colorful stat card with pastel background for mobile
 
@@ -57,7 +57,7 @@ class PastelStatCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(AdminConstants.spaceSm),
                     decoration: BoxDecoration(
-                      color: fgColor.withOpacity(0.15),
+                      color: fgColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                     ),
                     child: Icon(
@@ -75,8 +75,8 @@ class PastelStatCard extends StatelessWidget {
                       ),
                       decoration: BoxDecoration(
                         color: trendUp
-                            ? AdminColors.success.withOpacity(0.15)
-                            : AdminColors.error.withOpacity(0.15),
+                            ? AdminColors.success.withValues(alpha: 0.15)
+                            : AdminColors.error.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                       ),
                       child: Row(
@@ -111,7 +111,7 @@ class PastelStatCard extends StatelessWidget {
               // Label
               Text(
                 label,
-                style: AdminTypography.statLabel.copyWith(color: fgColor.withOpacity(0.8)),
+                style: AdminTypography.statLabel.copyWith(color: fgColor.withValues(alpha: 0.8)),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -123,7 +123,7 @@ class PastelStatCard extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 6,
-                  backgroundColor: fgColor.withOpacity(0.15),
+                  backgroundColor: fgColor.withValues(alpha: 0.15),
                   valueColor: AlwaysStoppedAnimation<Color>(fgColor),
                 ),
               ),

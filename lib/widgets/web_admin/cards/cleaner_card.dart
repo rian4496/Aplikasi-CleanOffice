@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/cards/cleaner_card.dart
+﻿// lib/widgets/web_admin/cards/cleaner_card.dart
 // 👤 Cleaner Card
 // Card showing cleaner info and performance
 
@@ -55,7 +55,7 @@ class CleanerCard extends StatelessWidget {
                   // Avatar
                   CircleAvatar(
                     radius: 28,
-                    backgroundColor: AdminColors.primaryLight.withOpacity(0.2),
+                    backgroundColor: AdminColors.primaryLight.withValues(alpha: 0.2),
                     child: Text(
                       cleanerName[0].toUpperCase(),
                       style: AdminTypography.h4.copyWith(
@@ -97,8 +97,8 @@ class CleanerCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isAvailable
-                          ? AdminColors.success.withOpacity(0.15)
-                          : AdminColors.textSecondary.withOpacity(0.15),
+                          ? AdminColors.success.withValues(alpha: 0.15)
+                          : AdminColors.textSecondary.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(AdminConstants.radiusSm),
                     ),
                     child: Row(

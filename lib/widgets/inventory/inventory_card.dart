@@ -1,4 +1,4 @@
-// lib/widgets/inventory/inventory_card.dart
+﻿// lib/widgets/inventory/inventory_card.dart
 // Modern Compact Inventory Tile
 
 import 'package:flutter/material.dart';
@@ -55,8 +55,8 @@ class InventoryCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.symmetric(
-        horizontal: 16, // Standard margin
-        vertical: 6,   // Reduced vertical margin for compactness
+        horizontal: 16,
+        vertical: 4,   // Compact margin
       ),
       decoration: _buildCardDecoration(context),
       child: Material(
@@ -66,9 +66,9 @@ class InventoryCard extends StatelessWidget {
           onLongPress: onLongPress,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.all(12), // Compact padding
+            padding: const EdgeInsets.all(10), // Compact padding
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center, // Center vertically
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                  // Selection Checkbox
                 if (isSelectionMode) ...[
@@ -79,17 +79,16 @@ class InventoryCard extends StatelessWidget {
                   const SizedBox(width: 8),
                 ],
 
-                // 1. Category Icon
-                // 1. Image or Category Icon
-                _buildItemImage(48),
+                // 1. Image or Category Icon - Slightly Smaller
+                _buildItemImage(42), // Reduced from 48
                 
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 
                 // 2. Main Info
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min, // Wrap content
+                    mainAxisSize: MainAxisSize.min, 
                     children: [
                       // Name & Badges
                       Row(
@@ -98,7 +97,7 @@ class InventoryCard extends StatelessWidget {
                             child: Text(
                               item.name,
                               style: const TextStyle(
-                                fontSize: 16,
+                                fontSize: 14, // Reduced from 16
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black87,
                               ),
@@ -117,14 +116,14 @@ class InventoryCard extends StatelessWidget {
                         ],
                       ),
                       
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 4),
                       
-                      // Progress Bar
+                      // Progress Bar - Thinner
                       ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(2),
                         child: LinearProgressIndicator(
                           value: item.stockPercentage / 100,
-                          minHeight: 6,
+                          minHeight: 4, // Reduced from 6
                           backgroundColor: Colors.grey.shade100,
                           valueColor: AlwaysStoppedAnimation(statusColors.color),
                         ),
@@ -141,20 +140,20 @@ class InventoryCard extends StatelessWidget {
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 color: statusColors.color,
+                                fontSize: 13,
                               ),
                             ),
                             TextSpan(
                               text: ' / ${item.maxStock} ${item.unit}',
-                              style: TextStyle(color: Colors.grey.shade600),
+                              style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
                             ),
                             const TextSpan(text: '  •  '),
                             TextSpan(
                               text: 'Min: ${item.minStock}',
-                              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
+                              style: TextStyle(color: Colors.grey.shade500, fontSize: 10),
                             ),
                           ],
                         ),
-                        style: const TextStyle(fontSize: 12),
                       ),
                     ],
                   ),
@@ -278,14 +277,14 @@ class InventoryCard extends StatelessWidget {
       boxShadow: isSelected
           ? [
               BoxShadow(
-                color: Theme.of(context).primaryColor.withOpacity(0.3),
+                color: Theme.of(context).primaryColor.withValues(alpha: 0.3),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               )
             ]
           : [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               )
@@ -349,7 +348,7 @@ class InventoryCard extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: categoryColors.primary.withOpacity(0.1),
+          color: categoryColors.primary.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(
@@ -417,7 +416,7 @@ class InventoryCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: textColor.withOpacity(0.2)),
+        border: Border.all(color: textColor.withValues(alpha: 0.2)),
       ),
       child: Text(
         label,

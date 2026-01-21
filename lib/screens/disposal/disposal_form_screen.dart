@@ -6,8 +6,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
-import '../../providers/transaction_providers.dart';
-import '../../providers/master_data_providers.dart';
+import '../../riverpod/transaction_providers.dart';
+import '../../riverpod/dropdown_providers.dart';
 import '../../models/transactions/disposal_model.dart';
 import '../../models/master/master_data_models.dart';
 

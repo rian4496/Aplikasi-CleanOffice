@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../models/ticket.dart';
-import '../../providers/riverpod/ticket_providers.dart';
+import '../../riverpod/ticket_providers.dart';
 import '../../core/theme/app_theme.dart';
 
 class KasubbagApprovalDashboard extends HookConsumerWidget {
@@ -44,7 +44,7 @@ class KasubbagApprovalDashboard extends HookConsumerWidget {
           // Header Stats
           Container(
             padding: const EdgeInsets.all(20),
-            color: Colors.deepPurple.withOpacity(0.05),
+            color: Colors.deepPurple.withValues(alpha: 0.05),
             child: Row(
               children: [
                 _StatCard(
@@ -185,14 +185,14 @@ class _StatCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -235,7 +235,7 @@ class _ApprovalCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(

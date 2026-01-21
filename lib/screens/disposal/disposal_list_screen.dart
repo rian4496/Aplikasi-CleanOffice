@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/theme/app_theme.dart';
-import '../../../../providers/transaction_providers.dart';
+import '../../../../riverpod/transaction_providers.dart';
 import '../../../../models/transactions/disposal_model.dart';
 
 class DisposalListScreen extends HookConsumerWidget {
@@ -172,7 +172,7 @@ class DisposalListScreen extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: isSelected ? Border.all(color: AppTheme.primary, width: 2) : Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -244,9 +244,9 @@ class DisposalListScreen extends HookConsumerWidget {
      return Container(
        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
        decoration: BoxDecoration(
-         color: color.withOpacity(0.1),
+         color: color.withValues(alpha: 0.1),
          borderRadius: BorderRadius.circular(8),
-         border: Border.all(color: color.withOpacity(0.3)),
+         border: Border.all(color: color.withValues(alpha: 0.3)),
        ),
        child: Text(status.toUpperCase(), style: TextStyle(color: color, fontSize: 9, fontWeight: FontWeight.bold)),
      );

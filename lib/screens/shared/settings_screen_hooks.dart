@@ -9,7 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/app_settings.dart';
-import '../../providers/riverpod/settings_provider.dart';
+import '../../riverpod/settings_provider.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});

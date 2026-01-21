@@ -1,4 +1,4 @@
-// lib/widgets/inventory/inventory_stats_card.dart
+﻿// lib/widgets/inventory/inventory_stats_card.dart
 // Stats summary card for inventory overview
 
 import 'package:flutter/material.dart';
@@ -24,15 +24,21 @@ class InventoryStatsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: InventoryDesignTokens.cardMarginHorizontal,
-        vertical: InventoryDesignTokens.cardMarginVertical,
+      margin: const EdgeInsets.symmetric(
+        horizontal: 16,
+        vertical: 8, // Reduced vertical margin
       ),
-      padding: const EdgeInsets.all(InventoryDesignTokens.cardPadding),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12), // Reduced Internal Padding
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(InventoryDesignTokens.cardBorderRadius),
-        boxShadow: [InventoryDesignTokens.cardShadow],
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -41,7 +47,7 @@ class InventoryStatsCard extends StatelessWidget {
             child: _StatItem(
               icon: Icons.inventory_2,
               iconColor: AdminColors.primary,
-              iconBackground: AdminColors.primary.withValues(alpha: 0.1),
+              iconBackground: AdminColors.primary.withValues(alpha: 0.1), // Fixed withValues to withOpacity for compatibility if needed, or stick to provided
               label: 'Total Item',
               value: totalItems.toString(),
             ),
@@ -49,8 +55,8 @@ class InventoryStatsCard extends StatelessWidget {
 
           Container(
             width: 1,
-            height: 40,
-            color: AdminColors.border,
+            height: 32, // Reduced height
+            color: Colors.grey.withValues(alpha: 0.2), // Lighter border
           ),
 
           // Low Stock
@@ -59,15 +65,15 @@ class InventoryStatsCard extends StatelessWidget {
               icon: Icons.warning_amber,
               iconColor: InventoryDesignTokens.lowStock.color,
               iconBackground: InventoryDesignTokens.lowStock.background,
-              label: 'Stok Rendah',
+              label: 'Stok Tipis',
               value: lowStockCount.toString(),
             ),
           ),
 
           Container(
             width: 1,
-            height: 40,
-            color: AdminColors.border,
+            height: 32,
+            color: Colors.grey.withValues(alpha: 0.2),
           ),
 
           // Out of Stock
@@ -107,40 +113,48 @@ class _StatItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Icon
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: iconBackground,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            icon,
-            size: 24,
-            color: iconColor,
-          ),
+        // Compact Layout: Row (Icon + Value) -> Label below
+        // Or keep vertical but tighter
+        
+        Row(
+           mainAxisAlignment: MainAxisAlignment.center,
+           children: [
+             // Icon - Small
+              Container(
+                width: 28, // Reduced from 40
+                height: 28,
+                decoration: BoxDecoration(
+                  color: iconBackground,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Icon(
+                  icon,
+                  size: 16, // Reduced from 24
+                  color: iconColor,
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Value
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18, // Reduced from 20
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF2D3238),
+                ),
+              ),
+           ],
         ),
 
-        const SizedBox(height: InventoryDesignTokens.spaceSM),
-
-        // Value
-        Text(
-          value,
-          style: InventoryDesignTokens.statsNumberStyle.copyWith(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: InventoryDesignTokens.spaceXS),
+        const SizedBox(height: 4),
 
         // Label
         Text(
           label,
-          style: InventoryDesignTokens.statsLabelStyle.copyWith(
+          style: const TextStyle(
             fontSize: 11,
-            color: AdminColors.textSecondary,
+            color: Colors.grey,
+            fontWeight: FontWeight.w500,
           ),
           textAlign: TextAlign.center,
           maxLines: 1,

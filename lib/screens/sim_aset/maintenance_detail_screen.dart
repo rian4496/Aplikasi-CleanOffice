@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/maintenance_log.dart';
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/maintenance_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/maintenance_providers.dart';
 
 class MaintenanceDetailScreen extends ConsumerStatefulWidget {
   final MaintenanceLog log;

@@ -8,7 +8,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/report.dart';
-import '../../providers/riverpod/employee_providers.dart';
+import '../../riverpod/employee_providers.dart';
 import '../../widgets/shared/empty_state_widget.dart';
 
 class AllReportsScreen extends ConsumerStatefulWidget {

@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/budget/budget_detail_drawer.dart
+﻿// lib/widgets/web_admin/budget/budget_detail_drawer.dart
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -29,12 +29,11 @@ class BudgetDetailDrawer extends StatelessWidget {
         : 0.0;
 
     return Container(
-      width: 400,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(left: BorderSide(color: Colors.grey[200]!)),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(-4, 0)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(-4, 0)),
         ],
       ),
       child: Column(
@@ -56,6 +55,7 @@ class BudgetDetailDrawer extends StatelessWidget {
           // Content
           Expanded(
             child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(), // Ensure scrolling works even if content fits
               padding: const EdgeInsets.all(24),
               children: [
                 // Icon & Title
@@ -173,6 +173,9 @@ class BudgetDetailDrawer extends StatelessWidget {
                     ],
                   ),
                 ),
+                
+                // Extra padding to avoid obstruction (Increased to 300)
+                const SizedBox(height: 300),
               ],
             ),
           ),

@@ -14,7 +14,7 @@ import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
 import '../../services/inventory_service.dart';
 import '../../services/storage_service.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 
 /// Add/Edit Inventory Item Screen with validation and image upload
 /// ✅ MIGRATED: ConsumerStatefulWidget → HookConsumerWidget

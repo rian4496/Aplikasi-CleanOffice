@@ -7,7 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/report.dart';
-import '../../providers/riverpod/admin_providers.dart';
+import '../../riverpod/admin_providers.dart';
 
 /// Screen untuk verifikasi laporan yang sudah selesai dikerjakan
 /// Admin dapat menyetujui atau menolak laporan

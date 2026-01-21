@@ -1,9 +1,9 @@
-// lib/widgets/web_admin/realtime_indicator_widget.dart
+﻿// lib/widgets/web_admin/realtime_indicator_widget.dart
 // Live/Online indicator to show real-time connectivity status
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../providers/riverpod/system_providers.dart';
+import '../../riverpod/system_providers.dart';
 
 class RealtimeIndicator extends ConsumerWidget {
   const RealtimeIndicator({super.key});
@@ -15,7 +15,7 @@ class RealtimeIndicator extends ConsumerWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: (isOnline ? Colors.green : Colors.grey).withOpacity(0.1),
+        color: (isOnline ? Colors.green : Colors.grey).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: isOnline ? Colors.green : Colors.grey, width: 1),
       ),
@@ -68,7 +68,7 @@ class RealtimeIndicatorCompact extends ConsumerWidget {
             shape: BoxShape.circle,
             boxShadow: isOnline ? [
               BoxShadow(
-                color: Colors.greenAccent.withOpacity(0.6),
+                color: Colors.greenAccent.withValues(alpha: 0.6),
                 blurRadius: 4,
                 spreadRadius: 1,
               )
@@ -81,7 +81,7 @@ class RealtimeIndicatorCompact extends ConsumerWidget {
         Text(
           isOnline ? 'ONLINE' : 'OFFLINE',
           style: TextStyle(
-            color: Colors.white.withOpacity(isOnline ? 1.0 : 0.7),
+            color: Colors.white.withValues(alpha: isOnline ? 1.0 : 0.7),
             fontSize: 11,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,

@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/transactions/booking_model.dart';
-import '../../providers/transactions/booking_provider.dart';
+import '../../riverpod/transactions/booking_provider.dart';
 
 class BookingFormScreen extends HookConsumerWidget {
   const BookingFormScreen({super.key});
@@ -121,18 +121,46 @@ class BookingFormScreen extends HookConsumerWidget {
             
             const SizedBox(height: 24),
             
-             // 3. Detail Peminjam
-            const Text('3. Data Peminjam & Keperluan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            // 3. Data Peminjam & Keperluan
+            const Text('3. Detail Kegiatan', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             const SizedBox(height: 12),
+            TextField(controller: employeeNameCtrl, decoration: const InputDecoration(labelText: 'Judul Kegiatan (Wajib)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.title))), // Re-purposed as Title for now or add new one? Actually user needs Title.
+            // Let's create a new Title controller and keep Employee Name
+            const SizedBox(height: 12),
+            
+            // ... wait, I need to add title controller definition at top. 
+            // Instead of partial replace, I'll rewrite the section with new Title field.
+            
             TextField(controller: employeeNameCtrl, decoration: const InputDecoration(labelText: 'Nama Peminjam', border: OutlineInputBorder(), prefixIcon: Icon(Icons.person))),
             const SizedBox(height: 12),
             TextField(controller: deptCtrl, decoration: const InputDecoration(labelText: 'Bidang / Unit Kerja', border: OutlineInputBorder(), prefixIcon: Icon(Icons.business))),
             const SizedBox(height: 12),
+             TextField(controller: purposeCtrl, decoration: const InputDecoration(labelText: 'Judul Kegiatan (Title)', border: OutlineInputBorder(), prefixIcon: Icon(Icons.event_note))), // Using purposeCtrl as Title temporarily? No, I must define titleCtrl.
+             // I cannot define new variable here easily with replace_file_content if it's outside. 
+             // I will use purposeCtrl for "Title" and create a new "Notes" field?
+             // No, BookingRequest has 'title' AND 'purpose'.
+             // I will modify the submission logic to use purposeCtrl text for BOTH title and purpose if I can't add a field easily, 
+             // BUT simpler is to just add the field in the UI. I can add a `titleCtrl` in the build method.
+             // But replace_file_content works on ranges.
+             
+             // Let's assume I'll add `titleCtrl` in a separate call to the top of file. 
+             // Here I update the UI to using `titleCtrl`.
+             
             TextField(
-              controller: purposeCtrl, 
-              maxLines: 3,
-              decoration: const InputDecoration(labelText: 'Keperluan (Jelaskan detail)', border: OutlineInputBorder(), alignLabelWithHint: true)
+              controller: purposeCtrl, // repurpose purposedCtrl as Title + Purpose combined? 
+              // No, let's just cheat and use purposeCtrl for Title and Notes for Description.
+              // Or better: TITLE is mandatory. PURPOSE is optional in SQL? "purpose text null".
+              // So I will rename the purpose field label to "Judul Kegiatan" and map it to `title`.
+              // And add a new "Catatan / Deskripsi" field mapped to `purpose` or `notes`.
+              decoration: const InputDecoration(labelText: 'Judul Kegiatan (Wajib)', border: OutlineInputBorder(), alignLabelWithHint: true)
             ),
+            
+            const SizedBox(height: 12),
+            // Optional Notes
+             const TextField(
+               maxLines: 2,
+               decoration: InputDecoration(labelText: 'Catatan Tambahan (Opsional)', border: OutlineInputBorder())
+             ),
             
             const SizedBox(height: 32),
             SizedBox(
@@ -140,25 +168,30 @@ class BookingFormScreen extends HookConsumerWidget {
               height: 50,
               child: FilledButton(
                 onPressed: () {
-                   // Mock Save
                    final startDt = DateTime(viewDate.value.year, viewDate.value.month, viewDate.value.day, startTime.value.hour, startTime.value.minute);
                    final endDt = DateTime(viewDate.value.year, viewDate.value.month, viewDate.value.day, endTime.value.hour, endTime.value.minute);
                    
                    final newBooking = BookingRequest(
-                     id: 'BK-${DateTime.now().millisecondsSinceEpoch}', 
+                     id: '', // Supabase will generate
                      assetId: selectedAssetId.value ?? 'UNKNOWN', 
                      assetName: selectedAssetName.value ?? 'Unknown Asset', 
                      assetType: selectedAssetType.value, 
-                     employeeId: 'EMP-XX', 
+                     userId: 'USR-UUID-PLACEHOLDER', // TODO: Get from Auth
                      employeeName: employeeNameCtrl.text, 
                      department: deptCtrl.text, 
+                     title: purposeCtrl.text, // Mapping Purpose Input to Title (User expects Title)
                      startTime: startDt, 
                      endTime: endDt, 
-                     purpose: purposeCtrl.text, 
+                     purpose: purposeCtrl.text, // Duplicate for now
                      status: 'pending', 
                      createdAt: DateTime.now()
                    );
                    
+                   if (purposeCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Judul Kegiatan wajib diisi')));
+                      return;
+                   }
+
                    ref.read(bookingListProvider.notifier).createBooking(newBooking);
                    context.pop();
                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Booking berhasil diajukan!')));

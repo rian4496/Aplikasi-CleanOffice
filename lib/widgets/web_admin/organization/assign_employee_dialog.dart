@@ -7,9 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../models/master/organization.dart';
-import '../../../models/user_profile.dart'; // Using UserProfile as Employee source
-import '../../../providers/riverpod/admin_providers.dart'; // For fetching users
-import '../../../providers/riverpod/supabase_service_providers.dart'; // For service provider
+import '../../../models/master/employee.dart';
+import '../../../riverpod/master_crud_controllers.dart'; // For employeesProvider, employeeControllerProvider
 import '../../../services/supabase_database_service.dart';
 
 class AssignEmployeeDialog extends HookConsumerWidget {
@@ -30,23 +29,23 @@ class AssignEmployeeDialog extends HookConsumerWidget {
     final isSubmitting = useState(false);
 
     // Data
-    final allUsersAsync = ref.watch(pendingVerificationUsersProvider);
+    final allEmployeesAsync = ref.watch(employeesProvider);
 
     // Filter Logic
-    final usersList = allUsersAsync.maybeWhen(
-      data: (users) {
-        return users.where((u) {
-          // Filter out users already in this org
-          if (u.departmentId == organization.id) return false;
+    final usersList = allEmployeesAsync.maybeWhen(
+      data: (employees) {
+        return employees.where((e) {
+          // Filter out employees already in this org
+          if (e.organizationId == organization.id) return false;
           
           // Search query
           if (searchQuery.value.isEmpty) return true;
-          final q = searchQuery.value.toLowerCase();
-          return u.displayName.toLowerCase().contains(q) || 
-                 u.email.toLowerCase().contains(q);
+          final query = searchQuery.value.toLowerCase();
+          return e.fullName.toLowerCase().contains(query) || 
+                 (e.nip.toLowerCase().contains(query));
         }).toList();
       },
-      orElse: () => <UserProfile>[],
+      orElse: () => <Employee>[],
     );
 
     Future<void> _submit() async {
@@ -54,21 +53,21 @@ class AssignEmployeeDialog extends HookConsumerWidget {
 
       isSubmitting.value = true;
       try {
-        final service = ref.read(supabaseDatabaseServiceProvider);
+        // Update each selected employee
+        // Using Employee Controller to update organizationId
+        final allEmployees = allEmployeesAsync.asData?.value ?? [];
         
-        // Update each selected user
-        // Ideally this should be a batch operation or transaction, but looping is okay for small numbers
-        for (var uid in selectedUserIds.value) {
-          await service.updateUserProfile(
-            userId: uid,
-            departmentId: organization.id,
-          );
+        for (var empId in selectedUserIds.value) {
+           final emp = allEmployees.firstWhere((e) => e.id == empId);
+           final updatedEmp = emp.copyWith(organizationId: organization.id);
+           
+           await ref.read(employeeControllerProvider.notifier).updateEmployee(updatedEmp);
         }
         
         if (context.mounted) {
            Navigator.of(context).pop();
            // Invalidate providers to refresh lists
-           ref.invalidate(pendingVerificationUsersProvider);
+           ref.invalidate(employeesProvider);
            onSaved();
            
            ScaffoldMessenger.of(context).showSnackBar(
@@ -127,7 +126,7 @@ class AssignEmployeeDialog extends HookConsumerWidget {
 
             // List
             Expanded(
-              child: allUsersAsync.when(
+              child: allEmployeesAsync.when(
                 data: (_) {
                   if (usersList.isEmpty) {
                     return Center(child: Text(searchQuery.value.isNotEmpty ? 'Tidak ditemukan.' : 'Semua pegawai sudah memiliki unit lain.'));
@@ -137,25 +136,26 @@ class AssignEmployeeDialog extends HookConsumerWidget {
                     itemCount: usersList.length,
                     itemBuilder: (context, index) {
                       final user = usersList[index];
-                      final isSelected = selectedUserIds.value.contains(user.uid);
+                      final isSelected = selectedUserIds.value.contains(user.id);
                       
                       return CheckboxListTile(
                         value: isSelected,
                         onChanged: (bool? value) {
                           final newSet = Set<String>.from(selectedUserIds.value);
                           if (value == true) {
-                            newSet.add(user.uid);
+                            newSet.add(user.id);
                           } else {
-                            newSet.remove(user.uid);
+                            newSet.remove(user.id);
                           }
                           selectedUserIds.value = newSet;
                         },
-                        title: Text(user.displayName, style: const TextStyle(fontWeight: FontWeight.w500)),
-                        subtitle: Text(user.role, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
+                        title: Text(user.fullName, style: const TextStyle(fontWeight: FontWeight.w500)),
+                        subtitle: Text(user.position ?? '-', style: TextStyle(color: Colors.grey[600], fontSize: 12)),
                         secondary: CircleAvatar(
                           radius: 16,
                           backgroundColor: Colors.grey[100],
-                          child: Text(user.displayName[0], style: const TextStyle(color: Colors.grey)),
+                          backgroundImage: user.photoUrl != null ? NetworkImage(user.photoUrl!) : null,
+                          child: user.photoUrl == null ? Text(user.fullName.isNotEmpty ? user.fullName[0] : '?', style: const TextStyle(color: Colors.grey)) : null,
                         ),
                       );
                     },

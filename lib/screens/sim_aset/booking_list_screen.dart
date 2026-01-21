@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +7,7 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/transactions/booking_model.dart';
-import '../../providers/transactions/booking_provider.dart';
+import '../../riverpod/transactions/booking_provider.dart';
 
 class BookingListScreen extends HookConsumerWidget {
   const BookingListScreen({super.key});
@@ -162,7 +162,7 @@ class BookingListScreen extends HookConsumerWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 4, offset: const Offset(0, 2)),
         ],
       ),
       child: Row(
@@ -216,7 +216,10 @@ class BookingListScreen extends HookConsumerWidget {
                         CircleAvatar(
                           radius: 12, 
                           backgroundColor: Colors.grey[200],
-                          child: Text(item.employeeName.substring(0,1), style: const TextStyle(fontSize: 10)),
+                          child: Text(
+                            item.employeeName.isNotEmpty ? item.employeeName.substring(0, 1) : '?',
+                            style: const TextStyle(fontSize: 10),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Column(
@@ -290,7 +293,7 @@ class BookingListScreen extends HookConsumerWidget {
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
     );
   }

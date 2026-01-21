@@ -124,9 +124,12 @@ class SupabaseAuthService {
       String? code;
 
       if (e.statusCode == '422' || e.statusCode == '400') {
-        if (e.message.toLowerCase().contains('email')) {
-          message = 'Format email tidak valid';
-          code = 'invalid-email';
+        if (e.message.toLowerCase().contains('email') || e.message.toLowerCase().contains('already registered')) {
+           // Zombie user detection: Email in Auth but maybe not in Public
+           // We cannot auto-fix this easily without Admin privileges (Service Role).
+           // Best approach: Inform user clearly.
+           message = 'Email sudah terdaftar (Cek tab "Dihapus" atau hubungi Admin Database)';
+           code = 'email-already-in-use';
         } else if (e.message.toLowerCase().contains('password')) {
           message = 'Password terlalu lemah (minimal 6 karakter)';
           code = 'weak-password';
@@ -159,7 +162,7 @@ class SupabaseAuthService {
     } catch (e, stackTrace) {
       _logger.error('❌ Unexpected error during signup', e, stackTrace);
       throw AuthException(
-        message: 'Terjadi kesalahan tidak terduga. Silakan coba lagi.',
+        message: 'Terjadi kesalahan: $e',
         code: 'unknown-error',
         originalError: e,
         stackTrace: stackTrace,
@@ -576,6 +579,7 @@ class SupabaseAuthService {
     required String userId,
     String? displayName,
     String? role,
+    String? status,
     String? departmentId,
     String? phoneNumber,
   }) async {
@@ -585,6 +589,7 @@ class SupabaseAuthService {
       final updates = <String, dynamic>{};
       if (displayName != null) updates['display_name'] = displayName;
       if (role != null) updates['role'] = role;
+      if (status != null) updates['status'] = status;
       if (departmentId != null) updates['department_id'] = departmentId;
       if (phoneNumber != null) updates['phone_number'] = phoneNumber;
 

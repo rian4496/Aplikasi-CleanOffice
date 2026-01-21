@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../models/transactions/loan_model.dart';
 import '../../models/asset.dart';
-import '../../providers/transactions/loan_provider.dart';
-import '../../providers/riverpod/asset_providers.dart';
+import '../../riverpod/transactions/loan_provider.dart';
+import '../../riverpod/asset_providers.dart';
 
 class LoanFormScreen extends HookConsumerWidget {
   final String? id; // If editing
@@ -28,15 +29,21 @@ class LoanFormScreen extends HookConsumerWidget {
     final selectedAssetName = useState<String?>(null);
     final loanDuration = useState(1); // Years
     final startDate = useState(DateTime.now());
+    final endDate = useState(DateTime.now().add(const Duration(days: 3))); // Default 3 days
+    final purposeCtrl = useTextEditingController();
     
-    // File Upload State (Placeholder)
+    // Auto-calculate logic (Optional: update UI if dates change)
     final applicationLetterInfo = useState<String?>('Belum ada file dipilih');
     final agreementDocInfo = useState<String?>('Belum ada file dipilih');
 
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        title: Text(id == null ? 'Buat Permohonan Pinjam Pakai' : 'Edit Permohonan', style: GoogleFonts.inter(fontWeight: FontWeight.bold)),
+        title: Text(
+          id == null ? 'Buat Permohonan Pinjam Pakai' : 'Edit Permohonan', 
+          style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 16),
+          overflow: TextOverflow.ellipsis,
+        ),
         elevation: 0,
         backgroundColor: Colors.white,
         leading: IconButton(
@@ -47,214 +54,250 @@ class LoanFormScreen extends HookConsumerWidget {
       body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Left Column: Form
-              Expanded(
-                flex: 2,
-                child: Column(
-                  children: [
-                    // Section 1: Data Peminjam
-                    _buildSectionHeader('1. Data Peminjam (Instansi/Pihak Ketiga)'),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: Column(
-                        children: [
-                          _buildTextField('Nomor Surat Permohonan', proposalNumberCtrl, hint: 'Contoh: 028/DISHUB/XI/2024'),
-                          const SizedBox(height: 16),
-                          _buildTextField('Nama Peminjam / Instansi', borrowerNameCtrl, hint: 'Contoh: Dinas Perhubungan Kab. Banjar'),
-                          const SizedBox(height: 16),
-                          _buildTextField('Alamat Peminjam', borrowerAddressCtrl, hint: 'Alamat lengkap instansi...'),
-                          const SizedBox(height: 16),
-                          _buildTextField('Kontak penanggung Jawab', borrowerContactCtrl, hint: 'No. HP / Telp'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isMobile = constraints.maxWidth < 800;
 
-                    // Section 2: Objek Pinjam Pakai
-                    _buildSectionHeader('2. Objek Pinjam Pakai'),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Pilih Aset', style: TextStyle(fontWeight: FontWeight.w600)),
-                          const SizedBox(height: 8),
-                          InkWell(
-                            onTap: () {
-                              _showAssetPicker(context, ref, selectedAssetId, selectedAssetName);
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.grey.shade300),
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    selectedAssetName.value ?? 'Pilih aset dari Master Data...',
-                                    style: TextStyle(color: selectedAssetName.value == null ? Colors.grey : Colors.black87),
+              // == CONTENT WIDGETS ==
+
+              // 1. Left Section (Form Fields)
+              final formContent = Column(
+                children: [
+                   // Section 1: Data Peminjam & Keperluan
+                   _buildSectionHeader('1. Data Peminjam & Keperluan'),
+                   Container(
+                     padding: const EdgeInsets.all(20),
+                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                     child: Column(
+                       children: [
+                         _buildTextField('Nomor Surat Permohonan', proposalNumberCtrl, hint: 'Contoh: 028/DISHUB/XI/2024'),
+                         const SizedBox(height: 16),
+                         _buildTextField('Nama Peminjam / Instansi', borrowerNameCtrl, hint: 'Contoh: Dinas Perhubungan Kab. Banjar'),
+                         const SizedBox(height: 16),
+                         _buildTextField('Alamat Peminjam', borrowerAddressCtrl, hint: 'Alamat lengkap instansi...'),
+                         const SizedBox(height: 16),
+                         _buildTextField('Kontak penanggung Jawab', borrowerContactCtrl, hint: 'No. HP / Telp'),
+                         const SizedBox(height: 24),
+                         const Divider(),
+                         const SizedBox(height: 16),
+                         _buildTextField('Keperluan / Deskripsi Singkat', purposeCtrl, hint: 'Contoh: Perjalanan Dinas ke Luar Kota (3 Hari)', maxLines: 2),
+                       ],
+                     ),
+                   ),
+                   const SizedBox(height: 24),
+
+                   // Section 2: Objek Pinjam Pakai
+                   _buildSectionHeader('2. Objek Pinjam Pakai'),
+                   Container(
+                     padding: const EdgeInsets.all(20),
+                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         const Text('Pilih Aset', style: TextStyle(fontWeight: FontWeight.w600)),
+                         const SizedBox(height: 8),
+                         InkWell(
+                           onTap: () {
+                             _showAssetPicker(context, ref, selectedAssetId, selectedAssetName);
+                           },
+                           child: Container(
+                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                             decoration: BoxDecoration(
+                               border: Border.all(color: Colors.grey.shade300),
+                               borderRadius: BorderRadius.circular(8),
+                             ),
+                             child: Row(
+                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                               children: [
+                                 Text(
+                                   selectedAssetName.value ?? 'Pilih aset dari Master Data...',
+                                   style: TextStyle(color: selectedAssetName.value == null ? Colors.grey : Colors.black87),
+                                 ),
+                                 const Icon(Icons.search, color: Colors.grey),
+                               ],
+                             ),
+                           ),
+                         ),
+                         if (selectedAssetId.value != null) ...[
+                           const SizedBox(height: 16),
+                           Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
+                              child: const Row(children: [
+                                Icon(Icons.info_outline, color: Colors.blue, size: 20),
+                                SizedBox(width: 8),
+                                Text('Kondisi Aset Tercatat: BAIK', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
+                              ]),
+                           ),
+                         ]
+                       ],
+                     ),
+                   ),
+                   const SizedBox(height: 24),
+                   
+                   // Section 3: Jangka Waktu
+                  _buildSectionHeader('3. Jangka Waktu Peminjaman'),
+                   Container(
+                      child: Row(
+                       children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Tanggal Mulai', style: TextStyle(fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                     final picked = await showDatePicker(
+                                       context: context, 
+                                       initialDate: startDate.value, 
+                                       firstDate: DateTime.now().subtract(const Duration(days: 365)), 
+                                       lastDate: DateTime(2030)
+                                     );
+                                     if (picked != null) {
+                                       startDate.value = picked;
+                                       // Ensure endDate is after startDate
+                                       if (endDate.value.isBefore(picked)) {
+                                         endDate.value = picked.add(const Duration(days: 1));
+                                       }
+                                     }
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                                    child: Row(children: [const Icon(Icons.calendar_today, size: 16, color: Colors.blue), const SizedBox(width: 8), Text(DateFormat('dd MMM yyyy').format(startDate.value))]),
                                   ),
-                                  const Icon(Icons.search, color: Colors.grey),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
-                          if (selectedAssetId.value != null) ...[
-                            const SizedBox(height: 16),
-                            Container(
-                               padding: const EdgeInsets.all(12),
-                               decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(8)),
-                               child: const Row(children: [
-                                 Icon(Icons.info_outline, color: Colors.blue, size: 20),
-                                 SizedBox(width: 8),
-                                 Text('Kondisi Aset Tercatat: BAIK', style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold)),
-                               ]),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Tanggal Berakhir', style: TextStyle(fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 8),
+                                InkWell(
+                                  onTap: () async {
+                                     final picked = await showDatePicker(
+                                       context: context, 
+                                       initialDate: endDate.value, 
+                                       firstDate: startDate.value, 
+                                       lastDate: DateTime(2030)
+                                     );
+                                     if (picked != null) endDate.value = picked;
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                                    decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
+                                    child: Row(children: [const Icon(Icons.event_busy, size: 16, color: Colors.orange), const SizedBox(width: 8), Text(DateFormat('dd MMM yyyy').format(endDate.value))]),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ]
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    
-                    // Section 3: Jangka Waktu
-                   _buildSectionHeader('3. Jangka Waktu Peminjaman'),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: Row(
-                        children: [
-                           Expanded(
-                             child: Column(
-                               crossAxisAlignment: CrossAxisAlignment.start,
-                               children: [
-                                 const Text('Tanggal Mulai', style: TextStyle(fontWeight: FontWeight.w600)),
-                                 const SizedBox(height: 8),
-                                 InkWell(
-                                   onTap: () async {
-                                      final picked = await showDatePicker(
-                                        context: context, 
-                                        initialDate: startDate.value, 
-                                        firstDate: DateTime.now(), 
-                                        lastDate: DateTime(2030)
-                                      );
-                                      if (picked != null) startDate.value = picked;
-                                   },
-                                   child: Container(
-                                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-                                     decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8)),
-                                     child: Row(children: [const Icon(Icons.calendar_today, size: 16), const SizedBox(width: 8), Text(DateFormat('dd MMM yyyy').format(startDate.value))]),
-                                   ),
-                                 ),
-                               ],
-                             ),
-                           ),
-                           const SizedBox(width: 16),
-                           Expanded(
-                             child: Column(
-                               crossAxisAlignment: CrossAxisAlignment.start,
-                               children: [
-                                 const Text('Durasi (Tahun)', style: TextStyle(fontWeight: FontWeight.w600)),
-                                 const SizedBox(height: 8),
-                                 DropdownButtonFormField<int>(
-                                   value: loanDuration.value,
-                                   decoration: InputDecoration(
-                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                                     contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                                   ),
-                                   items: [1, 2, 3, 4, 5].map((e) => DropdownMenuItem(value: e, child: Text('$e Tahun'))).toList(),
-                                   onChanged: (val) => loanDuration.value = val!,
-                                 ),
-                               ],
-                             ),
-                           ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Section 4: Dokumen Pendukung
-                    _buildSectionHeader('4. Dokumen Pendukung'),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
-                      child: Column(
-                        children: [
-                          _buildFileUpload('Surat Permohonan (PDF)', applicationLetterInfo),
-                          const SizedBox(height: 16),
-                          const Divider(),
-                          const SizedBox(height: 16),
-                          _buildFileUpload('Draft Naskah Perjanjian (PDF)', agreementDocInfo),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              // Right Column: Summary & Actions
-              Expanded(
-                flex: 1,
-                child: Column(
-                  children: [
-                     Container(
-                       padding: const EdgeInsets.all(20),
-                       decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         children: [
-                           Text('Ringkasan', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
-                           const Divider(),
-                           const SizedBox(height: 12),
-                           _buildSummaryRow('Tanggal Berakhir:', DateFormat('dd MMM yyyy').format(startDate.value.add(Duration(days: 365 * loanDuration.value)))),
-                           const SizedBox(height: 8),
-                           _buildSummaryRow('Status Awal:', 'DRAFT (Konsep)'),
-                           const SizedBox(height: 24),
-                           SizedBox(
-                             width: double.infinity,
-                             child: FilledButton(
-                               onPressed: () {
-                                 // Save Action
-                                 final newLoan = LoanRequest(
-                                   id: 'LN-${DateTime.now().millisecondsSinceEpoch}', 
-                                   requestNumber: proposalNumberCtrl.text, 
-                                   borrowerName: borrowerNameCtrl.text, 
-                                   borrowerAddress: borrowerAddressCtrl.text, 
-                                   borrowerContact: borrowerContactCtrl.text, 
-                                   assetId: selectedAssetId.value ?? '', 
-                                   assetName: selectedAssetName.value ?? 'Unknown', 
-                                   assetCondition: 'Baik', 
-                                   startDate: startDate.value, 
-                                   durationYears: loanDuration.value, 
-                                   endDate: startDate.value.add(Duration(days: 365 * loanDuration.value)), 
-                                   status: 'draft', 
-                                   createdAt: DateTime.now()
-                                 );
-                                 
-                                 ref.read(loanListProvider.notifier).createLoan(newLoan);
-                                 context.pop();
-                                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permohonan berhasil dibuat')));
-                               }, 
-                               style: FilledButton.styleFrom(
-                                 backgroundColor: AppTheme.primary,
-                                 padding: const EdgeInsets.symmetric(vertical: 16),
-                               ),
-                               child: const Text('Simpan Permohonan'),
-                             ),
-                           ),
-                         ],
-                       ),
+                          ),
+                       ],
                      ),
+                   ),
+                   const SizedBox(height: 24),
+
+                   // Section 4: Dokumen Pendukung
+                   _buildSectionHeader('4. Dokumen Pendukung'),
+                   Container(
+                     padding: const EdgeInsets.all(20),
+                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8)),
+                     child: Column(
+                       children: [
+                         _buildFileUpload('Surat Permohonan (PDF)', applicationLetterInfo),
+                         const SizedBox(height: 16),
+                         const Divider(),
+                         const SizedBox(height: 16),
+                         _buildFileUpload('Draft Naskah Perjanjian (PDF)', agreementDocInfo),
+                       ],
+                     ),
+                   ),
+                ],
+              );
+
+              // 2. Right Section (Summary & Actions)
+              final summaryContent = Column(
+                children: [
+                   Container(
+                     padding: const EdgeInsets.all(20),
+                     decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.grey.shade200)),
+                     child: Column(
+                       crossAxisAlignment: CrossAxisAlignment.start,
+                       children: [
+                         Text('Ringkasan', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
+                         const Divider(),
+                         const SizedBox(height: 12),
+                         _buildSummaryRow('Durasi:', '${endDate.value.difference(startDate.value).inDays + 1} Hari'),
+                         const SizedBox(height: 8),
+                         _buildSummaryRow('Status Awal:', 'DRAFT (Konsep)'),
+                         const SizedBox(height: 24),
+                         SizedBox(
+                           width: double.infinity,
+                           child: FilledButton(
+                             onPressed: () {
+                               // Save Action
+                               final newLoan = LoanRequest(
+                                 id: '', 
+                                 requestNumber: proposalNumberCtrl.text, 
+                                 borrowerName: borrowerNameCtrl.text, 
+                                 borrowerAddress: borrowerAddressCtrl.text, 
+                                 borrowerContact: borrowerContactCtrl.text, 
+                                 assetId: selectedAssetId.value ?? '', 
+                                 assetName: selectedAssetName.value ?? 'Unknown', 
+                                 assetCondition: 'Baik', 
+                                 startDate: startDate.value, 
+                                 durationYears: 0, 
+                                 endDate: endDate.value, 
+                                 status: 'draft', 
+                                 createdAt: DateTime.now(),
+                                 purpose: purposeCtrl.text,
+                               );
+                               
+                               ref.read(loanListProvider.notifier).createLoan(newLoan);
+                               context.pop();
+                               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permohonan berhasil dibuat')));
+                             }, 
+                             style: FilledButton.styleFrom(
+                               backgroundColor: AppTheme.primary,
+                               padding: const EdgeInsets.symmetric(vertical: 16),
+                             ),
+                             child: const Text('Simpan Permohonan'),
+                           ),
+                         ),
+                       ],
+                     ),
+                   ),
+                ],
+              );
+
+              // == FINAL LAYOUT ==
+              if (isMobile) {
+                return Column(
+                  children: [
+                    formContent,
+                    const SizedBox(height: 24),
+                    summaryContent, 
+                    // Add extra padding at bottom for mobile scrolling
+                    const SizedBox(height: 48),
                   ],
-                ),
-              ),
-            ],
+                );
+              }
+
+              // Desktop Layout (Side-by-side)
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 2, child: formContent),
+                  const SizedBox(width: 24),
+                  Expanded(flex: 1, child: summaryContent),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -268,7 +311,7 @@ class LoanFormScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTextField(String label, TextEditingController controller, {String? hint}) {
+  Widget _buildTextField(String label, TextEditingController controller, {String? hint, int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -276,6 +319,7 @@ class LoanFormScreen extends HookConsumerWidget {
         const SizedBox(height: 6),
         TextField(
           controller: controller,
+          maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: Colors.grey[400], fontSize: 13),
@@ -307,9 +351,21 @@ class LoanFormScreen extends HookConsumerWidget {
         Row(
            children: [
              ElevatedButton.icon(
-               onPressed: () {
-                 // Mock File Picker
-                 fileInfo.value = 'dokumen_terpilih.pdf (1.2 MB)';
+               onPressed: () async {
+                 final result = await FilePicker.platform.pickFiles(
+                   type: FileType.custom,
+                   allowedExtensions: ['pdf'],
+                 );
+
+                 if (result != null) {
+                   final file = result.files.single;
+                   final sizeInKb = file.size / 1024;
+                   final sizeString = sizeInKb > 1024 
+                       ? '${(sizeInKb / 1024).toStringAsFixed(2)} MB' 
+                       : '${sizeInKb.toStringAsFixed(0)} KB';
+                   
+                   fileInfo.value = '${file.name} ($sizeString)';
+                 }
                }, 
                icon: const Icon(Icons.upload_file, size: 18), 
                label: const Text('Upload File'),
@@ -413,7 +469,7 @@ class LoanFormScreen extends HookConsumerWidget {
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
       child: Text(label, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
     );
   }

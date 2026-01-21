@@ -1,4 +1,4 @@
-// lib/widgets/web_admin/cards/compact_stat_card.dart
+﻿// lib/widgets/web_admin/cards/compact_stat_card.dart
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -29,17 +29,17 @@ class CompactStatCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppTheme.card,
         borderRadius: BorderRadius.circular(16), // Softer radius
-        border: Border.all(color: AppTheme.divider.withOpacity(0.8), width: 1.2), // STRONGER BORDER
+        border: Border.all(color: AppTheme.divider.withValues(alpha: 0.8), width: 1.2), // STRONGER BORDER
         boxShadow: [
           // Tighter shadow for depth
           BoxShadow(
-            color: (iconColor ?? Colors.black).withOpacity(0.05),
+            color: (iconColor ?? Colors.black).withValues(alpha: 0.05),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
           // Softer shadow for lift
           BoxShadow(
-            color: (iconColor ?? Colors.black).withOpacity(0.08), // STRONGER GLOW
+            color: (iconColor ?? Colors.black).withValues(alpha: 0.08), // STRONGER GLOW
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -56,7 +56,7 @@ class CompactStatCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12), // Larger icon area
                 decoration: BoxDecoration(
-                  color: (iconColor ?? AppTheme.primary).withOpacity(0.1),
+                  color: (iconColor ?? AppTheme.primary).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -71,8 +71,8 @@ class CompactStatCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
                     color: trendUp
-                        ? AppTheme.success.withOpacity(0.1)
-                        : AppTheme.error.withOpacity(0.1),
+                        ? AppTheme.success.withValues(alpha: 0.1)
+                        : AppTheme.error.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Row(

@@ -1,7 +1,7 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'dart:typed_data'; // Fix for Uint8List
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter/foundation.dart' show kIsWeb; // Add kIsWeb import
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint; // Add debugPrint
 import 'package:excel/excel.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart'; 
@@ -84,7 +84,7 @@ class ReceiptGeneratorService {
       }
 
     } catch (e) {
-      print('Error generating receipt: $e');
+      debugPrint('Error generating receipt: $e');
       rethrow;
     }
   }

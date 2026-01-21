@@ -12,7 +12,7 @@ import '../../core/utils/responsive_helper.dart';
 import '../../models/inventory_item.dart';
 import '../../models/user_role.dart';
 import '../../services/inventory_service.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
 import '../../widgets/inventory/stock_adjustment_dialog.dart';
 import '../../widgets/inventory/request_stock_dialog.dart';
 import './inventory_add_edit_screen.dart';

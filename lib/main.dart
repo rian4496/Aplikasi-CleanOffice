@@ -3,6 +3,7 @@
 // ✅ MIGRATED TO SUPABASE
 
 import 'dart:async';
+import 'dart:ui'; // For AppScrollBehavior
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -14,6 +15,8 @@ import 'package:toastification/toastification.dart'; // ✅ Toastification
 // Core
 import 'core/theme/app_theme.dart';
 import 'core/config/supabase_config.dart';
+import 'services/notification_local_service.dart';
+import 'services/presence_service.dart';
 
 // Router
 import 'core/router/app_router.dart';
@@ -64,6 +67,16 @@ void main() async {
     // Initialize Indonesian locale for date formatting
     await initializeDateFormatting('id_ID', null);
 
+    // Initialize local notifications (for Android/iOS)
+    if (!kIsWeb) {
+      try {
+        await NotificationLocalService().initialize();
+        debugPrint('✅ Local notifications initialized');
+      } catch (e) {
+        debugPrint('⚠️ Local notifications init failed: $e');
+      }
+    }
+
     runApp(const ProviderScope(child: MyApp()));
   }, (error, stack) {
     // Global error handler
@@ -80,9 +93,12 @@ class MyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(goRouterProvider);
+    
+    // Auto-start presence tracking when user is logged in
+    ref.watch(presenceAutoStartProvider);
 
     return MaterialApp.router(
-      title: 'Clean Office',
+      title: 'SIM-ASET BRIDA',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       
@@ -107,6 +123,18 @@ class MyApp extends ConsumerWidget {
           child: child!,
         );
       },
+      scrollBehavior: const AppScrollBehavior(),
     );
   }
+}
+
+class AppScrollBehavior extends MaterialScrollBehavior {
+  const AppScrollBehavior();
+
+  @override
+  Set<PointerDeviceKind> get dragDevices => {
+        PointerDeviceKind.touch,
+        PointerDeviceKind.mouse,
+        PointerDeviceKind.trackpad,
+      };
 }

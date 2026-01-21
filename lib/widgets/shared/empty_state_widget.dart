@@ -84,7 +84,7 @@ class EmptyStateWidget extends StatelessWidget {
   }) {
     return EmptyStateWidget(
       icon: Icons.task_alt,
-      title: 'Tidak ada tugas',
+      title: 'Tidak ada Tiket Masalah Kebersihan Masuk',
       subtitle: 'Tugas yang ditugaskan akan muncul di sini',
       actionLabel: onCreateTask != null ? 'Buat Tugas' : null,
       onAction: onCreateTask,

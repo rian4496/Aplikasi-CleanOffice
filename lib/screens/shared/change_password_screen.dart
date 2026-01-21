@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/error/exceptions.dart';
 import '../../widgets/custom_password_field.dart';
-import '../../providers/riverpod/auth_providers.dart';
+import '../../riverpod/auth_providers.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Modern Change Password Screen
 class ChangePasswordScreen extends StatefulWidget {
@@ -29,48 +30,31 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Mengubah widget menjadi Consumer untuk mengakses ref
     return Consumer(builder: (context, ref, child) {
-      // Listener untuk menangani side-effects (SnackBar, Navigasi)
       ref.listen<AsyncValue<void>>(authActionsProvider, (previous, next) {
         next.when(
           error: (error, stackTrace) {
             String message;
-            if (error is AuthException) {
-              switch (error.code) {
-                case 'wrong-password':
-                case 'user-mismatch':
-                  message = 'Password saat ini salah';
-                  break;
-                case 'weak-password':
-                  message = 'Password baru terlalu lemah';
-                  break;
-                default:
-                  message = error.message;
+             if (error is AuthException) {
+              if (error.code == 'wrong-password' || error.code == 'user-mismatch') {
+                message = 'Password saat ini salah';
+              } else if (error.code == 'weak-password') {
+                message = 'Password baru terlalu lemah';
+              } else {
+                message = error.message;
               }
             } else {
               message = 'Terjadi kesalahan yang tidak diketahui.';
             }
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(message),
-                backgroundColor: AppTheme.error,
-                behavior: SnackBarBehavior.floating,
-              ),
+              SnackBar(content: Text(message), backgroundColor: AppTheme.error, behavior: SnackBarBehavior.floating),
             );
           },
           data: (_) {
-            // Hanya tampilkan snackbar jika state sebelumnya tidak null (bukan state awal)
             if (previous != null && !previous.isLoading) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Row(
-                    children: const [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      SizedBox(width: 8),
-                      Text('Password berhasil diubah'),
-                    ],
-                  ),
+                  content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: 8), Text('Password berhasil diubah')]),
                   backgroundColor: AppTheme.success,
                   behavior: SnackBarBehavior.floating,
                 ),
@@ -78,188 +62,101 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               Navigator.pop(context);
             }
           },
-          loading: () {}, // Tidak perlu melakukan apa-apa saat loading
+          loading: () {},
         );
       });
 
-      // Mendapatkan state saat ini untuk mengontrol UI
       final state = ref.watch(authActionsProvider);
       final isChanging = state.isLoading;
 
       return Scaffold(
-        appBar: AppBar(title: const Text('Ubah Password'), backgroundColor: Colors.indigo[800]),
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          title: Text(
+            'Ubah Password',
+            style: GoogleFonts.inter(
+              color: const Color(0xFF1E293B),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.black),
+        ),
         body: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 24), // Ditambahkan untuk jarak atas
-                      // Icon
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.grey[200]!,
-                            width: 2.0,
-                          ),      
-                        ),
-                        child: Icon(
-                          Icons.lock_reset_rounded,
-                          size: 64,
-                          color: Colors.grey[700],
-                        ),
-                      ),
-                      const SizedBox(height: 24),
+          padding: const EdgeInsets.all(24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Buat password baru yang aman',
+                  style: GoogleFonts.inter(fontSize: 14, color: const Color(0xFF64748B)),
+                ),
+                const SizedBox(height: 32),
 
-                      // Description
-                      Text(
-                        'Masukkan password saat ini dan password baru Anda',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: AppTheme.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
+                CustomPasswordField(
+                  controller: _currentPasswordController,
+                  labelText: 'Password Saat Ini',
+                  enabled: !isChanging,
+                  validator: (value) => value?.isEmpty == true ? 'Wajib diisi' : null,
+                ),
+                const SizedBox(height: 20),
+                CustomPasswordField(
+                  controller: _newPasswordController,
+                  labelText: 'Password Baru',
+                  helperText: 'Minimal 6 karakter',
+                  enabled: !isChanging,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Wajib diisi';
+                    if (value.length < 6) return 'Minimal 6 karakter';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
+                CustomPasswordField(
+                  controller: _confirmPasswordController,
+                  labelText: 'Konfirmasi Password',
+                  enabled: !isChanging,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) return 'Wajib diisi';
+                    if (value != _newPasswordController.text) return 'Password tidak cocok';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 40),
 
-                      // Form Card
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Form(
-                            key: _formKey,
-                            child: Column(
-                              children: [
-                                CustomPasswordField(
-                                  controller: _currentPasswordController,
-                                  labelText: 'Password Saat Ini',
-                                  enabled: !isChanging,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Password saat ini tidak boleh kosong';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                                CustomPasswordField(
-                                  controller: _newPasswordController,
-                                  labelText: 'Password Baru',
-                                  helperText: 'Minimal 6 karakter',
-                                  enabled: !isChanging,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Password baru tidak boleh kosong';
-                                    }
-                                    if (value.length < 6) {
-                                      return 'Password minimal 6 karakter';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 16),
-                                CustomPasswordField(
-                                  controller: _confirmPasswordController,
-                                  labelText: 'Konfirmasi Password Baru',
-                                  enabled: !isChanging,
-                                  validator: (value) {
-                                    if (value == null || value.isEmpty) {
-                                      return 'Konfirmasi password tidak boleh kosong';
-                                    }
-                                    if (value != _newPasswordController.text) {
-                                      return 'Password tidak cocok';
-                                    }
-                                    return null;
-                                  },
-                                ),
-                                const SizedBox(height: 24),
-
-                                // Change Password Button
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 54,
-                                  child: ElevatedButton(
-                                    onPressed: isChanging
-                                        ? null
-                                        : () {
-                                            final isFormValid = _formKey
-                                                    .currentState
-                                                    ?.validate() ??
-                                                false;
-                                            if (!isFormValid) return;
-
-                                            ref
-                                                .read(authActionsProvider.notifier)
-                                                .changePassword(
-                                                  currentPassword:
-                                                      _currentPasswordController.text,
-                                                  newPassword:
-                                                      _newPasswordController.text,
-                                                );
-                                          },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.indigo[800],
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: isChanging
-                                        ? const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              valueColor:
-                                                  AlwaysStoppedAnimation<Color>(
-                                                    Colors.white,
-                                                  ),
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Ubah Password',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Security Info
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.info.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: AppTheme.info.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.info_outline, color: AppTheme.info),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
-                                'Gunakan password yang kuat dengan kombinasi huruf, angka, dan simbol',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: isChanging
+                        ? null
+                        : () {
+                            if (_formKey.currentState?.validate() ?? false) {
+                              ref.read(authActionsProvider.notifier).changePassword(
+                                    currentPassword: _currentPasswordController.text,
+                                    newPassword: _newPasswordController.text,
+                                  );
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isChanging ? const Color(0xFF94A3B8) : const Color(0xFF3B82F6), // Blue-500
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: isChanging
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : Text('Simpan Password Baru', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold)),
                   ),
                 ),
+              ],
+            ),
+          ),
+        ),
       );
     });
   }

@@ -1,4 +1,4 @@
-// lib/screens/web_admin/analytics/analytics_screen.dart
+﻿// lib/screens/web_admin/analytics/analytics_screen.dart
 // 📊 Analytics Screen
 // View analytics and reports with time range selection
 
@@ -253,7 +253,7 @@ class AnalyticsScreen extends HookConsumerWidget {
           Icon(
             Icons.bar_chart,
             size: 64,
-            color: AdminColors.primary.withOpacity(0.3),
+            color: AdminColors.primary.withValues(alpha: 0.3),
           ),
           const SizedBox(height: AdminConstants.spaceMd),
           Text(

@@ -1,4 +1,4 @@
-// lib/screens/web_admin/cleaners/cleaners_management_screen.dart
+﻿// lib/screens/web_admin/cleaners/cleaners_management_screen.dart
 // 👥 Cleaners Management Screen
 // Manage cleaning staff with performance tracking
 
@@ -11,7 +11,7 @@ import '../../../widgets/web_admin/layout/admin_bottom_nav.dart';
 import '../../../widgets/web_admin/search/search_bar_widget.dart';
 import '../../../widgets/web_admin/filters/horizontal_filter_chips.dart';
 import '../../../widgets/web_admin/cards/cleaner_card.dart';
-import '../../../providers/riverpod/cleaner_providers.dart';
+import '../../../riverpod/cleaner_providers.dart';
 
 class CleanersManagementScreen extends ConsumerWidget {
   const CleanersManagementScreen({super.key});
@@ -110,7 +110,7 @@ class CleanersManagementScreen extends ConsumerWidget {
             Icon(
               Icons.people_outline,
               size: 64,
-              color: AdminColors.textSecondary.withOpacity(0.5),
+              color: AdminColors.textSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(
@@ -133,7 +133,7 @@ class CleanersManagementScreen extends ConsumerWidget {
             Icon(
               Icons.error_outline,
               size: 64,
-              color: AdminColors.error.withOpacity(0.5),
+              color: AdminColors.error.withValues(alpha: 0.5),
             ),
             const SizedBox(height: AdminConstants.spaceMd),
             const Text(

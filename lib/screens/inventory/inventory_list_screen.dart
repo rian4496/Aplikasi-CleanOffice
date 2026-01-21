@@ -1,9 +1,10 @@
-// lib/screens/inventory/inventory_list_screen.dart
+﻿// lib/screens/inventory/inventory_list_screen.dart
 // Inventory list screen
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart'; // Added import
 import 'package:supabase_flutter/supabase_flutter.dart'; // Added import
 import 'package:shimmer/shimmer.dart';
 
@@ -13,10 +14,10 @@ import '../../utils/responsive_ui_helper.dart';
 
 import '../../models/inventory_item.dart';
 import '../../models/stock_history.dart'; // TransactionType
-import '../../providers/riverpod/auth_providers.dart';
-import '../../providers/riverpod/inventory_providers.dart';
-import '../../providers/riverpod/user_providers.dart';
-import '../../providers/riverpod/inventory_selection_provider.dart';
+import '../../riverpod/auth_providers.dart';
+import '../../riverpod/inventory_providers.dart';
+import '../../riverpod/user_providers.dart';
+import '../../riverpod/inventory_selection_provider.dart';
 import '../../widgets/inventory/batch_action_bar.dart';
 import '../../widgets/shared/notification_bell.dart'; // Fixed import path
 import '../../widgets/shared/drawer_menu_widget.dart'; // Fixed import path
@@ -66,20 +67,49 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
     // ... (This part stays largely similar unless we move filters to sidebar)
 
     return Scaffold(
-      backgroundColor: AppTheme.modernBg, // Use consistent BG
+      backgroundColor: Colors.white, // Match Dashboard
+      floatingActionButton: (!isDesktop && !isSelectionMode) ? Container(
+         margin: const EdgeInsets.only(bottom: 16),
+         child: InkWell(
+            onTap: () async {
+                  await showDialog<bool>(
+                    context: context,
+                    builder: (context) => const InventoryFormDialog(),
+                  );
+                  ref.invalidate(allInventoryItemsProvider);
+            },
+            borderRadius: BorderRadius.circular(50),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.primary.withValues(alpha: 0.9)]),
+                borderRadius: BorderRadius.circular(50),
+                boxShadow: [BoxShadow(color: AppTheme.primary.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                   const Icon(Icons.add, color: Colors.white, size: 20),
+                   const SizedBox(width: 8),
+                   Text('Tambah Item', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                ],
+              ),
+            ),
+         ),
+      ) : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       appBar: AppBar(
-        // ... (Keep AppBar as is or simplify)
         title: isSelectionMode
             ? Text('${selectedIds.length} dipilih')
-            : const Text(
+            : Text(
                 'Inventaris & Stok',
-                style: TextStyle(
+                style: GoogleFonts.inter(
                   color: Colors.black87,
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
                 ),
               ),
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
          leading: isSelectionMode
@@ -89,10 +119,16 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
                   ref.read(selectionModeProvider.notifier).disable();
                 },
               )
-            : null,
+            : (isDesktop
+                ? null
+                : IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black87),
+                    onPressed: () => context.canPop() ? context.pop() : context.go('/admin/dashboard'),
+                  )),
+
         actions: [
-          // Add Item Button (Moved from FAB)
-          if (!isSelectionMode)
+          // Add Item Button (Desktop Only)
+          if (!isSelectionMode && isDesktop)
             Padding(
               padding: const EdgeInsets.only(right: 16),
               child: ElevatedButton.icon(
@@ -199,12 +235,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           ),
         ],
       ),
-       endDrawer: !isDesktop ? Drawer(child: DrawerMenuWidget(
-          userProfile: ref.watch(currentUserProfileProvider).asData?.value,
-          roleTitle: 'Admin', 
-           menuItems: [ /* ... same items ... */ ],
-           onLogout: () async { /* ... */ }
-       )) : null,
+
        // floatingActionButton: Removed
        bottomNavigationBar: isSelectionMode 
           ? itemsAsync.maybeWhen(
@@ -214,7 +245,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
               ),
               orElse: () => null
             )
-          : (!isDesktop ? _buildBottomNavBar() : null),
+          : null,
     );
   }
 
@@ -354,124 +385,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
      // TODO: Implement simple dialog with quantity input
   }
 
-  // ==================== BOTTOM NAVIGATION BAR ====================
-  Widget _buildBottomNavBar() {
-    final userRole = ref.watch(currentUserRoleProvider)?.toLowerCase();
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(
-                icon: Icons.home_rounded,
-                label: 'Home',
-                isActive: false,
-                onTap: () {
-                  String route;
-                  switch (userRole) {
-                    case 'cleaner':
-                      route = AppConstants.homeCleanerRoute;
-                      break;
-                    case 'employee':
-                      route = AppConstants.homeEmployeeRoute;
-                      break;
-                    default:
-                      route = AppConstants.homeAdminRoute;
-                  }
-                  Navigator.pushNamedAndRemoveUntil(context, route, (route) => false);
-                },
-              ),
-              _buildNavItem(
-                icon: userRole == 'cleaner' ? Icons.inbox_rounded : Icons.assignment_rounded,
-                label: userRole == 'cleaner' ? 'Inbox' : 'Laporan',
-                isActive: false,
-                onTap: () {
-                  if (userRole == 'cleaner') {
-                    Navigator.pop(context);
-                  } else {
-                    Navigator.pushReplacementNamed(context, '/reports_management');
-                  }
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.chat_bubble_rounded,
-                label: 'Chat',
-                isActive: false,
-                onTap: () {
-                  Navigator.pushNamed(context, '/chat');
-                },
-              ),
-              _buildNavItem(
-                icon: Icons.more_horiz_rounded,
-                label: 'Lainnya',
-                isActive: false,
-                onTap: () {
-                  if (userRole == 'cleaner') {
-                    // CleanerMoreBottomSheet.show(context); // TODO: Implement CleanerMoreBottomSheet
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Menu Cleaner belum tersedia')));
-                  } else {
-                    // AdminMoreBottomSheet.show(context); // TODO: Implement AdminMoreBottomSheet
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Menu Admin belum tersedia')));
-                  }
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildNavItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required VoidCallback onTap,
-  }) {
-    const activeColor = Color(0xFF5D5FEF);
-    final inactiveColor = Colors.grey[600]!;
-
-    return Expanded(
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                icon,
-                color: isActive ? activeColor : inactiveColor,
-                size: 26,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  color: isActive ? activeColor : inactiveColor,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
 
 
@@ -723,25 +637,25 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
 
     if (confirm == true && mounted) {
       try {
-        print('🚀 DIRECT DELETE TEST - Item: ${item.name}, ID: ${item.id}');
+        debugPrint('🚀 DIRECT DELETE TEST - Item: ${item.name}, ID: ${item.id}');
         
         // DIRECT SUPABASE UPDATE - Bypass service layer
         final supabase = Supabase.instance.client;
         
-        print('📝 Step 1: Getting item from database...');
+        debugPrint('📝 Step 1: Getting item from database...');
         final checkItem = await supabase
             .from('inventory_items')
             .select()
             .eq('id', item.id)
             .maybeSingle();
         
-        print('✅ Item in DB: $checkItem');
+        debugPrint('✅ Item in DB: $checkItem');
         
         if (checkItem == null) {
           throw Exception('Item not found in database!');
         }
         
-        print('📝 Step 2: Attempting DIRECT update...');
+        debugPrint('📝 Step 2: Attempting DIRECT update...');
         final updateResponse = await supabase
             .from('inventory_items')
             .update({
@@ -752,15 +666,15 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
             .eq('id', item.id)
             .select();
         
-        print('📊 Update Response: $updateResponse');
-        print('📊 Response Type: ${updateResponse.runtimeType}');
-        print('📊 Response Length: ${(updateResponse as List).length}');
+        debugPrint('📊 Update Response: $updateResponse');
+        debugPrint('📊 Response Type: ${updateResponse.runtimeType}');
+        debugPrint('📊 Response Length: ${(updateResponse as List).length}');
         
         if (updateResponse.isEmpty) {
           throw Exception('UPDATE returned empty - RLS policy might be blocking!');
         }
         
-        print('✅ DIRECT UPDATE SUCCESS!');
+        debugPrint('✅ DIRECT UPDATE SUCCESS!');
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -769,9 +683,9 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
           ref.invalidate(allInventoryItemsProvider);
         }
       } catch (e, stackTrace) {
-        print('❌ DIRECT DELETE FAILED');
-        print('Error: $e');
-        print('StackTrace: $stackTrace');
+        debugPrint('❌ DIRECT DELETE FAILED');
+        debugPrint('Error: $e');
+        debugPrint('StackTrace: $stackTrace');
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -799,7 +713,7 @@ class _InventoryListScreenState extends ConsumerState<InventoryListScreen> {
       selected: isSelected,
       onSelected: (_) => onSelected(value),
       backgroundColor: Colors.transparent,
-      selectedColor: (color ?? AppTheme.primary).withOpacity(0.1),
+      selectedColor: (color ?? AppTheme.primary).withValues(alpha: 0.1),
       labelStyle: TextStyle(
         color: isSelected ? (color ?? AppTheme.primary) : Colors.grey.shade700,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,

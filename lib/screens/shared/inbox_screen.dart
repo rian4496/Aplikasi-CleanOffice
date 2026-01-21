@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -6,7 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 
 import '../../models/ticket.dart';
-import '../../providers/riverpod/ticket_providers.dart';
+import '../../riverpod/ticket_providers.dart';
 import '../../core/theme/app_theme.dart';
 
 class InboxScreen extends HookConsumerWidget {
@@ -147,9 +147,9 @@ class _TicketCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: _getPriorityColor(ticket.priority).withOpacity(0.1),
+                      color: _getPriorityColor(ticket.priority).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: _getPriorityColor(ticket.priority).withOpacity(0.3)),
+                      border: Border.all(color: _getPriorityColor(ticket.priority).withValues(alpha: 0.3)),
                     ),
                     child: Text(
                       ticket.priority.displayName,
@@ -280,7 +280,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(
